@@ -1,10 +1,11 @@
 import type { DepartmentId } from "@/components/glass";
 import { approvals } from "./approvals";
+import type { Consultation } from "./experts";
 import type { OfficeAgent } from "./departments";
 import { getAgentProfile } from "./messages";
 import { movements } from "./wallet";
 
-export type TaskStatus = "running" | "approval" | "done";
+export type TaskStatus = "running" | "expert" | "approval" | "done";
 
 export type OfficeTask = {
   id: string;
@@ -35,7 +36,11 @@ const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1
  * Tareas de la oficina a partir del estado actual:
  * en curso (agentes que trabajan), pendientes de aprobación (aprobaciones sin resolver) y completadas hoy.
  */
-export function buildTasks(agents: OfficeAgent[], resolved: ReadonlySet<string>): OfficeTask[] {
+export function buildTasks(
+  agents: OfficeAgent[],
+  resolved: ReadonlySet<string>,
+  consultations: Consultation[],
+): OfficeTask[] {
   const dept = (agentId: string) => agents.find((a) => a.id === agentId)!.departmentId;
 
   const running: OfficeTask[] = agents
@@ -49,6 +54,16 @@ export function buildTasks(agents: OfficeAgent[], resolved: ReadonlySet<string>)
       cost: getAgentProfile(a.id).avgCostPerTask,
       time: startedAt[a.id] ? `Desde las ${startedAt[a.id]}` : "Ahora",
     }));
+
+  const withExpert: OfficeTask[] = consultations.map((c) => ({
+    id: `exp-${c.id}`,
+    agentId: c.agentId,
+    departmentId: dept(c.agentId),
+    title: `Consulta al experto: ${c.problem}`,
+    status: "expert",
+    cost: c.price,
+    time: `Respuesta estimada: ${c.estimatedHours} h`,
+  }));
 
   const pending: OfficeTask[] = approvals
     .filter((a) => !resolved.has(a.id))
@@ -74,5 +89,5 @@ export function buildTasks(agents: OfficeAgent[], resolved: ReadonlySet<string>)
       time: m.when.split("· ")[1],
     }));
 
-  return [...running, ...pending, ...done];
+  return [...running, ...withExpert, ...pending, ...done];
 }

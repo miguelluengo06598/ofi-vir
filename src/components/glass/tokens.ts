@@ -1,12 +1,13 @@
 import { Gauge, Headphones, Megaphone, TrendingUp, Workflow, type LucideIcon } from "lucide-react";
 
-export type AgentStatus = "working" | "waiting" | "paused" | "error";
+export type AgentStatus = "working" | "waiting" | "paused" | "error" | "expert";
 
 export const statusMeta: Record<AgentStatus, { label: string; dot: string }> = {
   working: { label: "Trabajando", dot: "bg-status-working" },
   waiting: { label: "Espera aprobación", dot: "bg-status-waiting" },
   paused: { label: "En pausa", dot: "bg-status-paused" },
   error: { label: "Error", dot: "bg-status-error" },
+  expert: { label: "Con el experto", dot: "bg-status-expert" },
 };
 
 export type DepartmentId = "ventas" | "atencion" | "marketing" | "operaciones" | "direccion";

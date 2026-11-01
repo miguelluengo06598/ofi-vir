@@ -1,11 +1,10 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApprovals } from "@/components/ApprovalsProvider";
 import { GlassPanel, PillButton } from "@/components/glass";
-import { buildOffice } from "@/data/departments";
-import { initialConversations, simulatedReply, type Conversation, type Message } from "@/data/messages";
+import { initialConversations, simulatedReply, touchConversation as touch, type Message } from "@/data/messages";
 import { AgentProfile } from "./AgentProfile";
 import { ChatPanel } from "./ChatPanel";
 import { ConversationList, type Tab } from "./ConversationList";
@@ -23,20 +22,10 @@ const newMessage = (from: Message["from"], text: string): Message => ({
   day: "Hoy",
 });
 
-/** Aplica un cambio a la conversación del agente (creándola si no existe) y la sube al principio. */
-function touch(list: Conversation[], agentId: string, update: (c: Conversation) => Conversation) {
-  const current = list.find((c) => c.agentId === agentId) ?? { agentId, messages: [], unread: 0 };
-  return [update(current), ...list.filter((c) => c.agentId !== agentId)];
-}
-
 export function MessagesView() {
-  const { resolved, hired } = useApprovals();
-  const officeAgents = useMemo(
-    () => buildOffice(resolved, hired).summaries.flatMap((s) => s.agents),
-    [resolved, hired],
-  );
+  const { office, conversations, setConversations } = useApprovals();
+  const officeAgents = office.summaries.flatMap((s) => s.agents);
   const firstId = initialConversations[0].agentId;
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
   const [selectedId, setSelectedId] = useState(firstId);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<Tab>("all");

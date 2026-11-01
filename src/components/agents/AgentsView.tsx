@@ -1,29 +1,30 @@
 "use client";
 
 import { AnimatePresence } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PillButton, departmentMeta, type DepartmentId } from "@/components/glass";
 import { useApprovals } from "@/components/ApprovalsProvider";
-import { buildOffice, departmentOrder } from "@/data/departments";
+import { departmentOrder } from "@/data/departments";
 import { AgentCard } from "./AgentCard";
 import { AgentDialog } from "./AgentDialog";
 
-type StatusFilter = "all" | "working" | "waiting";
+type StatusFilter = "all" | "working" | "waiting" | "expert";
 
 const statusFilters: { id: StatusFilter; label: string }[] = [
   { id: "all", label: "Todos" },
   { id: "working", label: "Trabajando" },
   { id: "waiting", label: "Esperan aprobación" },
+  { id: "expert", label: "Con el experto" },
 ];
 
 export function AgentsView() {
-  const { resolved, hired } = useApprovals();
+  const { office } = useApprovals();
   const [dept, setDept] = useState<DepartmentId | "all">("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [selected, setSelected] = useState<string | null>(null);
   const opener = useRef<HTMLElement | null>(null);
 
-  const agents = useMemo(() => buildOffice(resolved, hired).summaries.flatMap((s) => s.agents), [resolved, hired]);
+  const agents = office.summaries.flatMap((s) => s.agents);
   const visible = agents.filter(
     (a) => (dept === "all" || a.departmentId === dept) && (status === "all" || a.status === status),
   );

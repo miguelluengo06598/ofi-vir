@@ -3,7 +3,8 @@ import { marketAgents } from "./marketplace";
 
 export type Message = {
   id: string;
-  from: "agent" | "me";
+  /** `system`: avisos automáticos (p. ej. consultas al experto). */
+  from: "agent" | "me" | "system";
   text: string;
   time: string;
   day: "Ayer" | "Hoy";
@@ -101,6 +102,8 @@ export const initialConversations: Conversation[] = [
     messages: [
       m("l1", "me", "Ayer", "18:05", "Lucía, ¿puedes retomar los leads del webinar de octubre?"),
       m("l2", "agent", "Ayer", "18:06", "Claro. Son 14 contactos sin respuesta; les preparo un seguimiento personalizado."),
+      m("l2b", "system", "Ayer", "18:20", "Lucía ha pedido ayuda a su creadora, Ana Martín. Respuesta estimada: 4 h"),
+      m("l2c", "system", "Ayer", "22:05", "Ana Martín ha respondido. Lucía retoma el trabajo."),
       m("l3", "agent", "Hoy", "09:12", "Buenos días, Marcos. Ya envié 9 seguimientos y quedan 5 por enviar. Dos leads han respondido."),
       m("l4", "me", "Hoy", "09:20", "Perfecto. Avísame si alguno pide una reunión."),
     ],
@@ -112,6 +115,14 @@ export const initialConversations: Conversation[] = [
       m("i1", "agent", "Ayer", "16:40", "He terminado el borrador de la propuesta para Clínica Dental Sol."),
       m("i2", "me", "Ayer", "17:02", "Gracias, la reviso mañana."),
       m("i3", "agent", "Hoy", "10:15", "La propuesta de 4.200 € está lista y espera tu aprobación para enviarla."),
+    ],
+  },
+  {
+    agentId: "hugo-lara",
+    unread: 1,
+    messages: [
+      m("h1", "agent", "Hoy", "09:50", "Tengo una reclamación de facturación con un cobro duplicado y no estoy seguro de cómo resolverla."),
+      m("h2", "system", "Hoy", "09:52", "Hugo ha pedido ayuda a su creadora, Inés Ortuño. Respuesta estimada: 2 h"),
     ],
   },
   {
@@ -179,4 +190,10 @@ export function getAgentProfile(agentId: string) {
     files: [] as AgentFile[],
     suggestions: ["¿En qué puedes ayudarme?", "Cuéntame cómo trabajas"],
   };
+}
+
+/** Aplica un cambio a la conversación del agente (creándola si no existe) y la sube al principio. */
+export function touchConversation(list: Conversation[], agentId: string, update: (c: Conversation) => Conversation) {
+  const current = list.find((c) => c.agentId === agentId) ?? { agentId, messages: [], unread: 0 };
+  return [update(current), ...list.filter((c) => c.agentId !== agentId)];
 }

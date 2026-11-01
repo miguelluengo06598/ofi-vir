@@ -1,9 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Avatar, PillButton } from "@/components/glass";
-import { buildOffice, type OfficeAgent, type StatusFilter } from "@/data/departments";
+import { type OfficeAgent, type StatusFilter } from "@/data/departments";
 import { currentUser } from "@/data/navigation";
 import type { DepartmentId } from "@/components/glass";
 import { DepartmentCard } from "./DepartmentCard";
@@ -66,11 +66,11 @@ function ArrivalFlight({ agent, onDone }: { agent: OfficeAgent; onDone: () => vo
 export function OfficeView() {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [selected, setSelected] = useState<DepartmentId | null>(null);
-  const { decisions, resolved, hired, arrival, finishArrival, decide } = useApprovals();
+  const { decisions, office, arrival, finishArrival, decide } = useApprovals();
   const opener = useRef<HTMLElement | null>(null);
   const hour = useSyncExternalStore(subscribeToClock, getHour, getServerHour);
 
-  const { summaries, totals } = useMemo(() => buildOffice(resolved, hired), [resolved, hired]);
+  const { summaries, totals } = office;
 
   function open(id: DepartmentId) {
     opener.current = document.activeElement as HTMLElement | null;

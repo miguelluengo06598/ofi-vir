@@ -12,12 +12,13 @@ import {
   type DepartmentId,
 } from "@/components/glass";
 import { useApprovals } from "@/components/ApprovalsProvider";
-import { buildOffice, departmentOrder } from "@/data/departments";
+import { departmentOrder } from "@/data/departments";
 import { buildTasks, type OfficeTask, type TaskStatus } from "@/data/tasks";
 import { fmtNumber } from "@/lib/format";
 
 const groups: { status: TaskStatus; title: string; badge: AgentStatus | null; empty: string }[] = [
   { status: "running", title: "En curso", badge: "working", empty: "Ningún agente está trabajando ahora mismo." },
+  { status: "expert", title: "Con el experto", badge: "expert", empty: "Ningún agente espera la respuesta de su creador." },
   { status: "approval", title: "Pendientes de aprobación", badge: "waiting", empty: "No hay nada pendiente de aprobar." },
   { status: "done", title: "Completadas hoy", badge: null, empty: "Todavía no se ha completado ninguna tarea hoy." },
 ];
@@ -43,17 +44,17 @@ function TaskRow({ task, name }: { task: OfficeTask; name: string }) {
         {task.status === "done" ? "" : "~"}
         {fmtNumber(task.cost, 1)} créditos
       </p>
-      <p className="w-28 text-right text-small text-ink-2">{task.time}</p>
+      <p className="min-w-28 text-right text-small text-ink-2">{task.time}</p>
     </li>
   );
 }
 
 export function TasksView() {
-  const { resolved, hired } = useApprovals();
+  const { office, resolved, consultations } = useApprovals();
   const [dept, setDept] = useState<DepartmentId | "all">("all");
 
-  const agents = useMemo(() => buildOffice(resolved, hired).summaries.flatMap((s) => s.agents), [resolved, hired]);
-  const tasks = useMemo(() => buildTasks(agents, resolved), [agents, resolved]);
+  const agents = office.summaries.flatMap((s) => s.agents);
+  const tasks = useMemo(() => buildTasks(agents, resolved, consultations), [agents, resolved, consultations]);
   const visible = tasks.filter((t) => dept === "all" || t.departmentId === dept);
 
   return (

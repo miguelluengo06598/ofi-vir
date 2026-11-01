@@ -3,10 +3,9 @@
 import { AnimatePresence } from "framer-motion";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApprovals } from "@/components/ApprovalsProvider";
 import { GlassInput, PillButton, type DepartmentId } from "@/components/glass";
-import { buildOffice } from "@/data/departments";
 import { marketAgents, marketCategories, type MarketCategory } from "@/data/marketplace";
 import { AgentSheet } from "./AgentSheet";
 import { HireDialog } from "./HireDialog";
@@ -14,14 +13,14 @@ import { MarketCard } from "./MarketCard";
 
 export function MarketplaceView() {
   const router = useRouter();
-  const { resolved, hired, hire } = useApprovals();
+  const { office, hired, hire } = useApprovals();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<MarketCategory | "all">("all");
   const [selected, setSelected] = useState<string | null>(null);
   const [hireFor, setHireFor] = useState<string | null>(null);
   const opener = useRef<HTMLElement | null>(null);
 
-  const { summaries } = useMemo(() => buildOffice(resolved, hired), [resolved, hired]);
+  const { summaries } = office;
   const isHired = (id: string) => hired.some((h) => h.marketId === id);
 
   const q = query.trim().toLowerCase();

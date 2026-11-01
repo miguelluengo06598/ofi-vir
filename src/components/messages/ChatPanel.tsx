@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, LifeBuoy, Send } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Avatar, GlassInput, GlassPanel, PillButton, StatusBadge } from "@/components/glass";
 import type { OfficeAgent } from "@/data/departments";
@@ -54,7 +54,10 @@ export function ChatPanel({ agent, conversation, typing, draft, onDraft, onSend,
           <h2 className="truncate text-body font-semibold">{agent.name}</h2>
           <p className="truncate text-tiny text-ink-2">{agent.role}</p>
         </div>
-        <StatusBadge status={agent.status} />
+        <StatusBadge
+          status={agent.status}
+          detail={agent.consultation ? `respuesta en ~${agent.consultation.estimatedHours} h` : undefined}
+        />
       </header>
 
       <div
@@ -75,6 +78,15 @@ export function ChatPanel({ agent, conversation, typing, draft, onDraft, onSend,
               {msg.day !== messages[i - 1]?.day && (
                 <p className="my-2 text-center text-tiny text-ink-3">{msg.day}</p>
               )}
+              {msg.from === "system" ? (
+                <div role="note" className="mx-auto flex max-w-[90%] items-start gap-2 rounded-card bg-glass px-3 py-2 text-small text-ink-2">
+                  <LifeBuoy size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-status-expert" />
+                  <span>
+                    {msg.text}
+                    <span className="ml-2 text-tiny text-ink-3">{msg.time}</span>
+                  </span>
+                </div>
+              ) : (
               <div className={`flex flex-col gap-1 ${mine ? "items-end" : "items-start"}`}>
                 {mine ? (
                   <p className="max-w-[80%] rounded-card rounded-br-sm bg-accent px-4 py-2.5 text-small text-white">
@@ -87,6 +99,7 @@ export function ChatPanel({ agent, conversation, typing, draft, onDraft, onSend,
                 )}
                 <span className="px-1 text-tiny text-ink-3">{msg.time}</span>
               </div>
+              )}
             </div>
           );
         })}

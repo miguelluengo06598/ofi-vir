@@ -1,6 +1,10 @@
-import { Coins, FileImage, FileSpreadsheet, FileText } from "lucide-react";
-import { Avatar, StatusBadge, departmentMeta } from "@/components/glass";
+"use client";
+
+import { Coins, FileImage, FileSpreadsheet, FileText, LifeBuoy } from "lucide-react";
+import { useApprovals } from "@/components/ApprovalsProvider";
+import { Avatar, PillButton, StatusBadge, departmentMeta } from "@/components/glass";
 import type { OfficeAgent } from "@/data/departments";
+import { expertFor } from "@/data/experts";
 import { getAgentProfile, type AgentFile } from "@/data/messages";
 
 const fileIcon = { doc: FileText, sheet: FileSpreadsheet, image: FileImage } as const satisfies Record<
@@ -19,6 +23,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function AgentProfile({ agent }: { agent: OfficeAgent }) {
   const profile = getAgentProfile(agent.id);
+  const { openConsult } = useApprovals();
+  const expert = expertFor(agent.creator);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
       <div className="flex flex-col items-center gap-2 text-center">
@@ -26,12 +32,34 @@ export function AgentProfile({ agent }: { agent: OfficeAgent }) {
         <h2 className="text-h2">{agent.name}</h2>
         <p className="text-small text-ink-2">{agent.role}</p>
         <p className="text-tiny text-ink-3">{departmentMeta[agent.departmentId].label}</p>
-        <StatusBadge status={agent.status} />
+        <StatusBadge
+          status={agent.status}
+          detail={agent.consultation ? `respuesta en ~${agent.consultation.estimatedHours} h` : undefined}
+        />
       </div>
 
       <Section title="Creador">
         <p className="text-small">{agent.creator}</p>
       </Section>
+
+      {expert && (
+        <PillButton
+          icon={LifeBuoy}
+          disabled={!!agent.consultation}
+          onClick={() => openConsult(agent.id)}
+          className="w-full flex-col items-start rounded-card! text-left"
+        >
+          <span className="font-semibold">{agent.consultation ? "Consulta en curso" : "Consultar al experto"}</span>
+          <span className="text-tiny text-ink-2">
+            {expert.name} · {expert.company}
+          </span>
+          <span className="text-tiny text-ink-2">
+            {agent.consultation
+              ? `Respuesta estimada: ${agent.consultation.estimatedHours} h`
+              : `Responde en ~${expert.avgResponseHours} h · ${expert.price} créditos`}
+          </span>
+        </PillButton>
+      )}
 
       <Section title="Herramientas conectadas">
         <ul className="flex flex-wrap gap-2">

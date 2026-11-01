@@ -1,6 +1,7 @@
 import type { AgentStatus, DepartmentId } from "@/components/glass";
 import { agents, type Agent } from "./agents";
 import { approvals, type Approval } from "./approvals";
+import { expertFor, type Consultation } from "./experts";
 import { marketAgents } from "./marketplace";
 
 /** Agente del marketplace contratado y asignado a un departamento. */
@@ -74,7 +75,12 @@ export const departmentInfo: Record<
 };
 
 /** Agente con los datos que dependen de las aprobaciones aún sin resolver. */
-export type OfficeAgent = Agent & { pendingApprovals: number; currentTask: string };
+export type OfficeAgent = Agent & {
+  pendingApprovals: number;
+  currentTask: string;
+  /** Consulta abierta con el experto de su creador, si la hay. */
+  consultation?: Consultation;
+};
 
 export type DepartmentSummary = {
   id: DepartmentId;
@@ -87,11 +93,26 @@ export type DepartmentSummary = {
 const sum = <T,>(list: T[], pick: (item: T) => number) => list.reduce((n, item) => n + pick(item), 0);
 
 /** Estado de la oficina dadas las aprobaciones ya resueltas: un agente en espera vuelve a trabajar al quedarse sin pendientes. */
-export function buildOffice(resolved: ReadonlySet<string>, hired: HiredAgent[] = []) {
+export function buildOffice(
+  resolved: ReadonlySet<string>,
+  hired: HiredAgent[] = [],
+  consultations: Consultation[] = [],
+) {
   const pending = approvals.filter((a) => !resolved.has(a.id));
   const officeAgents: OfficeAgent[] = [...agents, ...hired.map(hiredToAgent)].map((a) => {
     const count = pending.filter((p) => p.agentId === a.id).length;
     const resumed = a.status === "waiting" && count === 0;
+    const consultation = consultations.find((c) => c.agentId === a.id);
+    const expert = consultation && expertFor(a.creator);
+    if (consultation && expert) {
+      return {
+        ...a,
+        pendingApprovals: count,
+        status: "expert",
+        currentTask: `esperando la respuesta de su ${expert.title}, ${expert.name} (≈ ${consultation.estimatedHours} h)`,
+        consultation,
+      };
+    }
     return {
       ...a,
       pendingApprovals: count,

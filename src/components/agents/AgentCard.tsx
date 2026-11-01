@@ -24,7 +24,10 @@ export function AgentCard({ agent, delay, onOpen }: Props) {
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <StatusBadge status={agent.status} />
+        <StatusBadge
+          status={agent.status}
+          detail={agent.consultation ? `respuesta en ~${agent.consultation.estimatedHours} h` : undefined}
+        />
         <p className="text-tiny text-ink-3">Creador: {agent.creator}</p>
       </div>
       <dl className="mt-auto grid grid-cols-3 gap-2 border-t border-glass-border pt-3 text-center">

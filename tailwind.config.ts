@@ -17,6 +17,7 @@ const config: Config = {
           waiting: "#FBBF24",
           paused: "#9CA3AF",
           error: "#F87171",
+          expert: "#F472B6",
         },
         dept: {
           ventas: "#3B82F6",

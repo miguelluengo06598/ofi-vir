@@ -20,7 +20,12 @@ export function DepartmentCard({
   const { arrival } = useApprovals();
   const lead = agents[0];
   const counts = statusOrder
-    .map((status) => ({ status, count: agents.filter((a) => a.status === status).length }))
+    .map((status) => {
+      const members = agents.filter((a) => a.status === status);
+      // Con el experto: el menor tiempo estimado de respuesta entre sus agentes.
+      const hours = members.flatMap((a) => (a.consultation ? [a.consultation.estimatedHours] : []));
+      return { status, count: members.length, detail: hours.length ? `respuesta en ~${Math.min(...hours)} h` : undefined };
+    })
     .filter((s) => s.count > 0);
 
   return (
@@ -56,8 +61,8 @@ export function DepartmentCard({
         ))}
       </ul>
       <div className="flex flex-wrap gap-x-3 gap-y-1">
-        {counts.map(({ status, count }) => (
-          <StatusBadge key={status} status={status} count={count} />
+        {counts.map(({ status, count, detail }) => (
+          <StatusBadge key={status} status={status} count={count} detail={detail} />
         ))}
       </div>
     </GlassCard>

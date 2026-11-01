@@ -16,6 +16,9 @@ export function useFocusTrap(ref: RefObject<HTMLElement | null>, enabled = true)
       const first = items[0];
       const last = items[items.length - 1];
       const active = document.activeElement;
+      // Si el foco está en otro diálogo (superpuesto), ese diálogo lo gestiona.
+      const other = active?.closest("[role=dialog]");
+      if (other && other !== el) return;
       if (!el.contains(active)) {
         e.preventDefault();
         first.focus();

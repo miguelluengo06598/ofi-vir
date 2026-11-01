@@ -1,5 +1,6 @@
 import { ApprovalsProvider } from "@/components/ApprovalsProvider";
 import { Background } from "@/components/Background";
+import { ConsultDialog } from "@/components/experts/ConsultDialog";
 import { Dock, TopBar } from "@/components/glass";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -20,6 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main id="contenido" className="flex flex-1 flex-col px-4 pt-36 pb-28 md:pr-6 md:pb-8 md:pl-24 lg:pt-28">
         {children}
       </main>
+      <ConsultDialog />
     </ApprovalsProvider>
   );
 }

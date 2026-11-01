@@ -3,17 +3,15 @@
 import { AnimatePresence } from "framer-motion";
 import { PartyPopper } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
 import { GlassPanel, PillButton } from "@/components/glass";
 import { useApprovals } from "@/components/ApprovalsProvider";
 import { approvals } from "@/data/approvals";
-import { buildOffice } from "@/data/departments";
 import { ApprovalCard } from "./ApprovalCard";
 
 export function ApprovalsView() {
   const router = useRouter();
-  const { resolved, hired, pendingCount } = useApprovals();
-  const agents = useMemo(() => buildOffice(resolved, hired).summaries.flatMap((s) => s.agents), [resolved, hired]);
+  const { resolved, office, pendingCount } = useApprovals();
+  const agents = office.summaries.flatMap((s) => s.agents);
   const pending = approvals.filter((a) => !resolved.has(a.id));
 
   return (

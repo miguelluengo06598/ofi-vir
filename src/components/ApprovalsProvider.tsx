@@ -1,12 +1,25 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { approvals } from "@/data/approvals";
-import { hiredAgentId, type HiredAgent } from "@/data/departments";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import type { DepartmentId } from "@/components/glass";
+import { approvals } from "@/data/approvals";
+import { buildOffice, hiredAgentId, type HiredAgent } from "@/data/departments";
+import { expertFor, initialConsultations, type Consultation } from "@/data/experts";
+import { initialConversations, touchConversation, type Conversation } from "@/data/messages";
 import { initialBalance, initialMonthlyLimitEur } from "@/data/wallet";
 
 export type Decision = { approvalId: string; decision: "approved" | "rejected" };
+
+type OfficeState = ReturnType<typeof buildOffice>;
 
 type ApprovalsContextValue = {
   decisions: Decision[];
@@ -15,7 +28,9 @@ type ApprovalsContextValue = {
   /** Textos editados por el usuario, por id de aprobación. */
   edits: Record<string, string>;
   pendingCount: number;
-  /** Saldo de créditos, en créditos. */
+  /** Estado de la oficina con aprobaciones, contrataciones y consultas aplicadas. */
+  office: OfficeState;
+  /** Saldo de créditos. */
   balance: number;
   /** Límite de gasto mensual, en euros. */
   limitEur: number;
@@ -29,11 +44,20 @@ type ApprovalsContextValue = {
   finishArrival: () => void;
   decide: (approvalId: string, decision: Decision["decision"]) => void;
   edit: (approvalId: string, body: string) => void;
+  /** Conversaciones de Mensajes (compartidas para que las consultas añadan avisos del sistema). */
+  conversations: Conversation[];
+  setConversations: Dispatch<SetStateAction<Conversation[]>>;
+  consultations: Consultation[];
+  /** Agente cuyo diálogo «Consultar al experto» está abierto. */
+  consultTarget: string | null;
+  openConsult: (agentId: string) => void;
+  closeConsult: () => void;
+  consult: (agentId: string, problem: string) => void;
 };
 
 const ApprovalsContext = createContext<ApprovalsContextValue | null>(null);
 
-/** Estado compartido (simulado) de las aprobaciones: lo usan Oficina, Mensajes, Aprobaciones y la TopBar. */
+/** Estado compartido (simulado) de la oficina: aprobaciones, contrataciones, créditos, mensajes y consultas al experto. */
 export function ApprovalsProvider({ children }: { children: ReactNode }) {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
@@ -41,8 +65,13 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState(initialBalance);
   const [limitEur, setLimitEur] = useState(initialMonthlyLimitEur);
   const [arrival, setArrival] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
+  const [consultations, setConsultations] = useState<Consultation[]>(initialConsultations);
+  const [consultTarget, setConsultTarget] = useState<string | null>(null);
 
   const resolved = useMemo(() => new Set(decisions.map((d) => d.approvalId)), [decisions]);
+  const office = useMemo(() => buildOffice(resolved, hired, consultations), [resolved, hired, consultations]);
+
   const decide = useCallback(
     (approvalId: string, decision: Decision["decision"]) =>
       setDecisions((d) => (d.some((x) => x.approvalId === approvalId) ? d : [...d, { approvalId, decision }])),
@@ -52,14 +81,47 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
     (approvalId: string, body: string) => setEdits((e) => ({ ...e, [approvalId]: body })),
     [],
   );
-
   const hire = useCallback((marketId: string, departmentId: DepartmentId) => {
     setHired((h) => (h.some((x) => x.marketId === marketId) ? h : [...h, { marketId, departmentId }]));
     setArrival(hiredAgentId(marketId));
   }, []);
+  const finishArrival = useCallback(() => setArrival(null), []);
   const topUp = useCallback((credits: number) => setBalance((b) => b + credits), []);
   const setLimit = useCallback((eur: number) => setLimitEur(eur), []);
-  const finishArrival = useCallback(() => setArrival(null), []);
+
+  const openConsult = useCallback((agentId: string) => setConsultTarget(agentId), []);
+  const closeConsult = useCallback(() => setConsultTarget(null), []);
+  const consult = useCallback(
+    (agentId: string, problem: string) => {
+      const agent = office.summaries.flatMap((s) => s.agents).find((a) => a.id === agentId);
+      const expert = agent && expertFor(agent.creator);
+      if (!agent || !expert || consultations.some((c) => c.agentId === agentId)) return;
+
+      const id = `consulta-${agentId}-${consultations.length}`;
+      setConsultations((c) => [
+        ...c,
+        { id, agentId, origin: "company", problem, price: expert.price, estimatedHours: expert.avgResponseHours },
+      ]);
+      setBalance((b) => b - expert.price);
+      const time = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+      setConversations((cs) =>
+        touchConversation(cs, agentId, (c) => ({
+          ...c,
+          messages: [
+            ...c.messages,
+            {
+              id: `sys-${id}`,
+              from: "system",
+              day: "Hoy",
+              time,
+              text: `Has consultado a ${expert.name}, ${expert.title} de ${agent.name.split(" ")[0]}. Respuesta estimada: ${expert.avgResponseHours} h`,
+            },
+          ],
+        })),
+      );
+    },
+    [office, consultations],
+  );
 
   const value = useMemo(
     () => ({
@@ -67,6 +129,7 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
       resolved,
       edits,
       pendingCount: approvals.filter((a) => !resolved.has(a.id)).length,
+      office,
       balance,
       limitEur,
       topUp,
@@ -77,8 +140,18 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
       finishArrival,
       decide,
       edit,
+      conversations,
+      setConversations,
+      consultations,
+      consultTarget,
+      openConsult,
+      closeConsult,
+      consult,
     }),
-    [decisions, resolved, edits, balance, limitEur, topUp, setLimit, hired, arrival, hire, finishArrival, decide, edit],
+    [
+      decisions, resolved, edits, office, balance, limitEur, topUp, setLimit, hired, arrival, hire,
+      finishArrival, decide, edit, conversations, consultations, consultTarget, openConsult, closeConsult, consult,
+    ],
   );
 
   return <ApprovalsContext.Provider value={value}>{children}</ApprovalsContext.Provider>;

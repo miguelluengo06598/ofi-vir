@@ -115,7 +115,10 @@ export function DepartmentPanel({ summary, decisions, onDecide, onClose }: Props
                           <p className="text-body font-semibold">{a.name}</p>
                           <p className="text-small text-ink-2">{a.role}</p>
                         </div>
-                        <StatusBadge status={a.status} />
+                        <StatusBadge
+                          status={a.status}
+                          detail={a.consultation ? `respuesta en ~${a.consultation.estimatedHours} h` : undefined}
+                        />
                       </div>
                       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-small sm:pl-13">
                         <p>{capitalize(a.currentTask)}</p>
