@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import { Avatar, MotionGlassPanel, PillButton, departmentMeta, type DepartmentId } from "@/components/glass";
 import type { DepartmentSummary } from "@/data/departments";
 import { categoryDepartment, type MarketAgent } from "@/data/marketplace";
@@ -19,6 +20,8 @@ type Props = {
 export function HireDialog({ agent, summaries, onConfirm, onClose }: Props) {
   const suggested = categoryDepartment[agent.category];
   const [choice, setChoice] = useState<DepartmentId>(suggested);
+  const dialog = useRef<HTMLElement>(null);
+  useFocusTrap(dialog);
 
   return (
     <>
@@ -32,6 +35,7 @@ export function HireDialog({ agent, summaries, onConfirm, onClose }: Props) {
       />
       <div className="pointer-events-none fixed inset-0 z-[70] flex items-center justify-center p-4">
         <MotionGlassPanel
+          ref={dialog}
           role="dialog"
           aria-modal="true"
           aria-labelledby="hire-title"

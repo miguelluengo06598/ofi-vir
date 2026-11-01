@@ -26,7 +26,7 @@ export function LimitPanel() {
   const valid = Number.isFinite(draftValue) && draftValue >= 10 && draftValue <= 10000;
 
   return (
-    <GlassPanel as="section" aria-labelledby="limit-title" className="flex flex-col gap-4 p-6">
+    <GlassPanel as="section" aria-labelledby="limit-title" className="enter flex flex-col gap-4 p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="limit-title" className="text-small text-ink-2">

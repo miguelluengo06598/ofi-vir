@@ -7,6 +7,7 @@ import { currentUser, isActive, topNav } from "@/data/navigation";
 import { Avatar } from "./Avatar";
 import { GlassPanel } from "./GlassPanel";
 import { PillButton } from "./PillButton";
+import { SceneMenu } from "./SceneMenu";
 
 export function TopBar() {
   const pathname = usePathname();
@@ -27,13 +28,14 @@ export function TopBar() {
 
         <nav
           aria-label="Principal"
-          className="order-last flex w-full gap-2 overflow-x-auto lg:order-none lg:w-auto"
+          className="order-last flex w-full gap-2 overflow-x-auto [scrollbar-width:none] lg:order-none lg:w-auto [&::-webkit-scrollbar]:hidden"
         >
           {topNav.map(({ href, label }) => {
             const active = isActive(pathname, href);
             return (
               <PillButton
                 key={href}
+                compact
                 active={active}
                 aria-pressed={undefined}
                 aria-current={active ? "page" : undefined}
@@ -46,7 +48,10 @@ export function TopBar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <PillButton icon={MessageSquare} aria-label="Mensajes" onClick={() => router.push("/mensajes")} />
+          {/* En móvil Mensajes ya está en el Dock. */}
+          <span className="hidden sm:block">
+            <PillButton icon={MessageSquare} aria-label="Mensajes" onClick={() => router.push("/mensajes")} />
+          </span>
           <span className="relative">
             <PillButton icon={Bell} aria-label={pendingCount ? `Notificaciones, ${pendingCount} sin leer` : "Notificaciones"} />
             {pendingCount > 0 && (
@@ -58,6 +63,7 @@ export function TopBar() {
               </span>
             )}
           </span>
+          <SceneMenu />
           <PillButton icon={Search} aria-label="Buscar" />
           <button
             type="button"

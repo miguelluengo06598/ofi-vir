@@ -28,6 +28,7 @@ export function ApprovalsView() {
       </div>
 
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4">
+        <h2 className="sr-only">Peticiones pendientes</h2>
         <AnimatePresence>
           {pending.map((a, i) => (
             <ApprovalCard

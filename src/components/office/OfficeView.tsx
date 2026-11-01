@@ -120,6 +120,7 @@ export function OfficeView() {
 
       {/* Fila de tarjetas a media altura, suspendidas frente a los ventanales. */}
       <div className="flex flex-1 items-center" inert={selected !== null}>
+        <h2 className="sr-only">Departamentos</h2>
         <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <AnimatePresence>
             {visible.map((summary, i) => (

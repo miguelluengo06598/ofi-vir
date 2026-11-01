@@ -7,7 +7,7 @@ type Props = InputHTMLAttributes<HTMLInputElement> & { icon?: LucideIcon };
 export function GlassInput({ icon: Icon, className = "", ...rest }: Props) {
   return (
     <label
-      className={`glass flex items-center gap-2 rounded-pill px-4 py-2 text-small text-white focus-within:bg-glass-strong focus-within:outline-2 focus-within:outline-accent ${className}`}
+      className={`glass flex items-center gap-2 rounded-pill px-4 py-2 text-small text-white focus-within:[--glass-fill:var(--glass-bg-strong)] focus-within:outline-2 focus-within:outline-white ${className}`}
     >
       {Icon && <Icon size={16} aria-hidden="true" className="shrink-0 text-ink-2" />}
       <input

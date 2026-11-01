@@ -107,6 +107,7 @@ export function MarketplaceView() {
 
       <div inert={selected !== null || hireFor !== null}>
         {visible.length === 0 && <p className="text-body text-ink-2">No hay agentes que coincidan con tu búsqueda.</p>}
+        <h2 className="sr-only">Agentes certificados</h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <AnimatePresence>
             {visible.map((a, i) => (
@@ -129,6 +130,7 @@ export function MarketplaceView() {
             key={sheetAgent.id}
             agent={sheetAgent}
             hired={isHired(sheetAgent.id)}
+            trap={!hireFor}
             onHire={() => openHire(sheetAgent.id)}
             onClose={closeSheet}
           />

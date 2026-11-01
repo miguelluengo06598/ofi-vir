@@ -116,11 +116,11 @@ export function MessagesView() {
         </PillButton>
       </div>
 
-      <div className="grid h-[calc(100dvh-22rem)] min-h-[28rem] gap-4 lg:h-[calc(100dvh-15rem)] lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr_300px]">
+      <div className="grid h-[calc(100dvh-22rem)] min-h-[28rem] grid-cols-1 gap-4 lg:h-[calc(100dvh-15rem)] lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_300px]">
         <GlassPanel
           as="section"
           aria-label="Conversaciones"
-          className={`min-h-0 flex-col ${mobileChat ? "hidden" : "flex"} lg:flex`}
+          className={`enter min-h-0 flex-col ${mobileChat ? "hidden" : "flex"} lg:flex`}
         >
           <ConversationList
             agents={officeAgents}
@@ -139,7 +139,7 @@ export function MessagesView() {
         <GlassPanel
           as="section"
           aria-label="Conversación"
-          className={`min-h-0 flex-col ${mobileChat ? "flex" : "hidden"} lg:flex`}
+          className={`enter min-h-0 flex-col ${mobileChat ? "flex" : "hidden"} lg:flex`}
         >
           <ChatPanel
             agent={agent}
@@ -152,7 +152,7 @@ export function MessagesView() {
           />
         </GlassPanel>
 
-        <GlassPanel as="aside" aria-label="Ficha del agente" className="hidden min-h-0 flex-col xl:flex">
+        <GlassPanel as="aside" aria-label="Ficha del agente" className="enter hidden min-h-0 flex-col xl:flex">
           <AgentProfile agent={agent} />
         </GlassPanel>
       </div>

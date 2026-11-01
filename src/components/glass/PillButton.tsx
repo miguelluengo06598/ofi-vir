@@ -8,6 +8,8 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   solid?: boolean;
   /** Fuerza el aspecto de hover (para revisión visual). */
   hovered?: boolean;
+  /** Menos relleno horizontal en pantallas estrechas. */
+  compact?: boolean;
 };
 
 export function PillButton({
@@ -15,6 +17,7 @@ export function PillButton({
   active,
   solid,
   hovered,
+  compact,
   className = "",
   children,
   type = "button",
@@ -24,10 +27,10 @@ export function PillButton({
     <button
       type={type}
       aria-pressed={active}
-      className={`glass glass-interactive inline-flex cursor-pointer items-center gap-2 rounded-pill text-small ${children ? "px-4 py-2" : "size-10 shrink-0 justify-center"} text-white disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`glass glass-interactive inline-flex cursor-pointer items-center gap-2 rounded-pill text-small ${children ? (compact ? "px-3 py-2 sm:px-4" : "px-4 py-2") : "size-10 shrink-0 justify-center"} text-white disabled:cursor-not-allowed disabled:opacity-50 ${
         active
           ? solid
-            ? "is-active border-white bg-white! text-black!"
+            ? "is-active border-white bg-white! bg-none! text-black!"
             : "is-active border-accent/60 bg-accent/30!"
           : ""
       } ${hovered ? "is-hover" : ""} ${className}`}

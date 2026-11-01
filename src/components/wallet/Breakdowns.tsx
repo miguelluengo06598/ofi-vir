@@ -17,7 +17,7 @@ export function Breakdowns() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <GlassPanel as="section" aria-labelledby="by-agent" className="flex flex-col gap-4 p-6">
+      <GlassPanel as="section" aria-labelledby="by-agent" className="enter flex flex-col gap-4 p-6">
         <h2 id="by-agent" className="text-h2">
           Consumo por agente
         </h2>
@@ -33,7 +33,7 @@ export function Breakdowns() {
         </ul>
       </GlassPanel>
 
-      <GlassPanel as="section" aria-labelledby="by-dept" className="flex flex-col gap-4 p-6">
+      <GlassPanel as="section" aria-labelledby="by-dept" className="enter flex flex-col gap-4 p-6">
         <h2 id="by-dept" className="text-h2">
           Consumo por departamento
         </h2>

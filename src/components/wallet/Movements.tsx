@@ -5,7 +5,7 @@ import { movements } from "@/data/wallet";
 
 export function Movements() {
   return (
-    <GlassPanel as="section" aria-labelledby="movements-title" className="flex flex-col gap-4 p-6">
+    <GlassPanel as="section" aria-labelledby="movements-title" className="enter flex flex-col gap-4 p-6">
       <h2 id="movements-title" className="text-h2">
         Movimientos
       </h2>

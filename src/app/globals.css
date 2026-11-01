@@ -11,6 +11,8 @@
   --glass-border-color: rgba(255, 255, 255, 0.18);
   --glass-blur: blur(28px) saturate(140%);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  /* Velo oscuro bajo el cristal: mantiene el contraste del texto sobre las zonas claras de la escena. */
+  --glass-tint: rgba(0, 0, 0, 0.14);
 }
 
 @theme inline {
@@ -26,28 +28,48 @@ body {
   font-size: 15px;
 }
 
-/* Superficie de cristal: única definición, usada solo por los componentes base. */
-.glass {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border-color);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  box-shadow: var(--glass-shadow);
-  /* Mantiene legible el texto cuando la escena de detrás es clara. */
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
-  transition: background-color 200ms ease-out;
+@layer base {
+  /* Foco visible sobre cristal, fondos oscuros y botones azules. */
+  :focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+
+  /* Títulos y subtítulos que van directamente sobre la escena. */
+  h1,
+  h1 + p {
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6);
+  }
 }
 
-/* Hover / activo: más brillo. `.is-hover` permite forzarlo en la página de revisión. */
-.glass-interactive:hover,
-.glass.is-hover,
-.glass.is-active {
-  background: var(--glass-bg-strong);
-}
+/* En la capa `components` para que las utilidades de Tailwind (bordes, fondos…) puedan sobrescribirlas. */
+@layer components {
+  /* Superficie de cristal: única definición, usada solo por los componentes base. */
+  .glass {
+    --glass-fill: var(--glass-bg);
+    background: linear-gradient(var(--glass-tint), var(--glass-tint)), var(--glass-fill);
+    border: 1px solid var(--glass-border-color);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: var(--glass-shadow);
+    /* Mantiene legible el texto cuando la escena de detrás es clara. */
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+    transition: background-color 200ms ease-out;
+  }
 
-:focus-visible {
-  outline: 2px solid #4f8cff;
-  outline-offset: 2px;
+  /* Hover / activo: más brillo. `.is-hover` permite forzarlo en la página de revisión. */
+  .glass-interactive:hover,
+  .glass.is-hover,
+  .glass.is-active {
+    --glass-fill: var(--glass-bg-strong);
+  }
+
+  /* Cristal dentro de cristal: solo la capa exterior desenfoca (máx. 2 capas visibles y mucho menos coste). */
+  .glass .glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-image: none;
+  }
 }
 
 /* Entrada: fade + 12px + blur que se aclara (300 ms). Se hace con CSS y sin fill-mode «forwards»
@@ -60,13 +82,35 @@ body {
   }
 }
 
+/* Para contenedores que envuelven cristal: solo desplazamiento, sin filter ni opacity (romperían el desenfoque). */
+@keyframes enter-slide {
+  from {
+    transform: translateY(12px);
+  }
+}
+
 .enter {
   animation: enter 300ms ease-out backwards;
   animation-delay: var(--enter-delay, 0s);
 }
 
+.enter-slide {
+  animation: enter-slide 300ms ease-out backwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .enter {
+  .enter,
+  .enter-slide {
     animation: none;
+  }
+}
+
+/* Preferencia del sistema: sin transparencias ni desenfoque, superficies casi opacas. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass-bg: rgba(24, 24, 32, 0.92);
+    --glass-bg-strong: rgba(48, 48, 60, 0.96);
+    --glass-blur: none;
+    --glass-tint: rgba(0, 0, 0, 0);
   }
 }

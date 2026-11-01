@@ -101,7 +101,7 @@ export function ApprovalCard({ approval, agent, delay }: { approval: Approval; a
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={8}
-            className="w-full resize-y rounded-card border border-glass-border bg-black/30 p-3 text-small text-white outline-none focus-visible:outline-2 focus-visible:outline-accent"
+            className="w-full resize-y rounded-card border border-glass-border bg-black/30 p-3 text-small text-white outline-none focus-visible:outline-2 focus-visible:outline-white"
           />
         ) : (
           <p className="text-small whitespace-pre-line">{body}</p>

@@ -2,11 +2,20 @@
 
 import { motion } from "framer-motion";
 import { Check, X } from "lucide-react";
+import { useRef } from "react";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import { Avatar, MotionGlassPanel, PillButton, departmentMeta } from "@/components/glass";
 import type { MarketAgent } from "@/data/marketplace";
 import { CreatorBadge, Rating, Stats, agentTone } from "./parts";
 
-type Props = { agent: MarketAgent; hired: boolean; onHire: () => void; onClose: () => void };
+type Props = {
+  agent: MarketAgent;
+  hired: boolean;
+  /** Desactívalo mientras otro diálogo (contratar) está encima. */
+  trap: boolean;
+  onHire: () => void;
+  onClose: () => void;
+};
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
@@ -32,8 +41,10 @@ function List({ items, icon: Icon, tone }: { items: string[]; icon: typeof Check
   );
 }
 
-export function AgentSheet({ agent, hired, onHire, onClose }: Props) {
+export function AgentSheet({ agent, hired, trap, onHire, onClose }: Props) {
   const tone = agentTone(agent);
+  const dialog = useRef<HTMLElement>(null);
+  useFocusTrap(dialog, trap);
   return (
     <>
       <motion.div
@@ -46,6 +57,7 @@ export function AgentSheet({ agent, hired, onHire, onClose }: Props) {
       />
       <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4 md:pl-24">
         <MotionGlassPanel
+          ref={dialog}
           layoutId={`market-${agent.id}`}
           role="dialog"
           aria-modal="true"

@@ -1,6 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { useRef } from "react";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import { Check, X } from "lucide-react";
 import {
   Avatar,
@@ -28,6 +30,8 @@ export function DepartmentPanel({ summary, decisions, onDecide, onClose }: Props
   const meta = departmentMeta[id];
   const info = departmentInfo[id];
   const Icon = meta.icon;
+  const dialog = useRef<HTMLElement>(null);
+  useFocusTrap(dialog);
 
   // Decisiones tomadas aquí (las más recientes primero) delante de la actividad simulada.
   const decided = decisions
@@ -53,6 +57,7 @@ export function DepartmentPanel({ summary, decisions, onDecide, onClose }: Props
       />
       <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4 md:pl-24">
         <MotionGlassPanel
+          ref={dialog}
           layoutId={`dept-${id}`}
           role="dialog"
           aria-modal="true"

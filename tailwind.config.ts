@@ -10,8 +10,8 @@ const config: Config = {
         "glass-strong": "var(--glass-bg-strong)",
         "glass-border": "var(--glass-border-color)",
         accent: "#4F8CFF",
-        "ink-2": "rgba(255,255,255,0.65)",
-        "ink-3": "rgba(255,255,255,0.45)",
+        "ink-2": "rgba(255,255,255,0.78)",
+        "ink-3": "rgba(255,255,255,0.62)",
         status: {
           working: "#34D399",
           waiting: "#FBBF24",

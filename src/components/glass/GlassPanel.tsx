@@ -1,7 +1,8 @@
-import type { ElementType, HTMLAttributes } from "react";
+import type { ElementType, HTMLAttributes, Ref } from "react";
 
 type Props = HTMLAttributes<HTMLElement> & {
   as?: ElementType;
+  ref?: Ref<HTMLElement>;
   /** Fuerza el aspecto de hover/activo. */
   strong?: boolean;
 };

@@ -17,7 +17,7 @@ export function ConsumptionChart() {
   const avg = Math.round(total / data.length);
 
   return (
-    <GlassPanel as="section" aria-labelledby="chart-title" className="flex flex-col gap-4 p-6">
+    <GlassPanel as="section" aria-labelledby="chart-title" className="enter flex flex-col gap-4 p-6">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 id="chart-title" className="text-h2">

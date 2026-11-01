@@ -27,7 +27,7 @@ export function BalancePanel() {
   }
 
   return (
-    <GlassPanel as="section" aria-labelledby="balance-title" className="flex flex-col gap-6 p-6">
+    <GlassPanel as="section" aria-labelledby="balance-title" className="enter flex flex-col gap-6 p-6">
       <div>
         <h2 id="balance-title" className="flex items-center gap-2 text-small text-ink-2">
           <Coins size={16} aria-hidden="true" />
