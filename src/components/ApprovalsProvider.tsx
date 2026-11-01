@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { approvals } from "@/data/approvals";
+import { hiredAgentId, type HiredAgent } from "@/data/departments";
+import type { DepartmentId } from "@/components/glass";
 
 export type Decision = { approvalId: string; decision: "approved" | "rejected" };
 
@@ -12,6 +14,12 @@ type ApprovalsContextValue = {
   /** Textos editados por el usuario, por id de aprobación. */
   edits: Record<string, string>;
   pendingCount: number;
+  /** Agentes del marketplace contratados. */
+  hired: HiredAgent[];
+  /** Id del agente recién contratado cuya llegada a la oficina aún se está animando. */
+  arrival: string | null;
+  hire: (marketId: string, departmentId: DepartmentId) => void;
+  finishArrival: () => void;
   decide: (approvalId: string, decision: Decision["decision"]) => void;
   edit: (approvalId: string, body: string) => void;
 };
@@ -22,6 +30,8 @@ const ApprovalsContext = createContext<ApprovalsContextValue | null>(null);
 export function ApprovalsProvider({ children }: { children: ReactNode }) {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
+  const [hired, setHired] = useState<HiredAgent[]>([]);
+  const [arrival, setArrival] = useState<string | null>(null);
 
   const resolved = useMemo(() => new Set(decisions.map((d) => d.approvalId)), [decisions]);
   const decide = useCallback(
@@ -34,16 +44,26 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const hire = useCallback((marketId: string, departmentId: DepartmentId) => {
+    setHired((h) => (h.some((x) => x.marketId === marketId) ? h : [...h, { marketId, departmentId }]));
+    setArrival(hiredAgentId(marketId));
+  }, []);
+  const finishArrival = useCallback(() => setArrival(null), []);
+
   const value = useMemo(
     () => ({
       decisions,
       resolved,
       edits,
       pendingCount: approvals.filter((a) => !resolved.has(a.id)).length,
+      hired,
+      arrival,
+      hire,
+      finishArrival,
       decide,
       edit,
     }),
-    [decisions, resolved, edits, decide, edit],
+    [decisions, resolved, edits, hired, arrival, hire, finishArrival, decide, edit],
   );
 
   return <ApprovalsContext.Provider value={value}>{children}</ApprovalsContext.Provider>;

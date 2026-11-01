@@ -1,6 +1,27 @@
 import type { AgentStatus, DepartmentId } from "@/components/glass";
 import { agents, type Agent } from "./agents";
 import { approvals, type Approval } from "./approvals";
+import { marketAgents } from "./marketplace";
+
+/** Agente del marketplace contratado y asignado a un departamento. */
+export type HiredAgent = { marketId: string; departmentId: DepartmentId };
+
+export const hiredAgentId = (marketId: string) => `hired-${marketId}`;
+
+function hiredToAgent({ marketId, departmentId }: HiredAgent): Agent {
+  const m = marketAgents.find((a) => a.id === marketId)!;
+  return {
+    id: hiredAgentId(marketId),
+    name: m.name,
+    role: m.role,
+    departmentId,
+    status: "working",
+    task: "configurando sus herramientas en tu oficina",
+    tools: m.tools,
+    creator: m.creator,
+    creditsToday: 0,
+  };
+}
 
 /** Orden de las tarjetas en la oficina. */
 export const departmentOrder: DepartmentId[] = [
@@ -66,9 +87,9 @@ export type DepartmentSummary = {
 const sum = <T,>(list: T[], pick: (item: T) => number) => list.reduce((n, item) => n + pick(item), 0);
 
 /** Estado de la oficina dadas las aprobaciones ya resueltas: un agente en espera vuelve a trabajar al quedarse sin pendientes. */
-export function buildOffice(resolved: ReadonlySet<string>) {
+export function buildOffice(resolved: ReadonlySet<string>, hired: HiredAgent[] = []) {
   const pending = approvals.filter((a) => !resolved.has(a.id));
-  const officeAgents: OfficeAgent[] = agents.map((a) => {
+  const officeAgents: OfficeAgent[] = [...agents, ...hired.map(hiredToAgent)].map((a) => {
     const count = pending.filter((p) => p.agentId === a.id).length;
     const resumed = a.status === "waiting" && count === 0;
     return {

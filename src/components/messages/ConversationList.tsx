@@ -1,11 +1,12 @@
 import { Search } from "lucide-react";
 import { Avatar, GlassInput, PillButton } from "@/components/glass";
-import { agents } from "@/data/agents";
+import type { OfficeAgent } from "@/data/departments";
 import type { Conversation } from "@/data/messages";
 
 export type Tab = "all" | "unread";
 
 type Props = {
+  agents: OfficeAgent[];
   conversations: Conversation[];
   selectedId: string;
   query: string;
@@ -18,6 +19,7 @@ type Props = {
 };
 
 export function ConversationList({
+  agents,
   conversations,
   selectedId,
   query,

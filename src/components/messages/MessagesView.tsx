@@ -30,10 +30,10 @@ function touch(list: Conversation[], agentId: string, update: (c: Conversation) 
 }
 
 export function MessagesView() {
-  const { resolved } = useApprovals();
+  const { resolved, hired } = useApprovals();
   const officeAgents = useMemo(
-    () => buildOffice(resolved).summaries.flatMap((s) => s.agents),
-    [resolved],
+    () => buildOffice(resolved, hired).summaries.flatMap((s) => s.agents),
+    [resolved, hired],
   );
   const firstId = initialConversations[0].agentId;
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
@@ -123,6 +123,7 @@ export function MessagesView() {
           className={`min-h-0 flex-col ${mobileChat ? "hidden" : "flex"} lg:flex`}
         >
           <ConversationList
+            agents={officeAgents}
             conversations={conversations}
             selectedId={selectedId}
             query={query}

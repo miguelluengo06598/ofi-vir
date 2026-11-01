@@ -1,7 +1,7 @@
 import { Coins, FileImage, FileSpreadsheet, FileText } from "lucide-react";
 import { Avatar, StatusBadge, departmentMeta } from "@/components/glass";
 import type { OfficeAgent } from "@/data/departments";
-import { agentProfiles, type AgentFile } from "@/data/messages";
+import { getAgentProfile, type AgentFile } from "@/data/messages";
 
 const fileIcon = { doc: FileText, sheet: FileSpreadsheet, image: FileImage } as const satisfies Record<
   AgentFile["kind"],
@@ -18,7 +18,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function AgentProfile({ agent }: { agent: OfficeAgent }) {
-  const profile = agentProfiles[agent.id];
+  const profile = getAgentProfile(agent.id);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
       <div className="flex flex-col items-center gap-2 text-center">

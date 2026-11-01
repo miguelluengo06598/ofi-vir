@@ -5,7 +5,7 @@ import { ArrowLeft, Send } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Avatar, GlassInput, GlassPanel, PillButton, StatusBadge } from "@/components/glass";
 import type { OfficeAgent } from "@/data/departments";
-import { agentProfiles, type Conversation } from "@/data/messages";
+import { getAgentProfile, type Conversation } from "@/data/messages";
 
 type Props = {
   agent: OfficeAgent;
@@ -95,7 +95,7 @@ export function ChatPanel({ agent, conversation, typing, draft, onDraft, onSend,
 
       <div className="flex flex-col gap-3 border-t border-glass-border p-4">
         <div className="flex flex-wrap gap-2">
-          {agentProfiles[agent.id].suggestions.map((s) => (
+          {getAgentProfile(agent.id).suggestions.map((s) => (
             <PillButton key={s} disabled={typing} onClick={() => onSend(s)}>
               {s}
             </PillButton>

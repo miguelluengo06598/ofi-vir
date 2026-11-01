@@ -1,9 +1,9 @@
 "use client";
 
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { PillButton } from "@/components/glass";
-import { buildOffice, type StatusFilter } from "@/data/departments";
+import { Avatar, PillButton } from "@/components/glass";
+import { buildOffice, type OfficeAgent, type StatusFilter } from "@/data/departments";
 import { currentUser } from "@/data/navigation";
 import type { DepartmentId } from "@/components/glass";
 import { DepartmentCard } from "./DepartmentCard";
@@ -31,14 +31,46 @@ function greeting(hour: number) {
   return "Buenas noches";
 }
 
+/** El agente recién contratado cruza la pantalla hasta su sitio en la tarjeta del departamento. */
+function ArrivalFlight({ agent, onDone }: { agent: OfficeAgent; onDone: () => void }) {
+  const [target, setTarget] = useState<{ x: number; y: number; scale: number } | null>(null);
+
+  useEffect(() => {
+    // Espera a que las tarjetas terminen de entrar antes de medir dónde aterrizar.
+    const timer = setTimeout(() => {
+      const el = document.querySelector(`[data-agent-id="${agent.id}"]`);
+      if (!el) return onDone();
+      const r = el.getBoundingClientRect();
+      setTarget({ x: r.left + r.width / 2 - 32, y: r.top + r.height / 2 - 32, scale: r.width / 64 });
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [agent.id, onDone]);
+
+  return (
+    <motion.div
+      aria-hidden="true"
+      className="pointer-events-none fixed top-0 left-0 z-50 rounded-full shadow-[0_0_48px_rgba(79,140,255,0.8)]"
+      initial={{ x: window.innerWidth / 2 - 32, y: window.innerHeight / 2 - 32, scale: 2.4, opacity: 0 }}
+      animate={target ? { ...target, opacity: 1 } : { opacity: 1 }}
+      transition={{ type: "spring", stiffness: 70, damping: 16, opacity: { duration: 0.3 } }}
+      onAnimationComplete={(definition) => {
+        // Solo termina con el vuelo (que define `x`), no con la aparición inicial.
+        if (typeof definition === "object" && "x" in definition) onDone();
+      }}
+    >
+      <Avatar name={agent.name} tone={agent.departmentId} size={64} />
+    </motion.div>
+  );
+}
+
 export function OfficeView() {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [selected, setSelected] = useState<DepartmentId | null>(null);
-  const { decisions, resolved, decide } = useApprovals();
+  const { decisions, resolved, hired, arrival, finishArrival, decide } = useApprovals();
   const opener = useRef<HTMLElement | null>(null);
   const hour = useSyncExternalStore(subscribeToClock, getHour, getServerHour);
 
-  const { summaries, totals } = useMemo(() => buildOffice(resolved), [resolved]);
+  const { summaries, totals } = useMemo(() => buildOffice(resolved, hired), [resolved, hired]);
 
   function open(id: DepartmentId) {
     opener.current = document.activeElement as HTMLElement | null;
@@ -58,6 +90,7 @@ export function OfficeView() {
     return () => window.removeEventListener("keydown", onKey);
   }, [selected]);
 
+  const arrivingAgent = arrival ? summaries.flatMap((d) => d.agents).find((a) => a.id === arrival) : undefined;
   const selectedSummary = summaries.find((d) => d.id === selected);
   const visible = summaries.filter(
     (d) => filter === "all" || d.agents.some((a) => a.status === filter),
@@ -95,6 +128,8 @@ export function OfficeView() {
           </AnimatePresence>
         </div>
       </div>
+
+      {arrivingAgent && <ArrivalFlight agent={arrivingAgent} onDone={finishArrival} />}
 
       <AnimatePresence>
         {selectedSummary && (

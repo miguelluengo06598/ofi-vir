@@ -1,5 +1,5 @@
-import { ViewPlaceholder } from "@/components/ViewPlaceholder";
+import { MarketplaceView } from "@/components/marketplace/MarketplaceView";
 
 export default function Page() {
-  return <ViewPlaceholder title="Marketplace" description="Aquí explorarás los agentes certificados por los creadores." />;
+  return <MarketplaceView />;
 }

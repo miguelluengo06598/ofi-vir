@@ -12,8 +12,8 @@ import { ApprovalCard } from "./ApprovalCard";
 
 export function ApprovalsView() {
   const router = useRouter();
-  const { resolved, pendingCount } = useApprovals();
-  const agents = useMemo(() => buildOffice(resolved).summaries.flatMap((s) => s.agents), [resolved]);
+  const { resolved, hired, pendingCount } = useApprovals();
+  const agents = useMemo(() => buildOffice(resolved, hired).summaries.flatMap((s) => s.agents), [resolved, hired]);
   const pending = approvals.filter((a) => !resolved.has(a.id));
 
   return (

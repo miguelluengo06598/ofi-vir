@@ -1,4 +1,5 @@
 import type { Agent } from "./agents";
+import { marketAgents } from "./marketplace";
 
 export type Message = {
   id: string;
@@ -166,4 +167,16 @@ export function simulatedReply(agent: Agent, round: number) {
     `Gracias, Marcos. Te confirmo por aquí en cuanto lo tenga listo. — ${first}`,
   ];
   return replies[round % replies.length];
+}
+
+/** Perfil del agente; los recién contratados no tienen archivos y parten del coste medio del marketplace. */
+export function getAgentProfile(agentId: string) {
+  const known = agentProfiles[agentId];
+  if (known) return known;
+  const market = marketAgents.find((a) => `hired-${a.id}` === agentId);
+  return {
+    avgCostPerTask: market?.avgCost ?? 0,
+    files: [] as AgentFile[],
+    suggestions: ["¿En qué puedes ayudarme?", "Cuéntame cómo trabajas"],
+  };
 }

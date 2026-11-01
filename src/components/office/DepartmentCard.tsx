@@ -1,5 +1,6 @@
 import { Coins, ShieldCheck } from "lucide-react";
 import { Avatar, GlassCard, StatusBadge, statusMeta, type AgentStatus } from "@/components/glass";
+import { useApprovals } from "@/components/ApprovalsProvider";
 import type { DepartmentSummary, StatusFilter } from "@/data/departments";
 
 const statusOrder = Object.keys(statusMeta) as AgentStatus[];
@@ -16,6 +17,7 @@ export function DepartmentCard({
   onOpen: () => void;
 }) {
   const { id, agents, pendingApprovals, creditsToday } = summary;
+  const { arrival } = useApprovals();
   const lead = agents[0];
   const counts = statusOrder
     .map((status) => ({ status, count: agents.filter((a) => a.status === status).length }))
@@ -45,8 +47,9 @@ export function DepartmentCard({
         {agents.map((a) => (
           <li
             key={a.id}
+            data-agent-id={a.id}
             title={`${a.name} · ${a.role}`}
-            className={`transition-opacity ${filter !== "all" && a.status !== filter ? "opacity-35" : ""}`}
+            className={`transition-opacity ${a.id === arrival ? "opacity-0" : filter !== "all" && a.status !== filter ? "opacity-35" : ""}`}
           >
             <Avatar name={a.name} tone={id} status={a.status} />
           </li>

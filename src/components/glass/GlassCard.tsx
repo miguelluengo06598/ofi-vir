@@ -7,6 +7,8 @@ import { departmentMeta, type DepartmentId } from "./tokens";
 
 type Props = {
   department: DepartmentId;
+  /** Sustituye al nombre del departamento en la cabecera (p. ej. una categoría del marketplace). */
+  label?: string;
   /** Título opcional bajo la cabecera (la cabecera ya muestra el nombre del departamento). */
   title?: string;
   description?: string;
@@ -31,6 +33,7 @@ type Props = {
 
 export function GlassCard({
   department,
+  label,
   title,
   description,
   tag,
@@ -59,7 +62,7 @@ export function GlassCard({
       {onOpen && (
         <button
           type="button"
-          aria-label={`Abrir ${meta.label}`}
+          aria-label={`Abrir ${label ?? meta.label}`}
           onClick={onOpen}
           className="absolute inset-0 z-10 cursor-pointer rounded-[inherit]"
         />
@@ -67,7 +70,7 @@ export function GlassCard({
       <div className={`flex items-center justify-between gap-2 px-4 py-3 ${meta.header}`}>
         <h3 className="flex items-center gap-2 text-small font-semibold">
           <Icon size={16} aria-hidden="true" />
-          {meta.label}
+          {label ?? meta.label}
         </h3>
         {tag && (
           <span className="rounded-pill bg-black/25 px-2 py-0.5 text-tiny text-white">{tag}</span>
@@ -77,7 +80,7 @@ export function GlassCard({
         {title && <p className="text-h2">{title}</p>}
         {description && <p className="text-small text-ink-2">{description}</p>}
         {children}
-        {actions && <div className="mt-2 flex flex-wrap gap-2">{actions}</div>}
+        {actions && <div className="mt-auto flex flex-wrap gap-2 pt-2">{actions}</div>}
       </div>
       {footer && (
         <div className="border-t border-glass-border px-4 py-3 text-tiny text-ink-2">{footer}</div>
