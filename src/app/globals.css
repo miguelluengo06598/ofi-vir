@@ -1,8 +1,16 @@
 @import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 :root {
   --background: #0a0a0a;
   --foreground: #ffffff;
+
+  /* Cristal */
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-bg-strong: rgba(255, 255, 255, 0.16);
+  --glass-border-color: rgba(255, 255, 255, 0.18);
+  --glass-blur: blur(28px) saturate(140%);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 @theme inline {
@@ -15,4 +23,27 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-poppins), system-ui, sans-serif;
+  font-size: 15px;
+}
+
+/* Superficie de cristal: única definición, usada solo por los componentes base. */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border-color);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
+  transition: background-color 200ms ease-out;
+}
+
+/* Hover / activo: más brillo. `.is-hover` permite forzarlo en la página de revisión. */
+.glass-interactive:hover,
+.glass.is-hover,
+.glass.is-active {
+  background: var(--glass-bg-strong);
+}
+
+:focus-visible {
+  outline: 2px solid #4f8cff;
+  outline-offset: 2px;
 }
