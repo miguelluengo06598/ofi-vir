@@ -4,3 +4,5 @@ export { GlassPanel } from "./GlassPanel";
 export { PillButton } from "./PillButton";
 export { StatusBadge } from "./StatusBadge";
 export * from "./tokens";
+export { Dock } from "./Dock";
+export { TopBar } from "./TopBar";

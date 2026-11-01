@@ -6,6 +6,8 @@ type Props = {
   size?: number;
   /** Punto de estado opcional (el texto lo aporta el aria-label). */
   status?: AgentStatus;
+  /** Sustituye al texto del estado en el aria-label (p. ej. «En línea»). */
+  statusLabel?: string;
   className?: string;
 };
 
@@ -18,8 +20,8 @@ function initials(name: string) {
     .join("");
 }
 
-export function Avatar({ name, tone = "ventas", size = 40, status, className = "" }: Props) {
-  const label = status ? `${name}, ${statusMeta[status].label}` : name;
+export function Avatar({ name, tone = "ventas", size = 40, status, statusLabel, className = "" }: Props) {
+  const label = status ? `${name}, ${statusLabel ?? statusMeta[status].label}` : name;
   return (
     <span
       role="img"
