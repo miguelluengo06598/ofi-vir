@@ -7,3 +7,4 @@ export * from "./tokens";
 export { Dock } from "./Dock";
 export { TopBar } from "./TopBar";
 export { MotionGlassPanel } from "./MotionGlassPanel";
+export { GlassInput } from "./GlassInput";
