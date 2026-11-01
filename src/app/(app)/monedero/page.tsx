@@ -1,5 +1,5 @@
-import { ViewPlaceholder } from "@/components/ViewPlaceholder";
+import { WalletView } from "@/components/wallet/WalletView";
 
 export default function Page() {
-  return <ViewPlaceholder title="Monedero" description="Aquí gestionarás tu saldo y tus recargas." />;
+  return <WalletView />;
 }
