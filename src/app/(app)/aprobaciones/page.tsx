@@ -1,5 +1,5 @@
-import { ViewPlaceholder } from "@/components/ViewPlaceholder";
+import { ApprovalsView } from "@/components/approvals/ApprovalsView";
 
 export default function Page() {
-  return <ViewPlaceholder title="Aprobaciones" description="Aquí revisarás lo que tus agentes esperan que apruebes." />;
+  return <ApprovalsView />;
 }

@@ -11,9 +11,8 @@ import {
   departmentMeta,
 } from "@/components/glass";
 import { activity, approvals as allApprovals } from "@/data/approvals";
+import { type Decision } from "@/components/ApprovalsProvider";
 import { departmentInfo, type DepartmentSummary } from "@/data/departments";
-
-export type Decision = { approvalId: string; decision: "approved" | "rejected" };
 
 type Props = {
   summary: DepartmentSummary;

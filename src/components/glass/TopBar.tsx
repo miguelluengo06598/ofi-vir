@@ -2,16 +2,16 @@
 
 import { Bell, CalendarDays, MessageSquare, Search, SlidersHorizontal } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useApprovals } from "@/components/ApprovalsProvider";
 import { currentUser, isActive, topNav } from "@/data/navigation";
 import { Avatar } from "./Avatar";
 import { GlassPanel } from "./GlassPanel";
 import { PillButton } from "./PillButton";
 
-const unreadNotifications = 3;
-
 export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { pendingCount } = useApprovals();
 
   return (
     <header className="fixed inset-x-4 top-4 z-30">
@@ -48,13 +48,15 @@ export function TopBar() {
         <div className="flex items-center gap-2">
           <PillButton icon={MessageSquare} aria-label="Mensajes" onClick={() => router.push("/mensajes")} />
           <span className="relative">
-            <PillButton icon={Bell} aria-label={`Notificaciones, ${unreadNotifications} sin leer`} />
-            <span
-              aria-hidden="true"
-              className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-red-500 text-tiny font-semibold text-white"
-            >
-              {unreadNotifications}
-            </span>
+            <PillButton icon={Bell} aria-label={pendingCount ? `Notificaciones, ${pendingCount} sin leer` : "Notificaciones"} />
+            {pendingCount > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-red-500 text-tiny font-semibold text-white"
+              >
+                {pendingCount}
+              </span>
+            )}
           </span>
           <PillButton icon={Search} aria-label="Buscar" />
           <button

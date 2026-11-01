@@ -1,7 +1,8 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useApprovals } from "@/components/ApprovalsProvider";
 import { GlassPanel, PillButton } from "@/components/glass";
 import { buildOffice } from "@/data/departments";
 import { initialConversations, simulatedReply, type Conversation, type Message } from "@/data/messages";
@@ -10,9 +11,6 @@ import { ChatPanel } from "./ChatPanel";
 import { ConversationList, type Tab } from "./ConversationList";
 
 const REPLY_DELAY_MS = 1600;
-
-// Los estados de los agentes son los de partida (sin aprobaciones resueltas).
-const officeAgents = buildOffice(new Set()).summaries.flatMap((s) => s.agents);
 
 const nowTime = () => new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 
@@ -32,6 +30,11 @@ function touch(list: Conversation[], agentId: string, update: (c: Conversation) 
 }
 
 export function MessagesView() {
+  const { resolved } = useApprovals();
+  const officeAgents = useMemo(
+    () => buildOffice(resolved).summaries.flatMap((s) => s.agents),
+    [resolved],
+  );
   const firstId = initialConversations[0].agentId;
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
   const [selectedId, setSelectedId] = useState(firstId);

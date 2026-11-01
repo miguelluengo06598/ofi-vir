@@ -7,7 +7,8 @@ import { buildOffice, type StatusFilter } from "@/data/departments";
 import { currentUser } from "@/data/navigation";
 import type { DepartmentId } from "@/components/glass";
 import { DepartmentCard } from "./DepartmentCard";
-import { DepartmentPanel, type Decision } from "./DepartmentPanel";
+import { useApprovals } from "@/components/ApprovalsProvider";
+import { DepartmentPanel } from "./DepartmentPanel";
 
 const filters: { id: StatusFilter; label: string }[] = [
   { id: "all", label: "Todos" },
@@ -33,14 +34,11 @@ function greeting(hour: number) {
 export function OfficeView() {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [selected, setSelected] = useState<DepartmentId | null>(null);
-  const [decisions, setDecisions] = useState<Decision[]>([]);
+  const { decisions, resolved, decide } = useApprovals();
   const opener = useRef<HTMLElement | null>(null);
   const hour = useSyncExternalStore(subscribeToClock, getHour, getServerHour);
 
-  const { summaries, totals } = useMemo(
-    () => buildOffice(new Set(decisions.map((d) => d.approvalId))),
-    [decisions],
-  );
+  const { summaries, totals } = useMemo(() => buildOffice(resolved), [resolved]);
 
   function open(id: DepartmentId) {
     opener.current = document.activeElement as HTMLElement | null;
@@ -104,7 +102,7 @@ export function OfficeView() {
             key={selectedSummary.id}
             summary={selectedSummary}
             decisions={decisions}
-            onDecide={(approvalId, decision) => setDecisions((d) => [...d, { approvalId, decision }])}
+            onDecide={decide}
             onClose={close}
           />
         )}

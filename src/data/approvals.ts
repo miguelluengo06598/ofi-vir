@@ -1,11 +1,21 @@
 import type { DepartmentId } from "@/components/glass";
 
+export type ApprovalPreview = {
+  label: string;
+  fields: { label: string; value: string }[];
+  body: string;
+};
+
 export type Approval = {
   id: string;
   agentId: string;
   departmentId: DepartmentId;
   title: string;
   detail: string;
+  requested: string;
+  /** Coste estimado de ejecutar la acción, en créditos. */
+  costCredits: number;
+  preview: ApprovalPreview;
 };
 
 export const approvals: Approval[] = [
@@ -15,6 +25,16 @@ export const approvals: Approval[] = [
     departmentId: "ventas",
     title: "Enviar propuesta a Clínica Dental Sol",
     detail: "Plan anual de gestión de citas · 4.200 € · válida 15 días",
+    requested: "Hace 35 min",
+    costCredits: 1.8,
+    preview: {
+      label: "Borrador del email",
+      fields: [
+        { label: "Para", value: "Paula Serrano <paula@clinicasol.example>" },
+        { label: "Asunto", value: "Propuesta: gestión de citas con IA para Clínica Dental Sol" },
+      ],
+      body: "Hola, Paula:\n\nGracias por la reunión del martes. Te adjunto la propuesta del plan anual de gestión de citas, con recordatorios automáticos por WhatsApp y confirmación por correo. La inversión es de 4.200 € al año y la propuesta es válida durante 15 días.\n\nQuedo a tu disposición para resolver cualquier duda.\n\nUn saludo,\nIrene Soler · Ventas",
+    },
   },
   {
     id: "apr-anuncio-otono",
@@ -22,6 +42,18 @@ export const approvals: Approval[] = [
     departmentId: "marketing",
     title: "Publicar el anuncio «Otoño en casa» en Meta Ads",
     detail: "Presupuesto de 350 € durante 7 días · público: Madrid y Valencia",
+    requested: "Hace 40 min",
+    costCredits: 4.5,
+    preview: {
+      label: "Vista previa del anuncio",
+      fields: [
+        { label: "Plataforma", value: "Meta Ads (Facebook e Instagram)" },
+        { label: "Titular", value: "Otoño en casa: renueva tu salón" },
+        { label: "Público", value: "Madrid y Valencia · 28–55 años" },
+        { label: "Presupuesto", value: "350 € en 7 días" },
+      ],
+      body: "Descubre la colección de otoño con envío gratis en pedidos de más de 60 €. Mantas, cojines y luz cálida para estrenar la estación.",
+    },
   },
   {
     id: "apr-presupuesto-google",
@@ -29,6 +61,17 @@ export const approvals: Approval[] = [
     departmentId: "marketing",
     title: "Ampliar un 20 % el presupuesto de Google Ads",
     detail: "De 1.500 € a 1.800 € al mes · la campaña supera su objetivo de clics",
+    requested: "Hace 1 h",
+    costCredits: 0.6,
+    preview: {
+      label: "Cambio propuesto",
+      fields: [
+        { label: "Campaña", value: "Búsqueda · Otoño" },
+        { label: "Presupuesto mensual", value: "1.500 € → 1.800 € (+20 %)" },
+        { label: "Motivo", value: "Supera su objetivo de clics en un 18 %" },
+      ],
+      body: "Si apruebas, el nuevo presupuesto se aplica desde mañana y se revisa el viernes con los resultados de la semana.",
+    },
   },
 ];
 
