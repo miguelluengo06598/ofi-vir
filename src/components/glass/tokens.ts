@@ -46,10 +46,3 @@ export const departmentMeta: Record<
     avatar: "bg-linear-to-br from-dept-direccion to-dept-direccion/50",
   },
 };
-
-/** Entrada común: fade + 12px + blur que se aclara (300 ms, ease-out). */
-export const enterMotion = {
-  initial: { opacity: 0, y: 12, filter: "blur(8px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-  transition: { duration: 0.3, ease: "easeOut" as const },
-};

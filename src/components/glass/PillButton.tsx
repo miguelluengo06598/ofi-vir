@@ -24,7 +24,7 @@ export function PillButton({
     <button
       type={type}
       aria-pressed={active}
-      className={`glass glass-interactive inline-flex cursor-pointer items-center gap-2 rounded-pill px-4 py-2 text-small text-white disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`glass glass-interactive inline-flex cursor-pointer items-center gap-2 rounded-pill text-small ${children ? "px-4 py-2" : "size-10 shrink-0 justify-center"} text-white disabled:cursor-not-allowed disabled:opacity-50 ${
         active
           ? solid
             ? "is-active border-white bg-white! text-black!"
@@ -33,7 +33,7 @@ export function PillButton({
       } ${hovered ? "is-hover" : ""} ${className}`}
       {...rest}
     >
-      {Icon && <Icon size={16} aria-hidden="true" />}
+      {Icon && <Icon size={16} aria-hidden="true" className="shrink-0" />}
       {children}
     </button>
   );

@@ -6,3 +6,4 @@ export { StatusBadge } from "./StatusBadge";
 export * from "./tokens";
 export { Dock } from "./Dock";
 export { TopBar } from "./TopBar";
+export { MotionGlassPanel } from "./MotionGlassPanel";

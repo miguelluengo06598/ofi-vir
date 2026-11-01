@@ -49,3 +49,24 @@ body {
   outline: 2px solid #4f8cff;
   outline-offset: 2px;
 }
+
+/* Entrada: fade + 12px + blur que se aclara (300 ms). Se hace con CSS y sin fill-mode «forwards»
+   para no dejar un `filter` en el elemento: rompería el backdrop-filter del cristal. */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(8px);
+  }
+}
+
+.enter {
+  animation: enter 300ms ease-out backwards;
+  animation-delay: var(--enter-delay, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter {
+    animation: none;
+  }
+}

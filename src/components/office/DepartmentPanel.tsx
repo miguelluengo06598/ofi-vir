@@ -1,0 +1,192 @@
+"use client";
+
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, X } from "lucide-react";
+import {
+  Avatar,
+  GlassPanel,
+  MotionGlassPanel,
+  PillButton,
+  StatusBadge,
+  departmentMeta,
+} from "@/components/glass";
+import { activity, approvals as allApprovals } from "@/data/approvals";
+import { departmentInfo, type DepartmentSummary } from "@/data/departments";
+
+export type Decision = { approvalId: string; decision: "approved" | "rejected" };
+
+type Props = {
+  summary: DepartmentSummary;
+  decisions: Decision[];
+  onDecide: (approvalId: string, decision: Decision["decision"]) => void;
+  onClose: () => void;
+};
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+export function DepartmentPanel({ summary, decisions, onDecide, onClose }: Props) {
+  const { id, agents, pending } = summary;
+  const meta = departmentMeta[id];
+  const info = departmentInfo[id];
+  const Icon = meta.icon;
+
+  // Decisiones tomadas aquí (las más recientes primero) delante de la actividad simulada.
+  const decided = decisions
+    .map((d) => ({ ...d, approval: allApprovals.find((a) => a.id === d.approvalId)! }))
+    .filter((d) => d.approval.departmentId === id)
+    .reverse()
+    .map((d) => ({
+      id: d.approvalId,
+      time: "Ahora",
+      text: `${d.decision === "approved" ? "Aprobaste" : "Rechazaste"}: ${d.approval.title}.`,
+    }));
+  const recent = [...decided, ...activity.filter((a) => a.departmentId === id)];
+
+  return (
+    <>
+      <motion.div
+        aria-hidden="true"
+        className="fixed inset-0 z-40 bg-black/40"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      />
+      <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4 md:pl-24">
+        <MotionGlassPanel
+          layoutId={`dept-${id}`}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dept-panel-title"
+          style={{ borderRadius: 28 }}
+          className="pointer-events-auto flex max-h-full w-full max-w-4xl flex-col overflow-hidden"
+        >
+          <motion.div
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { delay: 0.15, duration: 0.2 } }}
+            exit={{ opacity: 0, transition: { duration: 0.1 } }}
+          >
+            <header className={`flex flex-col gap-4 p-6 ${meta.header}`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                  <h2 id="dept-panel-title" className="flex items-center gap-3 text-h1">
+                    <Icon size={26} aria-hidden="true" />
+                    {meta.label}
+                  </h2>
+                  <p className="max-w-xl text-body text-ink-2">{info.description}</p>
+                </div>
+                <PillButton
+                  icon={X}
+                  aria-label="Cerrar"
+                  autoFocus
+                  onClick={onClose}
+                />
+              </div>
+              <dl className="flex flex-wrap gap-x-10 gap-y-3">
+                {info.metrics.map((m) => (
+                  <div key={m.label}>
+                    <dd className="text-h1">{m.value}</dd>
+                    <dt className="text-small text-ink-2">{m.label}</dt>
+                  </div>
+                ))}
+              </dl>
+            </header>
+
+            <div className="flex flex-col gap-8 p-6">
+              <section aria-labelledby="dept-agents" className="flex flex-col gap-3">
+                <h3 id="dept-agents" className="text-h2">
+                  Agentes
+                </h3>
+                <ul className="flex flex-col gap-3">
+                  {agents.map((a) => (
+                    <GlassPanel
+                      as="li"
+                      key={a.id}
+                      className="flex flex-col gap-2 rounded-card! p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar name={a.name} tone={id} status={a.status} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-body font-semibold">{a.name}</p>
+                          <p className="text-small text-ink-2">{a.role}</p>
+                        </div>
+                        <StatusBadge status={a.status} />
+                      </div>
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-small sm:pl-13">
+                        <p>{capitalize(a.currentTask)}</p>
+                        <p className="text-tiny text-ink-3">Creador: {a.creator}</p>
+                      </div>
+                    </GlassPanel>
+                  ))}
+                </ul>
+              </section>
+
+              <section aria-labelledby="dept-approvals" className="flex flex-col gap-3">
+                <h3 id="dept-approvals" className="text-h2">
+                  Pendiente de tu aprobación
+                </h3>
+                {pending.length === 0 && (
+                  <p className="text-small text-ink-2">No tienes nada pendiente en este departamento.</p>
+                )}
+                <ul className="flex flex-col">
+                  <AnimatePresence initial={false}>
+                    {pending.map((p) => {
+                      const agent = agents.find((a) => a.id === p.agentId);
+                      return (
+                        <motion.li
+                          key={p.id}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-glass-border py-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-body font-semibold">{p.title}</p>
+                              <p className="text-small text-ink-2">{p.detail}</p>
+                              {agent && <p className="text-tiny text-ink-3">Solicitado por {agent.name}</p>}
+                            </div>
+                            <div className="flex gap-2">
+                              <PillButton
+                                icon={Check}
+                                active
+                                aria-pressed={undefined}
+                                onClick={() => onDecide(p.id, "approved")}
+                              >
+                                Aprobar
+                              </PillButton>
+                              <PillButton icon={X} onClick={() => onDecide(p.id, "rejected")}>
+                                Rechazar
+                              </PillButton>
+                            </div>
+                          </div>
+                        </motion.li>
+                      );
+                    })}
+                  </AnimatePresence>
+                </ul>
+              </section>
+
+              <section aria-labelledby="dept-activity" className="flex flex-col gap-3">
+                <h3 id="dept-activity" className="text-h2">
+                  Actividad reciente
+                </h3>
+                <ul className="flex flex-col">
+                  {recent.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex flex-wrap gap-x-4 border-b border-glass-border py-2 text-small last:border-b-0"
+                    >
+                      <span className="w-24 shrink-0 text-ink-3">{item.time}</span>
+                      <span className="min-w-0 flex-1">{item.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          </motion.div>
+        </MotionGlassPanel>
+      </div>
+    </>
+  );
+}

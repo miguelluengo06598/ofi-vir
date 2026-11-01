@@ -28,7 +28,6 @@ export function Dock() {
                 aria-pressed={undefined}
                 aria-current={active ? "page" : undefined}
                 onClick={() => router.push(href)}
-                className="size-11 justify-center p-0"
               />
               <span
                 aria-hidden="true"

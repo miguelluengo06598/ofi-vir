@@ -1,11 +1,13 @@
 "use client";
 
 import { AnimatePresence } from "framer-motion";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { PillButton } from "@/components/glass";
-import { departmentSummaries, officeTotals, type StatusFilter } from "@/data/departments";
+import { buildOffice, type StatusFilter } from "@/data/departments";
 import { currentUser } from "@/data/navigation";
+import type { DepartmentId } from "@/components/glass";
 import { DepartmentCard } from "./DepartmentCard";
+import { DepartmentPanel, type Decision } from "./DepartmentPanel";
 
 const filters: { id: StatusFilter; label: string }[] = [
   { id: "all", label: "Todos" },
@@ -30,12 +32,39 @@ function greeting(hour: number) {
 
 export function OfficeView() {
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const [selected, setSelected] = useState<DepartmentId | null>(null);
+  const [decisions, setDecisions] = useState<Decision[]>([]);
+  const opener = useRef<HTMLElement | null>(null);
   const hour = useSyncExternalStore(subscribeToClock, getHour, getServerHour);
 
-  const visible = departmentSummaries.filter(
+  const { summaries, totals } = useMemo(
+    () => buildOffice(new Set(decisions.map((d) => d.approvalId))),
+    [decisions],
+  );
+
+  function open(id: DepartmentId) {
+    opener.current = document.activeElement as HTMLElement | null;
+    setSelected(id);
+  }
+
+  function close() {
+    setSelected(null);
+    // Devuelve el foco a la tarjeta una vez desbloqueada.
+    requestAnimationFrame(() => opener.current?.focus());
+  }
+
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected]);
+
+  const selectedSummary = summaries.find((d) => d.id === selected);
+  const visible = summaries.filter(
     (d) => filter === "all" || d.agents.some((a) => a.status === filter),
   );
-  const { working, agents, pendingApprovals } = officeTotals;
+  const { working, agents, pendingApprovals } = totals;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -59,15 +88,27 @@ export function OfficeView() {
       </div>
 
       {/* Fila de tarjetas a media altura, suspendidas frente a los ventanales. */}
-      <div className="flex flex-1 items-center">
+      <div className="flex flex-1 items-center" inert={selected !== null}>
         <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <AnimatePresence>
             {visible.map((summary, i) => (
-              <DepartmentCard key={summary.id} summary={summary} filter={filter} delay={0.1 + i * 0.08} />
+              <DepartmentCard key={summary.id} summary={summary} filter={filter} delay={0.1 + i * 0.08} onOpen={() => open(summary.id)} />
             ))}
           </AnimatePresence>
         </div>
       </div>
+
+      <AnimatePresence>
+        {selectedSummary && (
+          <DepartmentPanel
+            key={selectedSummary.id}
+            summary={selectedSummary}
+            decisions={decisions}
+            onDecide={(approvalId, decision) => setDecisions((d) => [...d, { approvalId, decision }])}
+            onClose={close}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

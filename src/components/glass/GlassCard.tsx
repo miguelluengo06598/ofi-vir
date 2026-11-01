@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { departmentMeta, enterMotion, type DepartmentId } from "./tokens";
+import { departmentMeta, type DepartmentId } from "./tokens";
 
 type Props = {
   department: DepartmentId;
@@ -20,6 +20,8 @@ type Props = {
   footer?: ReactNode;
   /** Para abrir la tarjeta como panel con layoutId. */
   layoutId?: string;
+  /** Hace la tarjeta pulsable (botón real superpuesto). */
+  onOpen?: () => void;
   /** Retraso de la animación de entrada (s), para escalonar tarjetas. */
   delay?: number;
   /** Fuerza el aspecto de hover (para revisión visual). */
@@ -37,6 +39,7 @@ export function GlassCard({
   actions,
   footer,
   layoutId,
+  onOpen,
   delay = 0,
   hovered,
   className = "",
@@ -46,14 +49,21 @@ export function GlassCard({
   return (
     <motion.article
       layout
+      style={{ borderRadius: 20, "--enter-delay": `${delay}s` } as React.CSSProperties}
       layoutId={layoutId}
-      initial={enterMotion.initial}
-      animate={{ ...enterMotion.animate, y: hovered ? -4 : 0 }}
+      animate={{ y: hovered ? -4 : 0 }}
       exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.2 } }}
       whileHover={{ y: -4, transition: { duration: 0.2, delay: 0 } }}
-      transition={{ ...enterMotion.transition, delay }}
-      className={`glass glass-interactive flex flex-col overflow-hidden rounded-card text-white ${hovered ? "is-hover" : ""} ${className}`}
+      className={`enter glass glass-interactive relative flex flex-col overflow-hidden text-white ${hovered ? "is-hover" : ""} ${className}`}
     >
+      {onOpen && (
+        <button
+          type="button"
+          aria-label={`Abrir ${meta.label}`}
+          onClick={onOpen}
+          className="absolute inset-0 z-10 cursor-pointer rounded-[inherit]"
+        />
+      )}
       <div className={`flex items-center justify-between gap-2 px-4 py-3 ${meta.header}`}>
         <h3 className="flex items-center gap-2 text-small font-semibold">
           <Icon size={16} aria-hidden="true" />

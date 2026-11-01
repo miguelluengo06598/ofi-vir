@@ -8,10 +8,12 @@ export function DepartmentCard({
   summary,
   filter,
   delay,
+  onOpen,
 }: {
   summary: DepartmentSummary;
   filter: StatusFilter;
   delay: number;
+  onOpen: () => void;
 }) {
   const { id, agents, pendingApprovals, creditsToday } = summary;
   const lead = agents[0];
@@ -23,7 +25,9 @@ export function DepartmentCard({
     <GlassCard
       department={id}
       delay={delay}
-      description={`${lead.name.split(" ")[0]} está ${lead.task}`}
+      layoutId={`dept-${id}`}
+      onOpen={onOpen}
+      description={`${lead.name.split(" ")[0]} está ${lead.currentTask}`}
       footer={
         <div className="flex items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1.5">
