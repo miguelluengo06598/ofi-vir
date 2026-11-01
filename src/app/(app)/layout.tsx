@@ -13,7 +13,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Dock />
 
       {/* Márgenes para no quedar bajo la TopBar (2 filas en móvil) ni el Dock. */}
-      <main className="flex-1 px-4 pt-36 pb-28 md:pr-6 md:pb-8 md:pl-24 lg:pt-28">{children}</main>
+      <main className="flex flex-1 flex-col px-4 pt-36 pb-28 md:pr-6 md:pb-8 md:pl-24 lg:pt-28">{children}</main>
     </>
   );
 }

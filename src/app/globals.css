@@ -33,6 +33,8 @@ body {
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
   box-shadow: var(--glass-shadow);
+  /* Mantiene legible el texto cuando la escena de detrás es clara. */
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
   transition: background-color 200ms ease-out;
 }
 

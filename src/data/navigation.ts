@@ -32,7 +32,7 @@ export const dockNav: NavItem[] = [
   { href: "/favoritos", label: "Favoritos", icon: Star },
 ];
 
-export const currentUser = { name: "Laura Vega" };
+export const currentUser = { name: "Marcos Gil" };
 
 /** Coincidencia de ruta activa: «/» solo exacta; el resto por prefijo. */
 export function isActive(pathname: string, href: string) {

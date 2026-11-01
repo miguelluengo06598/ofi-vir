@@ -7,6 +7,7 @@ import { enterMotion } from "@/components/glass";
 export default function Template({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
+      className="flex flex-1 flex-col"
       initial={enterMotion.initial}
       animate={enterMotion.animate}
       transition={enterMotion.transition}
