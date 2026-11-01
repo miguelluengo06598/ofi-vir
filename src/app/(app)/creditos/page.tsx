@@ -1,5 +1,5 @@
-import { ViewPlaceholder } from "@/components/ViewPlaceholder";
+import { WalletView } from "@/components/wallet/WalletView";
 
 export default function Page() {
-  return <ViewPlaceholder title="Créditos" description="Aquí consultarás el consumo de créditos de tu empresa." />;
+  return <WalletView />;
 }

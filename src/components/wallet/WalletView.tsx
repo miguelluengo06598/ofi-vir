@@ -8,7 +8,7 @@ export function WalletView() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-h1">Monedero</h1>
+        <h1 className="text-h1">Créditos</h1>
         <p className="text-body text-ink-2">Tus créditos, tu consumo y tus movimientos</p>
       </div>
 

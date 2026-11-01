@@ -1,5 +1,5 @@
-import { ViewPlaceholder } from "@/components/ViewPlaceholder";
+import { TasksView } from "@/components/tasks/TasksView";
 
 export default function Page() {
-  return <ViewPlaceholder title="Tareas" description="Aquí seguirás las tareas que están realizando tus agentes." />;
+  return <TasksView />;
 }

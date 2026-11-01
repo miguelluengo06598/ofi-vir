@@ -15,7 +15,7 @@ type ApprovalsContextValue = {
   /** Textos editados por el usuario, por id de aprobación. */
   edits: Record<string, string>;
   pendingCount: number;
-  /** Saldo del monedero, en créditos. */
+  /** Saldo de créditos, en créditos. */
   balance: number;
   /** Límite de gasto mensual, en euros. */
   limitEur: number;

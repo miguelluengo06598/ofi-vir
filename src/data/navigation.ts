@@ -28,7 +28,7 @@ export const dockNav: NavItem[] = [
   { href: "/tareas", label: "Tareas", icon: ListChecks },
   { href: "/aprobaciones", label: "Aprobaciones", icon: CheckCircle2 },
   { href: "/marketplace", label: "Marketplace", icon: Store },
-  { href: "/monedero", label: "Monedero", icon: Wallet },
+  { href: "/creditos", label: "Créditos", icon: Wallet },
   { href: "/favoritos", label: "Favoritos", icon: Star },
 ];
 

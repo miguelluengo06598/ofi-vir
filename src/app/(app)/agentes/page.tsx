@@ -1,5 +1,5 @@
-import { ViewPlaceholder } from "@/components/ViewPlaceholder";
+import { AgentsView } from "@/components/agents/AgentsView";
 
 export default function Page() {
-  return <ViewPlaceholder title="Agentes" description="Aquí verás los agentes contratados y su estado." />;
+  return <AgentsView />;
 }
