@@ -13,6 +13,10 @@ import {
   departmentMeta,
 } from "@/components/glass";
 import { activity, approvals as allApprovals } from "@/data/approvals";
+import { useSimulation } from "@/components/SimulationProvider";
+import { ResolvedStatusText } from "@/components/handoffs/parts";
+import { agentById, firstName } from "@/data/agents";
+import { allHandoffs, kindLabel } from "@/data/handoffs";
 import { type Decision } from "@/components/ApprovalsProvider";
 import { departmentInfo, type DepartmentSummary } from "@/data/departments";
 
@@ -32,6 +36,10 @@ export function DepartmentPanel({ summary, decisions, onDecide, onClose }: Props
   const Icon = meta.icon;
   const dialog = useRef<HTMLElement>(null);
   useFocusTrap(dialog);
+  const { seen, openChain } = useSimulation();
+  const emitted = allHandoffs.filter((h) => seen.has(h.id));
+  const received = emitted.filter((h) => h.toDepartmentId === id && h.fromDepartmentId !== id);
+  const sent = emitted.filter((h) => h.fromDepartmentId === id && h.toDepartmentId !== id);
 
   // Decisiones tomadas aquí (las más recientes primero) delante de la actividad simulada.
   const decided = decisions
@@ -172,6 +180,46 @@ export function DepartmentPanel({ summary, decisions, onDecide, onClose }: Props
                     })}
                   </AnimatePresence>
                 </ul>
+              </section>
+
+              <section aria-labelledby="dept-handoffs" className="flex flex-col gap-3">
+                <h3 id="dept-handoffs" className="text-h2">
+                  Con otros departamentos
+                </h3>
+                <div className="grid gap-6 md:grid-cols-2">
+                  {[
+                    { title: "Ha recibido hoy", list: received, other: "fromAgentId" as const, otherDept: "fromDepartmentId" as const, verb: "de" },
+                    { title: "Ha enviado hoy", list: sent, other: "toAgentId" as const, otherDept: "toDepartmentId" as const, verb: "a" },
+                  ].map(({ title, list, other, otherDept, verb }) => (
+                    <div key={title} className="flex flex-col gap-1">
+                      <h4 className="text-small font-semibold text-ink-2">
+                        {title} ({list.length})
+                      </h4>
+                      {list.length === 0 && <p className="text-small text-ink-3">Todavía nada.</p>}
+                      <ul className="flex flex-col">
+                        {list.map((h) => (
+                          <li key={h.id} className="border-b border-glass-border last:border-b-0">
+                            <button
+                              type="button"
+                              aria-label={`Abrir la cadena: ${h.summary}`}
+                              onClick={() => openChain(h.chainId)}
+                              className="flex w-full cursor-pointer flex-col gap-1 rounded-card px-2 py-2 text-left transition-colors hover:bg-white/10"
+                            >
+                              <span className="text-small">{h.summary}</span>
+                              <span className="flex flex-wrap items-center gap-x-3 text-tiny text-ink-3">
+                                <span>
+                                  {kindLabel[h.kind]} {verb} {firstName(agentById(h[other]).name)} · {departmentMeta[h[otherDept]].label}
+                                </span>
+                                <span>{h.time}</span>
+                                <ResolvedStatusText handoff={h} />
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
               </section>
 
               <section aria-labelledby="dept-activity" className="flex flex-col gap-3">

@@ -69,3 +69,13 @@ Referencia: interfaz tipo visionOS. Paneles de cristal esmerilado flotando sobre
 - Responsive: en móvil el dock pasa a barra inferior y los paneles se apilan.
 - Datos de ejemplo realistas, sin lorem ipsum.
 - Al terminar cada paso, explicar qué se ha hecho y cómo verlo en el navegador.
+
+## Comunicación entre departamentos
+Es la pieza central del producto: los agentes de distintos departamentos se pasan trabajo entre sí y la empresa lo ve en directo en la oficina (todo simulado, datos en `src/data/handoffs.ts`).
+
+- **Traspaso**: mensaje con formato fijo de un agente a otro. Campos: `id`, cadena a la que pertenece, agente y departamento de origen, agente y departamento de destino, tipo (`lead`, `aviso`, `petición`, `informe`), resumen de una línea, ficha con los datos que se pasan, estado (`enviado`, `recibido`, `en curso`, `completado`, `rechazado`), hora y coste en créditos.
+- **Cadena**: secuencia de traspasos que persigue un objetivo (por ejemplo, de un anuncio a una venta). Tiene título, objetivo y coste total (suma de sus traspasos).
+- **Aprobaciones**: los traspasos sensibles (gasto, publicación, envío a clientes) generan una aprobación en la vista Aprobaciones; se puede resolver también desde la cadena.
+- **Motor**: `useOfficeSimulation` reproduce los traspasos uno a uno cada 6–10 s en bucle (pausable). Estado compartido en `SimulationProvider`.
+- **Visualización**: capa SVG tras las tarjetas de departamento (líneas con degradado origen→destino y partícula de luz; solo `transform`/`opacity`, nunca cristal), brillo y burbuja en la tarjeta de destino, panel «En directo» y diálogo de cadena. En móvil no hay líneas. Con `prefers-reduced-motion`: sin partículas, solo el brillo.
+- **Accesibilidad**: región `aria-live="polite"` que anuncia como mucho un traspaso cada 10 s; la pausa se maneja con teclado.

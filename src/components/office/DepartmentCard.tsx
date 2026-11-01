@@ -1,6 +1,7 @@
 import { Coins, ShieldCheck } from "lucide-react";
 import { Avatar, GlassCard, StatusBadge, statusMeta, type AgentStatus } from "@/components/glass";
 import { useApprovals } from "@/components/ApprovalsProvider";
+import { useSimulation } from "@/components/SimulationProvider";
 import type { DepartmentSummary, StatusFilter } from "@/data/departments";
 
 const statusOrder = Object.keys(statusMeta) as AgentStatus[];
@@ -18,6 +19,8 @@ export function DepartmentCard({
 }) {
   const { id, agents, pendingApprovals, creditsToday } = summary;
   const { arrival } = useApprovals();
+  const { latest } = useSimulation();
+  const pulse = latest && latest.handoff.toDepartmentId === id ? latest.seq : 0;
   const lead = agents[0];
   const counts = statusOrder
     .map((status) => {
@@ -33,6 +36,8 @@ export function DepartmentCard({
       department={id}
       delay={delay}
       layoutId={`dept-${id}`}
+      cardId={id}
+      pulse={pulse}
       onOpen={onOpen}
       description={`${lead.name.split(" ")[0]} está ${lead.currentTask}`}
       footer={

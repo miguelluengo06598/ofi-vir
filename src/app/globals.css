@@ -98,7 +98,31 @@ body {
   animation: enter-slide 300ms ease-out backwards;
 }
 
+/* Brillo de la tarjeta de destino al llegar un traspaso: solo opacity (llega cuando acaba el viaje de la partícula). */
+@keyframes arrival-glow {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.arrival-glow {
+  opacity: 0;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.6),
+    inset 0 0 40px rgba(255, 255, 255, 0.35);
+  animation: arrival-glow 1.6s ease-out var(--glow-delay, 1.4s);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .arrival-glow {
+    --glow-delay: 0s;
+  }
   .enter,
   .enter-slide {
     animation: none;

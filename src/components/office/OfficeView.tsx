@@ -6,6 +6,8 @@ import { Avatar, PillButton } from "@/components/glass";
 import { type OfficeAgent, type StatusFilter } from "@/data/departments";
 import { currentUser } from "@/data/navigation";
 import type { DepartmentId } from "@/components/glass";
+import { HandoffLayer } from "@/components/handoffs/HandoffLayer";
+import { LivePanel } from "@/components/handoffs/LivePanel";
 import { DepartmentCard } from "./DepartmentCard";
 import { useApprovals } from "@/components/ApprovalsProvider";
 import { DepartmentPanel } from "./DepartmentPanel";
@@ -68,6 +70,7 @@ export function OfficeView() {
   const [selected, setSelected] = useState<DepartmentId | null>(null);
   const { decisions, office, arrival, finishArrival, decide } = useApprovals();
   const opener = useRef<HTMLElement | null>(null);
+  const row = useRef<HTMLDivElement>(null);
   const hour = useSyncExternalStore(subscribeToClock, getHour, getServerHour);
 
   const { summaries, totals } = office;
@@ -119,7 +122,8 @@ export function OfficeView() {
       </div>
 
       {/* Fila de tarjetas a media altura, suspendidas frente a los ventanales. */}
-      <div className="flex flex-1 items-center" inert={selected !== null}>
+      <div ref={row} className="relative flex flex-1 items-center md:pb-36" inert={selected !== null}>
+        <HandoffLayer containerRef={row} layoutKey={visible.map((d) => d.id).join()} />
         <h2 className="sr-only">Departamentos</h2>
         <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <AnimatePresence>
@@ -129,6 +133,8 @@ export function OfficeView() {
           </AnimatePresence>
         </div>
       </div>
+
+      <LivePanel />
 
       {arrivingAgent && <ArrivalFlight agent={arrivingAgent} onDone={finishArrival} />}
 

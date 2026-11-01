@@ -47,3 +47,12 @@ export const departmentMeta: Record<
     avatar: "bg-linear-to-br from-dept-direccion to-dept-direccion/50",
   },
 };
+
+/** Color sólido de cada departamento (líneas y partículas SVG; Dirección aclarado para que se vea sobre la escena). */
+export const departmentColor: Record<DepartmentId, string> = {
+  ventas: "#3B82F6",
+  atencion: "#14B8A6",
+  marketing: "#F59E0B",
+  operaciones: "#8B5CF6",
+  direccion: "#9CA3AF",
+};

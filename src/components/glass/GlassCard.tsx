@@ -28,6 +28,10 @@ type Props = {
   delay?: number;
   /** Fuerza el aspecto de hover (para revisión visual). */
   hovered?: boolean;
+  /** Identificador para medir la tarjeta (líneas de traspasos). */
+  cardId?: string;
+  /** Cambia de valor en cada llegada de un traspaso: la tarjeta brilla un instante (0 = sin brillo). */
+  pulse?: number;
   className?: string;
 };
 
@@ -45,6 +49,8 @@ export function GlassCard({
   onOpen,
   delay = 0,
   hovered,
+  cardId,
+  pulse = 0,
   className = "",
 }: Props) {
   const meta = departmentMeta[department];
@@ -54,11 +60,15 @@ export function GlassCard({
       layout
       style={{ borderRadius: 20, "--enter-delay": `${delay}s` } as React.CSSProperties}
       layoutId={layoutId}
+      data-card={cardId}
       animate={{ y: hovered ? -4 : 0 }}
       exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.2 } }}
       whileHover={{ y: -4, transition: { duration: 0.2, delay: 0 } }}
       className={`enter glass glass-interactive relative flex flex-col overflow-hidden text-white ${hovered ? "is-hover" : ""} ${className}`}
     >
+      {pulse > 0 && (
+        <span key={pulse} aria-hidden="true" className="arrival-glow pointer-events-none absolute inset-0 z-20 rounded-[inherit]" />
+      )}
       {onOpen && (
         <button
           type="button"

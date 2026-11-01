@@ -73,6 +73,24 @@ export const approvals: Approval[] = [
       body: "Si apruebas, el nuevo presupuesto se aplica desde mañana y se revisa el viernes con los resultados de la semana.",
     },
   },
+  {
+    id: "apr-presupuesto-clinicas",
+    agentId: "alvaro-rios",
+    departmentId: "marketing",
+    title: "Subir un 30 % el presupuesto de «Clínicas dentales – Madrid»",
+    detail: "De 900 € a 1.170 € al mes · sus leads convierten el doble que la media",
+    requested: "Hace 4 min",
+    costCredits: 0.8,
+    preview: {
+      label: "Cambio propuesto",
+      fields: [
+        { label: "Campaña", value: "Clínicas dentales – Madrid" },
+        { label: "Presupuesto mensual", value: "900 € → 1.170 € (+30 %)" },
+        { label: "Motivo", value: "12 leads con buen perfil y una venta cerrada; convierten el doble que la media" },
+      ],
+      body: "Si apruebas, el nuevo presupuesto se aplica desde mañana y se revisa el viernes con los resultados de la semana.",
+    },
+  },
 ];
 
 export type ActivityItem = { id: string; departmentId: DepartmentId; time: string; text: string };

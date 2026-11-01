@@ -90,7 +90,7 @@ export const agents: Agent[] = [
     role: "Gestor de campañas",
     departmentId: "marketing",
     status: "waiting",
-    task: "esperando tu aprobación para 2 cambios de la campaña de otoño",
+    task: "esperando tu aprobación para 3 cambios en sus campañas",
     resumedTask: "revisando el rendimiento de las campañas activas",
     tools: ["Meta Ads", "Google Ads", "Google Analytics"],
     creator: "Verbo Studio",
@@ -130,3 +130,6 @@ export const agents: Agent[] = [
     creditsToday: 18,
   },
 ];
+
+export const agentById = (id: string) => agents.find((a) => a.id === id)!;
+export const firstName = (name: string) => name.split(" ")[0];
