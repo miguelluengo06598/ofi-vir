@@ -1,6 +1,8 @@
 "use client";
 
-import { Coins, FileImage, FileSpreadsheet, FileText, LifeBuoy } from "lucide-react";
+import { Coins, FileImage, FileSpreadsheet, FileText, LifeBuoy, Mail } from "lucide-react";
+import { EmailQuota } from "@/components/emails/EmailQuota";
+import { contactDirectory, contactsOfAgent } from "@/data/emails";
 import { useApprovals } from "@/components/ApprovalsProvider";
 import { Avatar, PillButton, StatusBadge, departmentMeta } from "@/components/glass";
 import type { OfficeAgent } from "@/data/departments";
@@ -23,7 +25,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function AgentProfile({ agent }: { agent: OfficeAgent }) {
   const profile = getAgentProfile(agent.id);
-  const { openConsult } = useApprovals();
+  const { openConsult, openContact } = useApprovals();
+  const contacts = contactsOfAgent(agent.id);
   const expert = expertFor(agent.creator);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
@@ -69,6 +72,27 @@ export function AgentProfile({ agent }: { agent: OfficeAgent }) {
             </li>
           ))}
         </ul>
+      </Section>
+
+      <Section title="Correos">
+        <EmailQuota agentId={agent.id} />
+        {contacts.length > 0 && (
+          <ul aria-label="Contactos con correos" className="flex flex-col gap-1">
+            {contacts.map((id) => (
+              <li key={id}>
+                <button
+                  type="button"
+                  onClick={() => openContact(id)}
+                  className="flex w-full cursor-pointer items-center gap-2 rounded-card px-2 py-1.5 text-left text-small hover:bg-white/10"
+                >
+                  <Mail size={14} aria-hidden="true" className="shrink-0 text-ink-2" />
+                  <span className="min-w-0 flex-1 truncate">{contactDirectory[id].name}</span>
+                  <span className="shrink-0 text-tiny text-ink-3">{contactDirectory[id].company}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </Section>
 
       <Section title="Coste medio por tarea">

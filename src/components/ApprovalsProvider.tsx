@@ -13,6 +13,7 @@ import {
 import type { DepartmentId } from "@/components/glass";
 import { approvals } from "@/data/approvals";
 import { buildOffice, hiredAgentId, type HiredAgent } from "@/data/departments";
+import type { EmailEdit } from "@/data/emails";
 import { expertFor, initialConsultations, type Consultation } from "@/data/experts";
 import { initialConversations, touchConversation, type Conversation } from "@/data/messages";
 import { initialBalance, initialMonthlyLimitEur } from "@/data/wallet";
@@ -27,6 +28,13 @@ type ApprovalsContextValue = {
   resolved: ReadonlySet<string>;
   /** Textos editados por el usuario, por id de aprobación. */
   edits: Record<string, string>;
+  /** Asunto y cuerpo editados de los borradores de correo, por id de aprobación. */
+  emailEdits: Record<string, EmailEdit>;
+  editEmail: (approvalId: string, edit: EmailEdit) => void;
+  /** Contacto cuya ficha (con la pestaña Correos) está abierta desde Mensajes. */
+  contactTarget: string | null;
+  openContact: (contactId: string) => void;
+  closeContact: () => void;
   pendingCount: number;
   /** Estado de la oficina con aprobaciones, contrataciones y consultas aplicadas. */
   office: OfficeState;
@@ -61,6 +69,8 @@ const ApprovalsContext = createContext<ApprovalsContextValue | null>(null);
 export function ApprovalsProvider({ children }: { children: ReactNode }) {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
+  const [emailEdits, setEmailEdits] = useState<Record<string, EmailEdit>>({});
+  const [contactTarget, setContactTarget] = useState<string | null>(null);
   const [hired, setHired] = useState<HiredAgent[]>([]);
   const [balance, setBalance] = useState(initialBalance);
   const [limitEur, setLimitEur] = useState(initialMonthlyLimitEur);
@@ -81,6 +91,9 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
     (approvalId: string, body: string) => setEdits((e) => ({ ...e, [approvalId]: body })),
     [],
   );
+  const editEmail = useCallback((approvalId: string, e: EmailEdit) => setEmailEdits((all) => ({ ...all, [approvalId]: e })), []);
+  const openContact = useCallback((id: string) => setContactTarget(id), []);
+  const closeContact = useCallback(() => setContactTarget(null), []);
   const hire = useCallback((marketId: string, departmentId: DepartmentId) => {
     setHired((h) => (h.some((x) => x.marketId === marketId) ? h : [...h, { marketId, departmentId }]));
     setArrival(hiredAgentId(marketId));
@@ -128,6 +141,11 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
       decisions,
       resolved,
       edits,
+      emailEdits,
+      editEmail,
+      contactTarget,
+      openContact,
+      closeContact,
       pendingCount: approvals.filter((a) => !resolved.has(a.id)).length,
       office,
       balance,
@@ -149,7 +167,7 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
       consult,
     }),
     [
-      decisions, resolved, edits, office, balance, limitEur, topUp, setLimit, hired, arrival, hire,
+      decisions, resolved, edits, emailEdits, editEmail, contactTarget, openContact, closeContact, office, balance, limitEur, topUp, setLimit, hired, arrival, hire,
       finishArrival, decide, edit, conversations, consultations, consultTarget, openConsult, closeConsult, consult,
     ],
   );

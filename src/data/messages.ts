@@ -32,7 +32,7 @@ export const agentProfiles: Record<string, { avgCostPerTask: number; files: Agen
   "irene-soler": {
     avgCostPerTask: 7.4,
     files: [
-      { name: "Propuesta-Clinica-Dental-Sol.docx", kind: "doc", when: "Hoy" },
+      { name: "Propuesta-Clinica-Sol.docx", kind: "doc", when: "Hoy" },
       { name: "Presupuesto-plan-anual.xlsx", kind: "sheet", when: "Hoy" },
       { name: "Propuesta-Taller-Medina.docx", kind: "doc", when: "Hace 3 días" },
     ],
@@ -112,7 +112,7 @@ export const initialConversations: Conversation[] = [
     agentId: "irene-soler",
     unread: 1,
     messages: [
-      m("i1", "agent", "Ayer", "16:40", "He terminado el borrador de la propuesta para Clínica Dental Sol."),
+      m("i1", "agent", "Ayer", "16:40", "He terminado el borrador de la propuesta para Clínica Sol."),
       m("i2", "me", "Ayer", "17:02", "Gracias, la reviso mañana."),
       m("i3", "agent", "Hoy", "10:15", "La propuesta de 4.200 € está lista y espera tu aprobación para enviarla."),
     ],

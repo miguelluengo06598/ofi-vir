@@ -110,7 +110,7 @@ export const marketAgents: MarketAgent[] = [
     does: ["Prepara un resumen del cliente antes de cada reunión", "Redacta el acta y los siguientes pasos", "Actualiza la oportunidad en el CRM"],
     doesNot: ["Asiste a las reuniones por ti", "Negocia precios", "Envía el acta sin tu visto bueno"],
     tools: ["Google Calendar", "HubSpot", "Gmail"],
-    examples: ["Preparar la reunión de mañana con Clínica Dental Sol", "Redactar el acta de la llamada de hoy", "Listar las reuniones sin seguimiento"],
+    examples: ["Preparar la reunión de mañana con Clínica Sol", "Redactar el acta de la llamada de hoy", "Listar las reuniones sin seguimiento"],
     reviews: [
       { author: "Marta Gil", company: "Consultora Gil", rating: 5, text: "Las actas salen en minutos y no se pierde ningún siguiente paso." },
       { author: "Rubén Ortega", company: "Ortega Seguros", rating: 4, text: "Muy útil; necesita buenas notas de entrada para dar lo mejor." },

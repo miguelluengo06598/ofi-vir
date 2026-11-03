@@ -119,7 +119,7 @@ export const chains: Chain[] = [
         summary: "Un lead pregunta precios: conversación resumida para Ventas",
         bubble: "Lucía recibió un lead de Sofía",
         card: [
-          { label: "Contacto", value: "Clínica Dental Sol · Paula Serrano" },
+          { label: "Contacto", value: "Clínica Sol · Laura Gómez" },
           { label: "Resumen", value: "Pregunta por el precio del plan anual y si hay permanencia. Tiene 4 sillones y 2 recepcionistas." },
           { label: "Siguiente paso", value: "Enviar propuesta y proponer llamada el jueves" },
         ],
@@ -137,7 +137,7 @@ export const chains: Chain[] = [
         card: [
           { label: "Fichas", value: "12 (estado: contactado; 1 en negociación)" },
           { label: "Etiqueta", value: "Campaña · Clínicas dentales – Madrid" },
-          { label: "Notas", value: "Añadir resumen de la conversación de WhatsApp en Paula Serrano" },
+          { label: "Notas", value: "Añadir resumen de la conversación de WhatsApp en Laura Gómez" },
         ],
         status: "done",
         time: "10:30",
@@ -151,7 +151,7 @@ export const chains: Chain[] = [
         summary: "Venta cerrada: los leads de esta campaña convierten el doble que la media",
         bubble: "Álvaro recibió el informe de Lucía",
         card: [
-          { label: "Venta", value: "Clínica Dental Sol · plan anual · 4.200 €" },
+          { label: "Venta", value: "Clínica Sol · plan anual · 4.200 €" },
           { label: "Conversión de la campaña", value: "16 % frente al 8 % de media" },
           { label: "Tiempo hasta el cierre", value: "5 días" },
         ],

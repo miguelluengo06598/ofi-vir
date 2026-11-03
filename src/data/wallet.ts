@@ -49,7 +49,7 @@ export const movements: Movement[] = [
   { id: "m4", agentId: "tomas-vidal", task: "Emisión de 3 facturas del cierre de mes", when: "Hoy · 08:50", ai: 1.1, fee: 0.8 },
   { id: "m5", agentId: "elena-bravo", task: "Cuadro de mando de ventas y gasto", when: "Hoy · 08:30", ai: 4.6, fee: 2.2 },
   { id: "m6", agentId: "daniel-prieto", task: "Puntuación de 23 contactos nuevos", when: "Ayer · 18:20", ai: 1.3, fee: 0.9 },
-  { id: "m7", agentId: "irene-soler", task: "Propuesta para Clínica Dental Sol", when: "Ayer · 17:10", ai: 4.8, fee: 3.1 },
+  { id: "m7", agentId: "irene-soler", task: "Propuesta para Clínica Sol", when: "Ayer · 17:10", ai: 4.8, fee: 3.1 },
   { id: "m8", agentId: "hugo-lara", task: "Clasificación de 31 correos de soporte", when: "Ayer · 16:45", ai: 0.6, fee: 0.4 },
   { id: "m9", agentId: "nuria-campos", task: "Actualización de 120 fichas de clientes", when: "Ayer · 15:30", ai: 0.8, fee: 0.5 },
   { id: "m10", agentId: "alvaro-rios", task: "Análisis de la campaña de otoño", when: "Ayer · 12:05", ai: 2.9, fee: 1.8 },

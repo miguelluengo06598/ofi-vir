@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2, X } from "lucide-react";
+import { Mail, Pencil, Trash2, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Avatar, GlassInput, GlassPanel, PillButton, departmentMeta } from "@/components/glass";
 import { agentById } from "@/data/agents";
@@ -12,6 +12,8 @@ import {
   type MemoryEdge,
   type MemoryNode,
 } from "@/data/memory";
+import { EmailThreads } from "@/components/emails/EmailThreads";
+import { Tabs, tabId } from "@/components/emails/parts";
 import { fmtDateTime } from "@/lib/format";
 import { NodeGlyph } from "./NodeGlyph";
 
@@ -31,6 +33,7 @@ type Props = {
 export function MemoryDetail({ node, client, nodes, edges, onClose, onSelect, onEdit, onDeleteClient }: Props) {
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [tab, setTab] = useState<"ficha" | "correos">("ficha");
   const [label, setLabel] = useState(node.label);
   const [detail, setDetail] = useState(node.detail);
   const editBtn = useRef<HTMLButtonElement>(null);
@@ -83,6 +86,25 @@ export function MemoryDetail({ node, client, nodes, edges, onClose, onSelect, on
         <PillButton icon={X} aria-label="Cerrar detalle" onClick={onClose} />
       </div>
 
+      {node.type === "contacto" && (
+        <Tabs
+          prefix="memory"
+          label="Secciones del contacto"
+          value={tab}
+          onChange={setTab}
+          tabs={[
+            { value: "ficha", label: "Ficha" },
+            { value: "correos", label: "Correos", icon: <Mail size={14} aria-hidden="true" /> },
+          ]}
+        />
+      )}
+
+      {node.type === "contacto" && tab === "correos" ? (
+        <div role="tabpanel" aria-labelledby={tabId("memory", "correos")}>
+          <EmailThreads contactId={client.id} />
+        </div>
+      ) : (
+        <>
       {editing ? (
         <form
           className="flex flex-col gap-3"
@@ -213,6 +235,8 @@ export function MemoryDetail({ node, client, nodes, edges, onClose, onSelect, on
           </PillButton>
         )}
       </div>
+        </>
+      )}
     </GlassPanel>
   );
 }

@@ -1,5 +1,6 @@
 import { ApprovalsProvider } from "@/components/ApprovalsProvider";
 import { Background } from "@/components/Background";
+import { ContactDialog } from "@/components/emails/ContactDialog";
 import { ConsultDialog } from "@/components/experts/ConsultDialog";
 import { Dock, TopBar } from "@/components/glass";
 import { ChainDialog } from "@/components/handoffs/ChainDialog";
@@ -25,6 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
         <ConsultDialog />
+        <ContactDialog />
         <ChainDialog />
       </SimulationProvider>
     </ApprovalsProvider>

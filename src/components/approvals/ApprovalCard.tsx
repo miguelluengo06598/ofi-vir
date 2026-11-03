@@ -6,15 +6,20 @@ import { Avatar, GlassCard, PillButton } from "@/components/glass";
 import { useApprovals } from "@/components/ApprovalsProvider";
 import type { OfficeAgent } from "@/data/departments";
 import type { Approval } from "@/data/approvals";
+import { EmailDraft } from "@/components/emails/EmailDraft";
 
 export function ApprovalCard({ approval, agent, delay }: { approval: Approval; agent: OfficeAgent; delay: number }) {
-  const { edits, decide, edit } = useApprovals();
-  const { preview } = approval;
-  const body = edits[approval.id] ?? preview.body;
-  const edited = approval.id in edits;
+  const { edits, emailEdits, decide, edit, editEmail } = useApprovals();
+  const { preview, email } = approval;
+  // Los correos se editan en asunto y cuerpo; el resto de peticiones, solo en el texto.
+  const emailEdit = emailEdits[approval.id];
+  const subject = emailEdit?.subject ?? email?.subject ?? "";
+  const body = email ? (emailEdit?.body ?? email.body) : (edits[approval.id] ?? preview.body);
+  const edited = email ? approval.id in emailEdits : approval.id in edits;
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(body);
+  const [draftSubject, setDraftSubject] = useState(subject);
 
   return (
     <GlassCard
@@ -35,7 +40,8 @@ export function ApprovalCard({ approval, agent, delay }: { approval: Approval; a
                   active
                   aria-pressed={undefined}
                   onClick={() => {
-                    edit(approval.id, draft.trim() || body);
+                    if (email) editEmail(approval.id, { subject: draftSubject.trim() || subject, body: draft.trim() || body });
+                    else edit(approval.id, draft.trim() || body);
                     setEditing(false);
                   }}
                 >
@@ -52,6 +58,7 @@ export function ApprovalCard({ approval, agent, delay }: { approval: Approval; a
                   icon={Pencil}
                   onClick={() => {
                     setDraft(body);
+                    setDraftSubject(subject);
                     setEditing(true);
                   }}
                 >
@@ -82,6 +89,18 @@ export function ApprovalCard({ approval, agent, delay }: { approval: Approval; a
         <p className="text-small text-ink-2">{approval.detail}</p>
       </div>
 
+      {email ? (
+        <EmailDraft
+          email={email}
+          from={`${agent.name} (${agent.role})`}
+          subject={editing ? draftSubject : subject}
+          body={editing ? draft : body}
+          edited={edited}
+          editing={editing}
+          onSubject={setDraftSubject}
+          onBody={setDraft}
+        />
+      ) : (
       <div className="flex flex-col gap-3 rounded-card bg-black/25 p-4">
         <p className="flex items-center gap-2 text-tiny text-ink-2">
           {preview.label}
@@ -107,6 +126,7 @@ export function ApprovalCard({ approval, agent, delay }: { approval: Approval; a
           <p className="text-small whitespace-pre-line">{body}</p>
         )}
       </div>
+      )}
     </GlassCard>
   );
 }
