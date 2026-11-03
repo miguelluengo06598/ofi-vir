@@ -15,7 +15,7 @@ export function Dock() {
       aria-label="Dock"
       className="fixed inset-x-4 bottom-4 z-30 md:inset-x-auto md:top-1/2 md:bottom-auto md:left-4 md:-translate-y-1/2"
     >
-      <GlassPanel className="flex items-center justify-around gap-2 rounded-pill p-2 md:flex-col md:justify-center">
+      <GlassPanel className="flex items-center justify-around gap-1 rounded-pill p-2 max-md:overflow-x-auto md:flex-col md:justify-center md:gap-2">
         {dockNav.map(({ href, label, icon: Icon }) => {
           const active = isActive(pathname, href);
           return (
@@ -24,6 +24,7 @@ export function Dock() {
                 icon={Icon}
                 active={active}
                 solid
+                className="max-md:size-9"
                 aria-label={label}
                 aria-pressed={undefined}
                 aria-current={active ? "page" : undefined}

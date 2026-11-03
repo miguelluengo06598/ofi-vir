@@ -138,3 +138,45 @@ body {
     --glass-tint: rgba(0, 0, 0, 0);
   }
 }
+
+/* Vista Memoria: nodos y conexiones SVG (sin cristal). El foco visible dibuja el anillo del nodo. */
+.mem-node {
+  cursor: pointer;
+  outline: none;
+  transition: opacity 200ms ease-out;
+}
+.mem-node .mem-ring {
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+.mem-node:focus-visible .mem-ring {
+  opacity: 1;
+}
+.mem-edge {
+  transition: opacity 200ms ease-out;
+}
+
+@keyframes mem-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.mem-pulse {
+  animation: mem-pulse 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mem-node,
+  .mem-node .mem-ring,
+  .mem-edge {
+    transition: none;
+  }
+  .mem-pulse {
+    animation: none;
+  }
+}

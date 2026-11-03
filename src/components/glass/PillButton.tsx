@@ -1,7 +1,8 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 import type { LucideIcon } from "lucide-react";
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
+  ref?: Ref<HTMLButtonElement>;
   icon?: LucideIcon;
   active?: boolean;
   /** Estado activo en blanco sólido (navegación). */

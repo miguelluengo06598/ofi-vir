@@ -5,6 +5,7 @@ import {
   Coins,
   ListChecks,
   MessageSquare,
+  Network,
   Star,
   Store,
   Wallet,
@@ -18,6 +19,7 @@ export const topNav: NavItem[] = [
   { href: "/", label: "Oficina", icon: Building2 },
   { href: "/agentes", label: "Agentes", icon: Bot },
   { href: "/marketplace", label: "Marketplace", icon: Store },
+  { href: "/memoria", label: "Memoria", icon: Network },
   { href: "/creditos", label: "Créditos", icon: Coins },
 ];
 
@@ -27,6 +29,7 @@ export const dockNav: NavItem[] = [
   { href: "/mensajes", label: "Mensajes", icon: MessageSquare },
   { href: "/tareas", label: "Tareas", icon: ListChecks },
   { href: "/aprobaciones", label: "Aprobaciones", icon: CheckCircle2 },
+  { href: "/memoria", label: "Memoria", icon: Network },
   { href: "/marketplace", label: "Marketplace", icon: Store },
   { href: "/creditos", label: "Créditos", icon: Wallet },
   { href: "/favoritos", label: "Favoritos", icon: Star },
