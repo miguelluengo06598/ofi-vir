@@ -25,7 +25,7 @@ export class InMemoryAgentStore implements AgentStore {
     const id = randomUUID();
     this.tasks.set(id, {
       companyId, id, agentId: t.agentId, title: t.title, status: "running", model: t.model, contactId: t.contactId ?? null, sourceEmailId: null,
-      usage: USO_VACIO, costEur: 0, steps: 0, reviewReason: null,
+      usage: USO_VACIO, costEur: 0, steps: 0, reviewReason: null, memoryUsage: { inputTokens: 0, outputTokens: 0 }, extraCostEur: 0,
     });
     return id;
   }
@@ -47,8 +47,12 @@ export class InMemoryAgentStore implements AgentStore {
     if (patch.usage) t.usage = patch.usage as LlmUsage;
     if (patch.steps !== undefined) t.steps = patch.steps;
     if (patch.reviewReason !== undefined) t.reviewReason = patch.reviewReason;
+    if (patch.memory) {
+      t.memoryUsage = { inputTokens: patch.memory.inputTokens, outputTokens: patch.memory.outputTokens };
+      t.extraCostEur = patch.memory.costEur;
+    }
     const p = this.pricing.get(t.model);
-    t.costEur = p ? costeEur(t.usage, p) : 0;
+    t.costEur = Math.round(((p ? costeEur(t.usage, p) : 0) + t.extraCostEur) * 1e6) / 1e6;
     return { costEur: t.costEur };
   }
 
@@ -71,6 +75,9 @@ export class InMemoryAgentStore implements AgentStore {
   async listSteps(companyId: string, taskId: string) {
     return this.own(companyId, taskId) ? [...(this.steps.get(taskId) ?? [])].sort((a, b) => a.position - b.position) : [];
   }
+
+  async listLearned() { return []; }
+  async recentLearning() { return []; }
 
   async createDraft(companyId: string, d: { agentId: string; contactId: string; subject: string; body: string }): Promise<DraftResult> {
     const same = this.drafts.find((x) => x.companyId === companyId && x.agentId === d.agentId && x.contactId === d.contactId && x.subject === d.subject && x.body === d.body);

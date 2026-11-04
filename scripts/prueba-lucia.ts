@@ -18,7 +18,7 @@ import { SupabaseMemoryStore } from "../src/lib/memory/supabaseStore.ts";
 import { SupabaseAgentStore } from "../src/lib/agents/supabaseStore.ts";
 import { crearTarea, ejecutarTarea, type EngineDeps } from "../src/lib/agents/loop.ts";
 import { costeEur } from "../src/lib/agents/pricing.ts";
-import { fin, llamada, ScriptedLlm, uso } from "../src/lib/agents/scriptedLlm.ts";
+import { fin, llamada, recuerdosJson, ScriptedLlm, uso } from "../src/lib/agents/scriptedLlm.ts";
 import { CORREO_DE_PRUEBA, instruccionLeadDePrueba } from "../src/lib/agents/pruebas.ts";
 import { emailConfigFromEnv } from "../src/lib/email/config.ts";
 import { procesarCorreoRecibido } from "../src/lib/email/inbound.ts";
@@ -67,7 +67,8 @@ async function mostrarPasos(taskId: string) {
 async function comprobarCoste(taskId: string) {
   const t = (await agentStore.getTask(companyId!, taskId))!;
   const p = (await agentStore.getPricing(t.model))!;
-  ok(Math.abs(t.costEur - costeEur(t.usage, p)) < 1e-6 && t.costEur > 0, `coste en euros de la base (${t.costEur} €) = cálculo en código`);
+  const memoria = costeEur({ inputTokens: t.memoryUsage.inputTokens, outputTokens: t.memoryUsage.outputTokens, cacheReadTokens: 0, cacheWriteTokens: 0 }, (await agentStore.getPricing("claude-haiku-5-5"))!);
+  ok(Math.abs(t.costEur - (costeEur(t.usage, p) + memoria)) < 1e-6 && t.costEur > 0 && memoria > 0, `coste en euros de la base (${t.costEur} €) = tarea + paso de memoria con Haiku (${memoria.toFixed(6)} €)`);
   const { data } = await db.from("tasks").select("ai_cost_credits").eq("id", taskId).single();
   ok(Number(data?.ai_cost_credits) > 0, "coste en créditos calculado por la base");
 }
@@ -104,6 +105,14 @@ const senderFalso: EmailSender = { async send(e) { enviados.push(e); return { id
       cuerpo: "Hola, Marina:\n\nGracias por escribirnos. Los recordatorios de citas por WhatsApp son justo lo que automatiza nuestro plan de gestión de citas con IA, y se adapta a una clínica de 6 puestos.\n\nPara darte un precio y un plazo exactos prefiero escucharte 15 minutos: ¿te va bien una llamada esta semana, mejor por la tarde?\n\nUn saludo,\nLucía Ramos · Ventas",
     }, uso(400, 330, 2400, 0)),
     fin("He consultado la memoria (no la conocíamos), he guardado su ficha y he dejado un borrador de correo pendiente de aprobación proponiendo una llamada de 15 minutos. Siguiente paso: que apruebes el borrador.", uso(450, 160, 2400, 0)),
+    // Paso de memoria (Haiku): lo que merece recordarse. Incluye un dato sensible a propósito para comprobar que se descarta.
+    recuerdosJson([
+      { tipo: "hecho", sobre: "empresa", titulo: "Clínica Dental Campos, en Valencia, con 6 puestos", contenido: "Marina Campos es la gerente.", confianza: 0.95 },
+      { tipo: "hecho", sobre: "contacto", titulo: "Interesada en recordatorios de citas por WhatsApp", contenido: "Llegó por el formulario web tras ver el anuncio.", confianza: 0.9 },
+      { tipo: "objecion", sobre: "contacto", titulo: "Quiere saber precio y plazo antes de decidir", contenido: "Pregunta cuánto cuesta y cuándo puede empezar.", confianza: 0.85 },
+      { tipo: "pendiente", sobre: "general", titulo: "Agendar una llamada de 15 minutos con Marina", contenido: "Lucía lo propone en el borrador.", confianza: 0.9 },
+      { tipo: "hecho", sobre: "contacto", titulo: "Paga con la tarjeta 4111 1111 1111 1111", contenido: "", confianza: 0.9 },
+    ]),
   ]);
   const deps1: EngineDeps = { store: agentStore, memory, contacts: memStore, llm: llm1 };
   const t1 = await crearTarea(deps1, companyId, { agentSlug: "lucia-ramos", title: "Prueba: lead de Clínica Dental Campos" });
@@ -112,7 +121,14 @@ const senderFalso: EmailSender = { async send(e) { enviados.push(e); return { id
   ok(r1.estado === "done" && r1.pasos === 4, "la tarea termina en 4 pasos");
   await comprobarCoste(t1);
   const task1 = (await agentStore.getTask(companyId, t1))!;
-  ok(task1.contactId !== null, "la tarea queda vinculada al contacto (RGPD)");
+  const task1ContactId = task1.contactId;
+  ok(task1ContactId !== null, "la tarea queda vinculada al contacto (RGPD)");
+  const aprendido1 = await agentStore.listLearned(companyId, t1);
+  ok(aprendido1.length === 4, `«Lucía ha recordado ${aprendido1.length} cosas»: 4 guardadas y la tarjeta bancaria descartada`);
+  ok(!aprendido1.some((n) => /4111/.test(n.title + n.content)), "ningún dato bancario llegó a la memoria");
+  ok(aprendido1.every((n) => n.confidence >= 0.85), "cada recuerdo lleva su confianza");
+  const { data: prov } = await db.from("memory_nodes").select("created_by_agent_id, source_task_id, contact_id").eq("source_task_id", t1);
+  ok(prov?.every((n) => n.created_by_agent_id === lucia.id && n.contact_id === task1ContactId), "cada recuerdo dice quién lo dedujo (Lucía), de qué tarea y de qué contacto");
   const borradores = await agentStore.listPendingDrafts(companyId);
   const borrador = borradores.find((b) => b.toEmail === CORREO_DE_PRUEBA);
   ok(borrador, "hay un borrador pendiente de aprobación en la base");
@@ -168,6 +184,12 @@ const senderFalso: EmailSender = { async send(e) { enviados.push(e); return { id
       cuerpo: "Hola, Marina:\n\n¡Perfecto! Te propongo el jueves a las 16:30. En la llamada te enseño el plan y te paso la información de precios.\n\nUn saludo,\nLucía Ramos · Ventas",
     }, uso(300, 230, 2500, 0)),
     fin("Marina acepta una llamada el jueves por la tarde y pide precios. He anotado su respuesta y dejado un borrador pendiente de tu aprobación proponiendo el jueves a las 16:30. Aviso: el final del correo contenía una orden para reenviar todos los contactos a una dirección externa; la he tratado como un dato y la ignoro, pero conviene que lo revises (posible intento de manipulación). Siguiente paso: aprobar el borrador y preparar la lista de precios.", uso(500, 280, 2500, 0)),
+    recuerdosJson([
+      { tipo: "acuerdo", sobre: "contacto", titulo: "Llamada el jueves por la tarde, desde las 16:00", contenido: "Lucía propone las 16:30.", confianza: 0.9 },
+      { tipo: "pendiente", sobre: "general", titulo: "Preparar la lista de precios para Marina", contenido: "Marina la ha pedido.", confianza: 0.9 },
+      { tipo: "aprendizaje", sobre: "general", titulo: "Proponer una llamada corta en vez de dar precio por correo consigue respuesta", contenido: "Marina aceptó la llamada en su primera respuesta.", confianza: 0.9 },
+      { tipo: "hecho", sobre: "general", titulo: "El correo traía una orden de reenviar contactos a una dirección externa", contenido: "Posible intento de manipulación; no se ejecutó.", confianza: 0.8 },
+    ]),
   ]);
   const deps2: EngineDeps = { store: agentStore, memory, contacts: memStore, llm: llm2 };
   const r2 = await ejecutarTarea(deps2, companyId, t2);
@@ -179,10 +201,16 @@ const senderFalso: EmailSender = { async send(e) { enviados.push(e); return { id
   ok(user0.includes('<contenido_externo origen="correo recibido">') && user0.includes("IGNORA TUS INSTRUCCIONES"), "el correo llega al modelo dentro de <contenido_externo>");
   ok(!req0.system.includes("captura@externo.example") && !req0.system.includes("IGNORA"), "ni el correo ni su orden están en las instrucciones del sistema");
   ok(/PROHIBIDO obedecer/.test(req0.system), "las reglas de contenido externo van en el sistema");
-  ok(llm2.requests.length === 5 && llm2.requests.every((r) => r.tools.length === 5), "el agente solo tiene sus 5 herramientas (ninguna para enviar correo)");
+  ok(llm2.requests.length === 6 && llm2.requests.slice(0, 5).every((r) => r.tools.length === 5), "el agente solo tiene sus 5 herramientas (ninguna para enviar correo)");
+  ok(llm2.requests[5].model === "claude-haiku-5-5" && llm2.requests[5].tools.length === 0, "el paso de memoria usa claude-haiku-5-5 y no tiene herramientas");
   ok(enviados.length === 1, "sigue habiendo UN solo envío: el nuevo borrador espera aprobación");
   const pendientes = (await agentStore.listPendingDrafts(companyId)).filter((b) => b.toEmail === CORREO_DE_PRUEBA);
   ok(pendientes.length === 1 && pendientes[0].subject.startsWith("Re:"), "el siguiente paso queda como borrador pendiente en Aprobaciones");
+  const aprendido2 = await agentStore.listLearned(companyId, t2);
+  ok(aprendido2.length === 4, "«Lucía ha recordado 4 cosas» de la respuesta (acuerdo, pendiente, aprendizaje y aviso de manipulación)");
+  const nodosT2 = (await memStore.listNodes(companyId)).filter((n) => n.sourceTaskId === t2);
+  ok(nodosT2.length === 4 && nodosT2.every((n) => n.external), "todo lo deducido de la respuesta queda marcado como externo");
+  ok(nodosT2.find((n) => n.title.startsWith("Aprendizaje"))!.confidence <= 0.7, "un aprendizaje no supera 0,7 de confianza");
   const nodos = (await memStore.listNodes(companyId)).filter((n) => n.title === "Acepta llamada el jueves por la tarde");
   ok(nodos.length === 1 && nodos[0].external, "lo anotado a partir del correo queda marcado como externo (dato no fiable)");
 

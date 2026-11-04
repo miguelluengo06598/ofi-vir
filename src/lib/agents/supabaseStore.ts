@@ -2,12 +2,15 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { LlmUsage } from "./llm.ts";
 import type { Pricing } from "./pricing.ts";
 import type {
-  AgentInfo, AgentStore, DraftResult, HandoffKind, HandoffResult, NewStep, SourceEmail, TaskInfo, TaskPatch, TaskStatus, TaskStep,
+  AgentInfo, AgentStore, DraftResult, HandoffKind, HandoffResult, LearnedNode, NewStep, TaskLearning, SourceEmail, TaskInfo, TaskPatch, TaskStatus, TaskStep,
 } from "./store.ts";
 
 const AGENT_COLS = "id, slug, name, role, department_id, model, instructions, allowed_tools, departments(name)";
-const TASK_COLS = "id, agent_id, title, status, model, contact_id, source_email_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_eur, steps, review_reason";
+const TASK_COLS = "id, agent_id, title, status, model, contact_id, source_email_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_eur, steps, review_reason, memory_input_tokens, memory_output_tokens, extra_cost_eur";
 const num = (v: unknown) => Number(v ?? 0);
+const toLearned = (r: Record<string, unknown>): LearnedNode => ({
+  id: r.id as string, type: r.node_type as string, title: r.title as string, content: r.content as string, confidence: num(r.confidence), createdAt: r.created_at as string,
+});
 
 export type PendingDraft = { approvalId: string; agentSlug: string; agentName: string; requestedAt: string; toEmail: string; toName: string; subject: string; body: string };
 
@@ -81,6 +84,8 @@ export class SupabaseAgentStore implements AgentStore {
       contactId: (r.contact_id as string | null) ?? null, sourceEmailId: (r.source_email_id as string | null) ?? null,
       usage: { inputTokens: num(r.input_tokens), outputTokens: num(r.output_tokens), cacheReadTokens: num(r.cache_read_tokens), cacheWriteTokens: num(r.cache_write_tokens) },
       costEur: num(r.cost_eur), steps: num(r.steps), reviewReason: (r.review_reason as string | null) ?? null,
+      memoryUsage: { inputTokens: num(r.memory_input_tokens), outputTokens: num(r.memory_output_tokens) },
+      extraCostEur: num(r.extra_cost_eur),
     };
   }
 
@@ -122,6 +127,11 @@ export class SupabaseAgentStore implements AgentStore {
     }
     if (patch.steps !== undefined) row.steps = patch.steps;
     if (patch.reviewReason !== undefined) row.review_reason = patch.reviewReason;
+    if (patch.memory) {
+      row.memory_input_tokens = patch.memory.inputTokens;
+      row.memory_output_tokens = patch.memory.outputTokens;
+      row.extra_cost_eur = patch.memory.costEur;
+    }
     if (patch.finished) row.finished_at = new Date().toISOString();
     const { data, error } = await this.db.from("tasks").update(row).eq("company_id", companyId).eq("id", taskId).select("cost_eur").single();
     if (error || !data) throw new Error("No se pudo actualizar la tarea.");
@@ -154,6 +164,41 @@ export class SupabaseAgentStore implements AgentStore {
       usage: { inputTokens: num(r.input_tokens), outputTokens: num(r.output_tokens), cacheReadTokens: num(r.cache_read_tokens), cacheWriteTokens: num(r.cache_write_tokens) } satisfies LlmUsage,
       createdAt: r.created_at as string,
     }));
+  }
+
+  async listLearned(companyId: string, taskId: string): Promise<LearnedNode[]> {
+    const { data, error } = await this.db
+      .from("memory_nodes")
+      .select("id, node_type, title, content, confidence, created_at")
+      .eq("company_id", companyId)
+      .eq("source_task_id", taskId)
+      .order("created_at");
+    if (error) throw new Error("No se pudo leer lo aprendido.");
+    return (data ?? []).map(toLearned);
+  }
+
+  async recentLearning(companyId: string, agentId: string, limitTasks: number): Promise<TaskLearning[]> {
+    const { data, error } = await this.db
+      .from("memory_nodes")
+      .select("id, node_type, title, content, confidence, created_at, source_task_id")
+      .eq("company_id", companyId)
+      .eq("created_by_agent_id", agentId)
+      .not("source_task_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error("No se pudo leer lo aprendido.");
+    const byTask = new Map<string, LearnedNode[]>();
+    for (const r of data ?? []) {
+      const id = r.source_task_id as string;
+      if (!byTask.has(id) && byTask.size >= limitTasks) continue;
+      byTask.set(id, [...(byTask.get(id) ?? []), toLearned(r)]);
+    }
+    if (byTask.size === 0) return [];
+    const { data: tasks, error: e2 } = await this.db.from("tasks").select("id, title, finished_at").eq("company_id", companyId).in("id", [...byTask.keys()]);
+    if (e2) throw new Error("No se pudieron leer las tareas.");
+    return (tasks ?? [])
+      .map((t) => ({ taskId: t.id as string, taskTitle: t.title as string, finishedAt: (t.finished_at as string | null) ?? null, items: byTask.get(t.id as string)!.reverse() }))
+      .sort((a, b) => (b.finishedAt ?? "").localeCompare(a.finishedAt ?? ""));
   }
 
   async createDraft(companyId: string, d: { agentId: string; contactId: string; subject: string; body: string }): Promise<DraftResult> {

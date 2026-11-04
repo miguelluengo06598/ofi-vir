@@ -1,6 +1,7 @@
 import type { MemoryService } from "../memory/service.ts";
 import type { MemoryStore } from "../memory/store.ts";
 import { mensajesParaLeerCorreo, REGLAS_CONTENIDO_EXTERNO } from "../email/untrusted.ts";
+import { aprenderDeTarea, MODELO_APRENDIZAJE } from "./aprender.ts";
 import type { LlmBlock, LlmClient, LlmMessage } from "./llm.ts";
 import { costeEur, sumarUso, USO_VACIO } from "./pricing.ts";
 import type { AgentStore, TaskStatus } from "./store.ts";
@@ -22,6 +23,8 @@ export type EngineDeps = {
   contacts: Pick<MemoryStore, "findContactByEmail" | "getContact">;
   llm: LlmClient;
   limites?: Partial<Limites>;
+  /** Al terminar bien una tarea, un paso con Haiku guarda lo importante en la memoria. Por defecto sí. */
+  aprender?: boolean;
 };
 
 export type ResultadoTarea = {
@@ -88,6 +91,8 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
     userText = mensajesParaLeerCorreo({ de: mail.from, asunto: mail.subject, texto: mail.text, recibidoEl: mail.occurredAt }).user;
   }
   if (!userText) throw new Error("La tarea no tiene instrucción.");
+  // Una instrucción que trae contenido de fuera (un lead, un formulario) también cuenta: lo que se deduzca de él es dato no fiable.
+  if (userText.includes("<contenido_externo")) externalContent = true;
 
   if (!(await store.claimTask(companyId, taskId, userText))) throw new Error("La tarea ya está en marcha o terminó.");
   let position = 1;
@@ -96,13 +101,34 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
   let ultimoTexto = "";
 
   const terminar = async (estado: ResultadoTarea["estado"], motivo: string | null): Promise<ResultadoTarea> => {
-    const { costEur } = await store.updateTask(companyId, taskId, { status: estado, usage, steps: pasos, reviewReason: estado === "done" ? null : motivo, finished: true });
+    // Paso de memoria: solo si la tarea terminó bien. Va antes de marcarla como terminada para que la interfaz lo vea.
+    let memoria: { inputTokens: number; outputTokens: number; costEur: number } | undefined;
+    if (estado === "done" && deps.aprender !== false) {
+      const l = await aprenderDeTarea(deps, { companyId, agent, taskId, contactId: ctx.task.contactId, externalContent: ctx.externalContent, finalText: ultimoTexto });
+      memoria = { inputTokens: l.usage.inputTokens, outputTokens: l.usage.outputTokens, costEur: l.costeEur };
+      const d = l.descartados;
+      const descartes = [d.sensibles && `${d.sensibles} sensible(s)`, d.pocoFiables && `${d.pocoFiables} poco fiable(s)`, d.repetidos && `${d.repetidos} repetido(s)`, d.invalidos && `${d.invalidos} inválido(s)`, d.sobrantes && `${d.sobrantes} de más`].filter(Boolean).join(", ");
+      await store.addStep(companyId, taskId, position++, {
+        step: pasos,
+        kind: "memoria",
+        content: l.error
+          ? l.error
+          : l.nuevos.length === 0
+            ? `No había nada nuevo que recordar${l.yaExistian ? ` (${l.yaExistian} ya constaba)` : ""}.${descartes ? ` Descartados: ${descartes}.` : ""}`
+            : `${agent.name.split(" ")[0]} ha recordado ${l.nuevos.length} ${l.nuevos.length === 1 ? "cosa" : "cosas"}${l.yaExistian ? ` (${l.yaExistian} ya constaba)` : ""}${descartes ? ` · descartados: ${descartes}` : ""}:\n${l.nuevos.map((n) => `• ${n.titulo} (confianza ${n.confianza.toFixed(2)})`).join("\n")}`,
+        isError: l.error !== null,
+        usage: { ...l.usage },
+        costEur: l.costeEur,
+        toolName: MODELO_APRENDIZAJE,
+      });
+    }
     await store.addStep(companyId, taskId, position++, {
       step: pasos,
       kind: "fin",
       content: estado === "done" ? ultimoTexto || "Tarea terminada." : `${estado === "review" ? "Parada para revisión" : "Error"}: ${motivo}`,
       isError: estado !== "done",
     });
+    const { costEur } = await store.updateTask(companyId, taskId, { status: estado, usage, steps: pasos, reviewReason: estado === "done" ? null : motivo, finished: true, ...(memoria ? { memory: memoria } : {}) });
     return { estado, motivo, pasos, costeEur: costEur, texto: ultimoTexto };
   };
 

@@ -7,7 +7,7 @@ import { crearTarea, ejecutarTarea, LIMITES } from "@/lib/agents/loop";
 import { motorDesdeEntorno } from "@/lib/agents/fromEnv";
 import { instruccionLeadDePrueba } from "@/lib/agents/pruebas";
 import { SupabaseAgentStore, type PendingDraft } from "@/lib/agents/supabaseStore";
-import type { TaskInfo, TaskStep } from "@/lib/agents/store";
+import type { LearnedNode, TaskInfo, TaskLearning, TaskStep } from "@/lib/agents/store";
 import { emailConfigFromEnv } from "@/lib/email/config";
 import { ResendSender } from "@/lib/email/sender";
 import { aprobarYEnviar } from "@/lib/email/service";
@@ -118,5 +118,34 @@ export async function rechazarBorradorDeAgente(input: { approvalId: string }): P
   } catch (e) {
     console.error("rechazarBorradorDeAgente:", e instanceof Error ? e.message : "error desconocido");
     return { estado: "error", mensaje: "No se pudo rechazar. Revisa la consola del servidor." };
+  }
+}
+
+/** Lo que la oficina recordó al terminar una tarea (solo lo nuevo; lo que ya constaba no se cuenta). */
+export async function aprendizajeDeTarea(taskId: string): Promise<LearnedNode[]> {
+  const id = z.string().uuid().safeParse(taskId);
+  const ctx = devContext();
+  const store = SupabaseAgentStore.fromEnv();
+  if (!id.success || !ctx || !store) return [];
+  try {
+    return await store.listLearned(ctx.companyId, id.data);
+  } catch (e) {
+    console.error("aprendizajeDeTarea:", e instanceof Error ? e.message : "error desconocido");
+    return [];
+  }
+}
+
+/** Lo aprendido en las últimas tareas de un agente. */
+export async function recuerdosRecientes(agentSlug: string): Promise<TaskLearning[]> {
+  const slug = z.string().min(1).max(100).safeParse(agentSlug);
+  const ctx = devContext();
+  const store = SupabaseAgentStore.fromEnv();
+  if (!slug.success || !ctx || !store) return [];
+  try {
+    const agent = await store.getAgentBySlug(ctx.companyId, slug.data);
+    return agent ? await store.recentLearning(ctx.companyId, agent.id, 5) : [];
+  } catch (e) {
+    console.error("recuerdosRecientes:", e instanceof Error ? e.message : "error desconocido");
+    return [];
   }
 }

@@ -38,6 +38,8 @@ const recuerdoSchema = z
         contenido: z.string().max(8000).default(""),
         /** Contenido de fuera (correo recibido): se guarda marcado como dato no fiable. */
         externo: z.boolean().default(false),
+        /** Confianza del dato (0..1). Un dato deducido por un agente no debería llevar 1. */
+        confianza: z.number().min(0).max(1).default(1),
       }))
       .min(1)
       .max(50),
@@ -142,7 +144,7 @@ export function createMemoryService(deps: { store: MemoryStore; embedder: Embedd
      * una conexión repetida se ignora. Los vectores se calculan antes de escribir: si falla el embedder, no se guarda nada
    * (salvo con `permitirSinVector`, que guarda los nodos sin vector en lugar de perderlos).
      */
-    async guardarRecuerdo(companyId: string, input: RecuerdoInput, opciones: { permitirSinVector?: boolean } = {}) {
+    async guardarRecuerdo(companyId: string, input: RecuerdoInput, opciones: { permitirSinVector?: boolean; tareaOrigen?: string } = {}) {
       const data = recuerdoSchema.parse(input);
 
       const found = data.contacto ? await store.findContactByEmail(companyId, data.contacto.email) : null;
@@ -187,7 +189,7 @@ export function createMemoryService(deps: { store: MemoryStore; embedder: Embedd
       const idByUnique = new Map([...existing].map(([u, n]) => [u, n.id]));
       for (const [i, [u, n]] of toCreate.entries()) {
         const node = await store.insertNode(companyId, {
-          contactId: contact?.contact.id ?? null, type: n.tipo, title: n.titulo, content: n.contenido, agentId: data.agentId, external: n.externo, embedding: vectors[i],
+          contactId: contact?.contact.id ?? null, type: n.tipo, title: n.titulo, content: n.contenido, agentId: data.agentId, external: n.externo, confidence: n.confianza, sourceTaskId: opciones.tareaOrigen ?? null, embedding: vectors[i],
         });
         idByUnique.set(u, node.id);
       }

@@ -2,7 +2,9 @@
 
 import { FlaskConical, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { lanzarTareaDePrueba, verTarea, type VistaTarea } from "@/app/actions/agentes";
+import { aprendizajeDeTarea, lanzarTareaDePrueba, verTarea, type VistaTarea } from "@/app/actions/agentes";
+import type { LearnedNode } from "@/lib/agents/store";
+import { Aprendido } from "./Aprendido";
 import { PillButton } from "@/components/glass";
 
 const eur = (n: number) => n.toLocaleString("es-ES", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
@@ -21,6 +23,7 @@ const estadoTexto: Record<string, string> = {
 function etiqueta(kind: string, tool: string | null) {
   if (kind === "instruccion") return "Tarea recibida";
   if (kind === "respuesta") return "El agente piensa";
+  if (kind === "memoria") return "Memoria · lo que se queda";
   if (kind === "herramienta") return `Herramienta · ${tool}`;
   return "Final";
 }
@@ -29,13 +32,15 @@ function etiqueta(kind: string, tool: string | null) {
  * Botón «Lanzar tarea de prueba» de la ficha del agente: le da un lead ficticio y muestra paso a paso lo que hace
  * (qué piensa, qué herramientas usa, qué le devuelven), con los tokens y el coste en euros de la tarea.
  */
-export function TareaDePrueba({ agentSlug }: { agentSlug: string }) {
+export function TareaDePrueba({ agentSlug, agentName }: { agentSlug: string; agentName: string }) {
   const [launching, setLaunching] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [view, setView] = useState<VistaTarea>(null);
   const [limits, setLimits] = useState<{ maxPasos: number; maxCosteEur: number } | null>(null);
+  const [learned, setLearned] = useState<LearnedNode[]>([]);
   const stopped = useRef(false);
+  const status = view?.task.status;
 
   const running = taskId !== null && (view === null || view.task.status === "running");
 
@@ -56,10 +61,20 @@ export function TareaDePrueba({ agentSlug }: { agentSlug: string }) {
     };
   }, [taskId]);
 
+  useEffect(() => {
+    if (!taskId || !status || status === "running") return;
+    let cancelled = false;
+    aprendizajeDeTarea(taskId).then((r) => !cancelled && setLearned(r)).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [taskId, status]);
+
   const launch = useCallback(async () => {
     setLaunching(true);
     setMessage(null);
     setView(null);
+    setLearned([]);
     setTaskId(null);
     try {
       const r = await lanzarTareaDePrueba({ agentSlug });
@@ -80,7 +95,7 @@ export function TareaDePrueba({ agentSlug }: { agentSlug: string }) {
         {running ? "El agente está trabajando…" : "Lanzar tarea de prueba"}
       </PillButton>
       <p className="text-tiny text-ink-3">
-        Le pasa un lead ficticio y gasta tokens reales de tu clave de Anthropic. Límite por tarea: {limits?.maxPasos ?? 8} pasos y{" "}
+        Le pasa un lead ficticio y gasta tokens reales de tu clave de Anthropic (también el paso final con Haiku que guarda lo aprendido). Límite por tarea: {limits?.maxPasos ?? 8} pasos y{" "}
         {(limits?.maxCosteEur ?? 0.2).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €.
       </p>
       {message && (
@@ -104,7 +119,7 @@ export function TareaDePrueba({ agentSlug }: { agentSlug: string }) {
                     {etiqueta(s.kind, s.toolName)}
                   </span>
                   {s.isError && <span className="text-ink-2">· con error</span>}
-                  {s.kind === "respuesta" && (
+                  {(s.kind === "respuesta" || s.kind === "memoria") && (
                     <span>
                       · {tokens(s.usage.inputTokens)} entrada · {tokens(s.usage.outputTokens)} salida · {tokens(s.usage.cacheReadTokens)} caché leída ·{" "}
                       {eur(s.costEur)} €
@@ -118,6 +133,7 @@ export function TareaDePrueba({ agentSlug }: { agentSlug: string }) {
               </li>
             ))}
           </ol>
+          {learned.length > 0 && <Aprendido nombre={agentName} items={learned} />}
           <p className="text-tiny text-ink-3">
             Total: {view.task.steps} {view.task.steps === 1 ? "paso" : "pasos"} · {tokens(view.task.usage.inputTokens)} entrada ·{" "}
             {tokens(view.task.usage.outputTokens)} salida · {tokens(view.task.usage.cacheReadTokens)} caché leída ·{" "}

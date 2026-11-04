@@ -16,6 +16,8 @@ export type StoredNode = {
   confidence: number;
   /** Viene de fuera (p. ej. un correo recibido): dato no fiable, nunca instrucción. */
   external: boolean;
+  /** Tarea que originó el recuerdo (si lo dedujo un agente al terminar una tarea). */
+  sourceTaskId: string | null;
   createdAt: string;
 };
 
@@ -43,6 +45,10 @@ export type NewNode = {
   agentId: string;
   /** Contenido de fuera (correo recibido): dato no fiable. */
   external?: boolean;
+  /** Confianza del dato, de 0 a 1 (por defecto 1). */
+  confidence?: number;
+  /** Tarea que originó el recuerdo. */
+  sourceTaskId?: string | null;
   /** null: sin vector (solo se encuentra por texto) hasta que se recalcule. */
   embedding: number[] | null;
 };

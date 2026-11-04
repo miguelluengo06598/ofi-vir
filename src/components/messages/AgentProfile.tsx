@@ -1,6 +1,7 @@
 "use client";
 
 import { Coins, FileImage, FileSpreadsheet, FileText, LifeBuoy, Mail } from "lucide-react";
+import { RecuerdosRecientes } from "@/components/agents/RecuerdosRecientes";
 import { TareaDePrueba } from "@/components/agents/TareaDePrueba";
 import { EmailQuota } from "@/components/emails/EmailQuota";
 import { contactDirectory, contactsOfAgent } from "@/data/emails";
@@ -97,7 +98,11 @@ export function AgentProfile({ agent }: { agent: OfficeAgent }) {
       </Section>
 
       <Section title="Tarea de prueba">
-        <TareaDePrueba agentSlug={agent.id} />
+        <TareaDePrueba agentSlug={agent.id} agentName={agent.name} />
+      </Section>
+
+      <Section title="Lo que ha aprendido">
+        <RecuerdosRecientes agentSlug={agent.id} agentName={agent.name} />
       </Section>
 
       <Section title="Coste medio por tarea">

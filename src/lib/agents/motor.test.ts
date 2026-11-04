@@ -30,7 +30,7 @@ const setup = (script: (LlmResponse | Error)[], over: Partial<EngineDeps> = {}) 
   const memStore = new InMemoryStore();
   const memory = createMemoryService({ store: memStore, embedder: new FakeEmbedder() });
   const llm = new ScriptedLlm(script);
-  const deps: EngineDeps = { store, memory, contacts: memStore, llm, ...over };
+  const deps: EngineDeps = { store, memory, contacts: memStore, llm, aprender: false, ...over };
   return { store, memStore, memory, llm, deps };
 };
 const run = async (s: ReturnType<typeof setup>, instruccion = "Ha llegado un lead.") => {

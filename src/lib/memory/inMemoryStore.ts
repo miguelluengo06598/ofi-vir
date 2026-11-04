@@ -26,8 +26,9 @@ export class InMemoryStore implements MemoryStore {
       title: n.title,
       content: n.content,
       agentSlug: n.agentId,
-      confidence: 1,
+      confidence: n.confidence ?? 1,
       external: n.external ?? false,
+      sourceTaskId: n.sourceTaskId ?? null,
       createdAt: new Date(Date.now() + this.seq).toISOString(),
       embedding: n.embedding,
     };

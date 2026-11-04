@@ -3,7 +3,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(21);
 
 create temp table ids as select
   'a64499d1-7f43-4a43-abc8-41a313dc4018'::uuid as company_a,
@@ -23,6 +23,17 @@ select is((select cost_eur from public.tasks where id = (select task from ids)),
 select is((select ai_cost_credits from public.tasks where id = (select task from ids)), 600.0000::numeric, 'y el coste en créditos (la caché no suma créditos de entrada)');
 update public.tasks set output_tokens = 0 where id = (select task from ids);
 select is((select cost_eur from public.tasks where id = (select task from ids)), 0.216200::numeric, 'al cambiar los tokens, el coste se recalcula');
+
+update public.tasks set extra_cost_eur = 0.01 where id = (select task from ids);
+select is((select cost_eur from public.tasks where id = (select task from ids)), 0.226200::numeric, 'el coste del paso de memoria (Haiku) se suma al de la tarea');
+
+-- Un recuerdo conserva su rastro aunque se borre la tarea que lo originó: solo pierde el enlace.
+insert into public.tasks (id, company_id, agent_id, title, model) values ('d0000000-0000-4000-8000-0000000000d2', (select company_a from ids), (select lucia from ids), 'Otra', 'claude-haiku-5-5');
+insert into public.memory_nodes (id, company_id, node_type, title, source_task_id, confidence, created_by_agent_id)
+  values ('d0000000-0000-4000-8000-0000000000e1', (select company_a from ids), 'dato', 'Hecho: de prueba', 'd0000000-0000-4000-8000-0000000000d2', 0.8, (select lucia from ids));
+delete from public.tasks where id = 'd0000000-0000-4000-8000-0000000000d2';
+select ok((select source_task_id is null and company_id = (select company_a from ids) and confidence = 0.8 from public.memory_nodes where id = 'd0000000-0000-4000-8000-0000000000e1'),
+  'al borrar la tarea, el recuerdo se conserva (con su confianza) y solo pierde el enlace');
 
 insert into public.task_steps (company_id, task_id, position, step, kind, content) values
   ((select company_a from ids), (select task from ids), 0, 0, 'instruccion', 'Lead ficticio'),

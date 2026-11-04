@@ -30,9 +30,12 @@ export type TaskInfo = {
   costEur: number;
   steps: number;
   reviewReason: string | null;
+  /** Tokens y coste (€) del paso de memoria al terminar, ya incluidos en `costEur`. */
+  memoryUsage: { inputTokens: number; outputTokens: number };
+  extraCostEur: number;
 };
 
-export type StepKind = "instruccion" | "respuesta" | "herramienta" | "fin";
+export type StepKind = "instruccion" | "respuesta" | "herramienta" | "memoria" | "fin";
 
 export type NewStep = {
   step: number;
@@ -66,7 +69,13 @@ export type TaskPatch = {
   steps?: number;
   reviewReason?: string | null;
   finished?: boolean;
+  /** Paso de memoria: tokens y coste en euros (con la tarifa de su modelo), que se suma al coste de la tarea. */
+  memory?: { inputTokens: number; outputTokens: number; costEur: number };
 };
+
+/** Un recuerdo que un agente guardó al terminar una tarea. */
+export type LearnedNode = { id: string; type: string; title: string; content: string; confidence: number; createdAt: string };
+export type TaskLearning = { taskId: string; taskTitle: string; finishedAt: string | null; items: LearnedNode[] };
 
 export interface AgentStore {
   getAgent(companyId: string, agentId: string): Promise<AgentInfo | null>;
@@ -89,6 +98,10 @@ export interface AgentStore {
 
   addStep(companyId: string, taskId: string, position: number, step: NewStep): Promise<void>;
   listSteps(companyId: string, taskId: string): Promise<TaskStep[]>;
+  /** Recuerdos guardados al terminar una tarea. */
+  listLearned(companyId: string, taskId: string): Promise<LearnedNode[]>;
+  /** Lo aprendido en las últimas tareas de un agente (solo tareas que guardaron algo). */
+  recentLearning(companyId: string, agentId: string, limitTasks: number): Promise<TaskLearning[]>;
 
   /** Crea el borrador y su aprobación en una sola transacción. NO envía nada. */
   createDraft(companyId: string, d: { agentId: string; contactId: string; subject: string; body: string }): Promise<DraftResult>;

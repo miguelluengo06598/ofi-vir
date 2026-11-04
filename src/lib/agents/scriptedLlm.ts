@@ -27,3 +27,10 @@ export const llamada = (id: string, name: string, input: unknown, usage: LlmUsag
 
 /** Respuesta final del modelo. */
 export const fin = (text: string, usage: LlmUsage = uso(1500, 300)): LlmResponse => ({ content: [{ type: "text", text }], stopReason: "end_turn", usage });
+
+/** Respuesta del paso de memoria: la lista de recuerdos que el modelo decide guardar (JSON). */
+export const recuerdosJson = (recuerdos: unknown[], usage: LlmUsage = uso(3200, 420)): LlmResponse => ({
+  content: [{ type: "text", text: JSON.stringify({ recuerdos }) }],
+  stopReason: "end_turn",
+  usage,
+});

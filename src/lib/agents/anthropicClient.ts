@@ -19,7 +19,7 @@ export class AnthropicLlm implements LlmClient {
       model: req.model,
       max_tokens: req.maxTokens,
       system: req.system,
-      tools: req.tools as Anthropic.Messages.Tool[],
+      ...(req.tools.length ? { tools: req.tools as Anthropic.Messages.Tool[] } : {}),
       messages: req.messages as Anthropic.Messages.MessageParam[],
       // Caché automática: el prefijo (herramientas + instrucciones + mensajes anteriores) se reutiliza en cada vuelta del bucle.
       cache_control: { type: "ephemeral" },
