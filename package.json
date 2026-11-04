@@ -12,6 +12,7 @@
     "supabase:status": "supabase status",
     "test:db": "supabase test db",
     "prueba:lucia": "node --env-file=.env.local scripts/prueba-lucia.ts",
+    "test:seguridad": "node --env-file=.env.local --test --test-concurrency=1 \"tests/seguridad/*.test.ts\"",
     "test": "node --test \"src/lib/*/*.test.ts\""
   },
   "dependencies": {

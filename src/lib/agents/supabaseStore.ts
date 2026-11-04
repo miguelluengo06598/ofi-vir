@@ -6,7 +6,7 @@ import type {
 } from "./store.ts";
 
 const AGENT_COLS = "id, slug, name, role, department_id, model, instructions, allowed_tools, departments(name)";
-const TASK_COLS = "id, agent_id, title, status, model, contact_id, source_email_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_eur, steps, review_reason, memory_input_tokens, memory_output_tokens, extra_cost_eur";
+const TASK_COLS = "id, agent_id, title, status, model, contact_id, source_email_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_eur, steps, review_reason, suspicious, memory_input_tokens, memory_output_tokens, extra_cost_eur";
 const num = (v: unknown) => Number(v ?? 0);
 const toLearned = (r: Record<string, unknown>): LearnedNode => ({
   id: r.id as string, type: r.node_type as string, title: r.title as string, content: r.content as string, confidence: num(r.confidence), createdAt: r.created_at as string,
@@ -84,6 +84,7 @@ export class SupabaseAgentStore implements AgentStore {
       contactId: (r.contact_id as string | null) ?? null, sourceEmailId: (r.source_email_id as string | null) ?? null,
       usage: { inputTokens: num(r.input_tokens), outputTokens: num(r.output_tokens), cacheReadTokens: num(r.cache_read_tokens), cacheWriteTokens: num(r.cache_write_tokens) },
       costEur: num(r.cost_eur), steps: num(r.steps), reviewReason: (r.review_reason as string | null) ?? null,
+      suspicious: Boolean(r.suspicious),
       memoryUsage: { inputTokens: num(r.memory_input_tokens), outputTokens: num(r.memory_output_tokens) },
       extraCostEur: num(r.extra_cost_eur),
     };
@@ -132,6 +133,7 @@ export class SupabaseAgentStore implements AgentStore {
       row.memory_output_tokens = patch.memory.outputTokens;
       row.extra_cost_eur = patch.memory.costEur;
     }
+    if (patch.suspicious !== undefined) row.suspicious = patch.suspicious;
     if (patch.finished) row.finished_at = new Date().toISOString();
     const { data, error } = await this.db.from("tasks").update(row).eq("company_id", companyId).eq("id", taskId).select("cost_eur").single();
     if (error || !data) throw new Error("No se pudo actualizar la tarea.");
@@ -208,10 +210,10 @@ export class SupabaseAgentStore implements AgentStore {
     return { approvalId: row.approval_id, emailId: row.email_id, threadId: row.thread_id, reused: row.reused };
   }
 
-  async createHandoff(companyId: string, h: { fromAgentId: string; toDepartmentId: string; kind: HandoffKind; summary: string; card: { label: string; value: string }[] }): Promise<HandoffResult> {
+  async createHandoff(companyId: string, h: { fromAgentId: string; toDepartmentId: string; kind: HandoffKind; summary: string; card: { label: string; value: string }[]; contactId?: string | null }): Promise<HandoffResult> {
     const { data, error } = await this.db.rpc("agent_create_handoff", {
       p_company_id: companyId, p_from_agent: h.fromAgentId, p_to_department: h.toDepartmentId,
-      p_kind: h.kind, p_summary: h.summary, p_card: h.card,
+      p_kind: h.kind, p_summary: h.summary, p_card: h.card, p_contact_id: h.contactId ?? null,
     });
     const row = Array.isArray(data) ? data[0] : data;
     if (error || !row) throw new Error("No se pudo crear el traspaso.");

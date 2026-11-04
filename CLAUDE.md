@@ -34,6 +34,9 @@ Plataforma web donde una empresa tiene su **oficina virtual** con **agentes de I
 - **Los creadores nunca acceden a datos de las empresas**: ni a correos, ni a contactos, ni a memoria, ni a registros. Solo ven métricas agregadas y anónimas de su agente.
 - Validar con `zod` toda entrada que llegue a una ruta de API o a un webhook, y verificar la firma de cada webhook antes de procesarlo.
 
+## Pruebas de seguridad
+`npm run test:seguridad` (base local + `npm run dev` en marcha) ataca el sistema de verdad, con usuarios reales de dos empresas y un modelo «obediente» que hace todo lo que pide el atacante: órdenes ocultas en un correo, lectura/escritura entre empresas, envío sin aprobación o por encima del límite diario, borrado RGPD con barrido de todas las columnas de todas las tablas, y webhooks con firma falsa. Una tarea cuyo contenido externo trae órdenes (`detectarManipulacion`) o en la que el modelo intenta salirse de sus permisos queda `suspicious`, en `review`, con las herramientas de escritura bloqueadas y sin paso de memoria. Con contenido externo, el agente solo puede escribir a quien escribió. Cualquier cambio en permisos, RLS, envío o borrado debe mantener esta suite en verde.
+
 ## Pendiente antes de producción
 - **Embeddings (Voyage)**: verificar el **DPA de Voyage** y **dónde procesa los datos** antes de enviarle contenido real de clientes. Si un cliente lo exige, la alternativa es **alojar BGE-M3** (1024 dimensiones, **sin migración**: basta con otra implementación de `Embedder`).
 

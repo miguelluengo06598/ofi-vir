@@ -18,6 +18,13 @@ export type ToolContext = {
   memory: MemoryService;
   contacts: Pick<MemoryStore, "findContactByEmail" | "getContact">;
   store: AgentStore;
+  /** Motivos de sospecha de la tarea (órdenes ocultas en el contenido externo o intentos de salirse de los permisos). */
+  sospechas: string[];
+};
+
+/** Anota una sospecha (sin repetir). */
+export const sospechar = (ctx: ToolContext, motivo: string) => {
+  if (!ctx.sospechas.includes(motivo)) ctx.sospechas.push(motivo);
 };
 
 /** Vincula la tarea al contacto con el que trabaja, para que el borrado por RGPD alcance también a la tarea y sus pasos. */
@@ -91,13 +98,19 @@ export const HERRAMIENTAS = [
       conexiones: z.array(z.object({ desde: z.string(), hasta: z.string(), tipo: z.enum(edgeKinds) })).max(20).default([]),
     }),
     async run(ctx, input) {
+      // Si el modelo no indica el contacto y la tarea trata de uno, lo guardado cuelga de él (así el borrado RGPD lo alcanza).
+      let contacto = input.contacto;
+      if (!contacto && ctx.task.contactId) {
+        const c = await ctx.contacts.getContact(ctx.companyId, ctx.task.contactId);
+        if (c) contacto = { nombre: c.name, email: c.email, organizacion: c.organization || undefined, cargo: c.jobTitle || undefined };
+      }
       const r = await ctx.memory.guardarRecuerdo(ctx.companyId, {
         agentId: ctx.agent.id,
-        contacto: input.contacto,
+        contacto,
         // Si la tarea parte de contenido externo, lo que se deduzca de él queda marcado como externo (dato no fiable).
         nodos: input.nodos.map((n) => ({ ...n, externo: ctx.externalContent })),
         conexiones: input.conexiones,
-      });
+      }, { tareaOrigen: ctx.task.id });
       if (r.contacto) await vincular(ctx, r.contacto.id);
       const nuevos = r.nodos.filter((n) => !n.reutilizado).length;
       return `Guardado: ${nuevos} nodo(s) nuevo(s), ${r.nodos.length - nuevos} ya existían, ${r.conexiones.creadas} conexión(es) nueva(s).`;
@@ -117,6 +130,11 @@ export const HERRAMIENTAS = [
       // Solo a contactos existentes: un agente no puede inventar destinatarios nuevos.
       const contact = await ctx.contacts.findContactByEmail(ctx.companyId, i.correo_del_contacto);
       if (!contact) throw new ToolError("Ese contacto no consta en la memoria. Guárdalo antes con guardar_recuerdo (con su nombre y correo).");
+      // Con contenido externo en la tarea solo se le puede escribir a quien escribió, nunca a otra dirección que pida el texto.
+      if (ctx.externalContent && ctx.task.contactId && ctx.task.contactId !== contact.id) {
+        sospechar(ctx, "intentó redactar un correo para una dirección distinta de la del remitente");
+        throw new ToolError("En una tarea con contenido externo solo puedes responder a quien lo envió.");
+      }
       await vincular(ctx, contact.id);
       const d = await ctx.store.createDraft(ctx.companyId, { agentId: ctx.agent.id, contactId: contact.id, subject: i.asunto, body: i.cuerpo });
       return d.reused
@@ -148,6 +166,7 @@ export const HERRAMIENTAS = [
           kind: i.tipo,
           summary: neutralizar(i.resumen),
           card: i.ficha.map((f) => ({ label: neutralizar(f.etiqueta), value: neutralizar(f.valor) })),
+          contactId: ctx.task.contactId,
         });
         return `Traspaso creado: ${h.toAgentName} (${dep.name}) lo recibe.`;
       } catch (e) {
@@ -159,6 +178,8 @@ export const HERRAMIENTAS = [
 ];
 
 export type NombreHerramienta = (typeof HERRAMIENTAS)[number]["name"];
+/** Herramientas que escriben (memoria, correo, traspasos): bloqueadas en una tarea sospechosa. */
+export const HERRAMIENTAS_DE_ESCRITURA = new Set<string>(["guardar_recuerdo", "redactar_correo", "pasar_a_departamento"]);
 export const NOMBRES_HERRAMIENTAS: string[] = HERRAMIENTAS.map((t) => t.name);
 
 /** Herramientas que ese agente tiene permitidas (el resto, y las integraciones que no son del motor, se ignoran). */

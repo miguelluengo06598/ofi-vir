@@ -25,7 +25,7 @@ export class InMemoryAgentStore implements AgentStore {
     const id = randomUUID();
     this.tasks.set(id, {
       companyId, id, agentId: t.agentId, title: t.title, status: "running", model: t.model, contactId: t.contactId ?? null, sourceEmailId: null,
-      usage: USO_VACIO, costEur: 0, steps: 0, reviewReason: null, memoryUsage: { inputTokens: 0, outputTokens: 0 }, extraCostEur: 0,
+      usage: USO_VACIO, costEur: 0, steps: 0, reviewReason: null, suspicious: false, memoryUsage: { inputTokens: 0, outputTokens: 0 }, extraCostEur: 0,
     });
     return id;
   }
@@ -47,6 +47,7 @@ export class InMemoryAgentStore implements AgentStore {
     if (patch.usage) t.usage = patch.usage as LlmUsage;
     if (patch.steps !== undefined) t.steps = patch.steps;
     if (patch.reviewReason !== undefined) t.reviewReason = patch.reviewReason;
+    if (patch.suspicious !== undefined) t.suspicious = patch.suspicious;
     if (patch.memory) {
       t.memoryUsage = { inputTokens: patch.memory.inputTokens, outputTokens: patch.memory.outputTokens };
       t.extraCostEur = patch.memory.costEur;

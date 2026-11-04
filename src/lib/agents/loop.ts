@@ -2,10 +2,11 @@ import type { MemoryService } from "../memory/service.ts";
 import type { MemoryStore } from "../memory/store.ts";
 import { mensajesParaLeerCorreo, REGLAS_CONTENIDO_EXTERNO } from "../email/untrusted.ts";
 import { aprenderDeTarea, MODELO_APRENDIZAJE } from "./aprender.ts";
+import { bloquesExternos, detectarManipulacion } from "./sospechoso.ts";
 import type { LlmBlock, LlmClient, LlmMessage } from "./llm.ts";
 import { costeEur, sumarUso, USO_VACIO } from "./pricing.ts";
 import type { AgentStore, TaskStatus } from "./store.ts";
-import { definicionesParaModelo, herramientasDe, ToolError, type ToolContext } from "./tools.ts";
+import { definicionesParaModelo, HERRAMIENTAS_DE_ESCRITURA, herramientasDe, sospechar, ToolError, type ToolContext } from "./tools.ts";
 
 export type Limites = {
   /** Llamadas al modelo por tarea. */
@@ -78,11 +79,13 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
   const pricing = await store.getPricing(task.model);
 
   let externalContent = false;
+  const sospechas: string[] = [];
   let userText = instruccion?.trim() ?? "";
   if (task.sourceEmailId) {
     const mail = await store.getSourceEmail(companyId, task.sourceEmailId);
     if (!mail) throw new Error("No se encontró el correo de la tarea.");
     externalContent = true;
+    for (const m of detectarManipulacion(`${mail.subject}\n${mail.text}`)) sospechas.push(m);
     // La tarea ya sabe de quién es el correo: así «ver_historial_del_contacto» no necesita argumentos y el borrado RGPD la alcanza.
     if (mail.contactId && !task.contactId) {
       await store.setTaskContact(companyId, taskId, mail.contactId);
@@ -92,15 +95,23 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
   }
   if (!userText) throw new Error("La tarea no tiene instrucción.");
   // Una instrucción que trae contenido de fuera (un lead, un formulario) también cuenta: lo que se deduzca de él es dato no fiable.
-  if (userText.includes("<contenido_externo")) externalContent = true;
+  if (userText.includes("<contenido_externo")) {
+    externalContent = true;
+    if (!task.sourceEmailId) for (const b of bloquesExternos(userText)) for (const m of detectarManipulacion(b)) if (!sospechas.includes(m)) sospechas.push(m);
+  }
 
   if (!(await store.claimTask(companyId, taskId, userText))) throw new Error("La tarea ya está en marcha o terminó.");
+  if (sospechas.length > 0) await store.updateTask(companyId, taskId, { suspicious: true });
   let position = 1;
   let usage = USO_VACIO;
   let pasos = 0;
   let ultimoTexto = "";
 
-  const terminar = async (estado: ResultadoTarea["estado"], motivo: string | null): Promise<ResultadoTarea> => {
+  const terminar = async (estadoPedido: ResultadoTarea["estado"], motivoPedido: string | null): Promise<ResultadoTarea> => {
+    // Una tarea sospechosa no termina como «hecha»: queda en revisión, no aprende nada de ese contenido y una persona la mira.
+    const sospechosa = sospechas.length > 0 && estadoPedido !== "failed";
+    const estado = sospechosa ? "review" : estadoPedido;
+    const motivo = sospechosa ? `Posible intento de manipulación en el contenido externo: ${sospechas.join("; ")}.${motivoPedido ? ` (${motivoPedido})` : ""}` : motivoPedido;
     // Paso de memoria: solo si la tarea terminó bien. Va antes de marcarla como terminada para que la interfaz lo vea.
     let memoria: { inputTokens: number; outputTokens: number; costEur: number } | undefined;
     if (estado === "done" && deps.aprender !== false) {
@@ -125,10 +136,10 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
     await store.addStep(companyId, taskId, position++, {
       step: pasos,
       kind: "fin",
-      content: estado === "done" ? ultimoTexto || "Tarea terminada." : `${estado === "review" ? "Parada para revisión" : "Error"}: ${motivo}`,
+      content: estado === "done" ? ultimoTexto || "Tarea terminada." : `${estado === "review" ? "Parada para revisión" : "Error"}: ${motivo}${sospechosa && ultimoTexto ? `\n\nResumen del agente: ${ultimoTexto}` : ""}`,
       isError: estado !== "done",
     });
-    const { costEur } = await store.updateTask(companyId, taskId, { status: estado, usage, steps: pasos, reviewReason: estado === "done" ? null : motivo, finished: true, ...(memoria ? { memory: memoria } : {}) });
+    const { costEur } = await store.updateTask(companyId, taskId, { status: estado, usage, steps: pasos, reviewReason: estado === "done" ? null : motivo, finished: true, ...(sospechosa ? { suspicious: true } : {}), ...(memoria ? { memory: memoria } : {}) });
     return { estado, motivo, pasos, costeEur: costEur, texto: ultimoTexto };
   };
 
@@ -144,6 +155,7 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
     memory: deps.memory,
     contacts: deps.contacts,
     store,
+    sospechas,
   };
   const system = `${agent.instructions.trim() || `Eres ${agent.name}, ${agent.role}.`}\n\n${REGLAS_GENERALES}`;
   const messages: LlmMessage[] = [{ role: "user", content: userText }];
@@ -216,7 +228,15 @@ async function ejecutarHerramienta(
   input: unknown,
 ): Promise<{ texto: string; error: boolean }> {
   const def = permitidas.find((t) => t.name === nombre);
-  if (!def) return { texto: "Esa herramienta no está disponible para ti.", error: true };
+  if (!def) {
+    // Pedir una herramienta que no tiene (p. ej. «enviar_correo») delata a un modelo manipulado.
+    if (ctx.externalContent) sospechar(ctx, `el modelo intentó usar una herramienta que no tiene («${nombre.slice(0, 40)}»)`);
+    return { texto: "Esa herramienta no está disponible para ti.", error: true };
+  }
+  // Una tarea sospechosa solo puede leer: lo que escribiera (memoria, correo, traspasos) podría ser lo que pidió el atacante.
+  if (ctx.sospechas.length > 0 && HERRAMIENTAS_DE_ESCRITURA.has(nombre)) {
+    return { texto: "Esta tarea está marcada como sospechosa y queda en revisión: no puedes escribir en la memoria, redactar correos ni hacer traspasos. Resume lo ocurrido y termina.", error: true };
+  }
   const parsed = def.schema.safeParse(input);
   if (!parsed.success) {
     return { texto: `Datos no válidos: ${parsed.error.issues.map((i) => `${i.path.join(".") || "entrada"}: ${i.message}`).join("; ")}`, error: true };

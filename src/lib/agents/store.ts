@@ -30,6 +30,8 @@ export type TaskInfo = {
   costEur: number;
   steps: number;
   reviewReason: string | null;
+  /** El contenido externo traía órdenes ocultas (o el modelo intentó salirse de sus permisos). */
+  suspicious: boolean;
   /** Tokens y coste (€) del paso de memoria al terminar, ya incluidos en `costEur`. */
   memoryUsage: { inputTokens: number; outputTokens: number };
   extraCostEur: number;
@@ -69,6 +71,7 @@ export type TaskPatch = {
   steps?: number;
   reviewReason?: string | null;
   finished?: boolean;
+  suspicious?: boolean;
   /** Paso de memoria: tokens y coste en euros (con la tarifa de su modelo), que se suma al coste de la tarea. */
   memory?: { inputTokens: number; outputTokens: number; costEur: number };
 };
@@ -105,5 +108,5 @@ export interface AgentStore {
 
   /** Crea el borrador y su aprobación en una sola transacción. NO envía nada. */
   createDraft(companyId: string, d: { agentId: string; contactId: string; subject: string; body: string }): Promise<DraftResult>;
-  createHandoff(companyId: string, h: { fromAgentId: string; toDepartmentId: string; kind: HandoffKind; summary: string; card: { label: string; value: string }[] }): Promise<HandoffResult>;
+  createHandoff(companyId: string, h: { fromAgentId: string; toDepartmentId: string; kind: HandoffKind; summary: string; card: { label: string; value: string }[]; contactId?: string | null }): Promise<HandoffResult>;
 }
