@@ -7,6 +7,7 @@ import { GlassPanel, PillButton } from "@/components/glass";
 import { useApprovals } from "@/components/ApprovalsProvider";
 import { approvals } from "@/data/approvals";
 import { ApprovalCard } from "./ApprovalCard";
+import { BorradoresDeAgentes } from "./BorradoresDeAgentes";
 
 export function ApprovalsView() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export function ApprovalsView() {
       </div>
 
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4">
+        <BorradoresDeAgentes />
         <h2 className="sr-only">Peticiones pendientes</h2>
         <AnimatePresence>
           {pending.map((a, i) => (

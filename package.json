@@ -11,9 +11,11 @@
     "supabase:stop": "supabase stop",
     "supabase:status": "supabase status",
     "test:db": "supabase test db",
+    "prueba:lucia": "node --env-file=.env.local scripts/prueba-lucia.ts",
     "test": "node --test \"src/lib/*/*.test.ts\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
     "@supabase/supabase-js": "^2.118.0",
     "framer-motion": "^14.9.0",
     "lucide-react": "^1.66.0",
