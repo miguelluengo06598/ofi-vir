@@ -15,7 +15,7 @@ const toContact = (c: Record<string, unknown>): StoredContact => ({
   jobTitle: (c.job_title as string | null) ?? "",
 });
 const toVector = (v: number[]) => `[${v.join(",")}]`;
-const NODE_COLS = "id, company_id, contact_id, node_type, title, content, confidence, created_by_agent_id, created_at";
+const NODE_COLS = "id, company_id, contact_id, node_type, title, content, confidence, external, created_by_agent_id, created_at";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Escapa % _ \ para usar un texto como patrón exacto de ilike. */
 const likeExact = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -53,6 +53,7 @@ export class SupabaseMemoryStore implements MemoryStore {
       title: r.title as string,
       content: r.content as string,
       confidence: Number(r.confidence ?? 1),
+      external: Boolean(r.external),
       agentSlug: r.created_by_agent_id ? (slugs.get(r.created_by_agent_id as string) ?? null) : null,
       createdAt: r.created_at as string,
     };
@@ -69,6 +70,7 @@ export class SupabaseMemoryStore implements MemoryStore {
         content: n.content,
         embedding: n.embedding ? toVector(n.embedding) : null,
         created_by_agent_id: n.agentId,
+        external: n.external ?? false,
       })
       .select(NODE_COLS)
       .single();

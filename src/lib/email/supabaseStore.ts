@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { InboundEmailData, InboundStore, InboxReader, LiveMessage, ThreadRef } from "./inboundStore.ts";
 import type { ChainHeaders, ClaimResult, DeliveryStatus, DeliveryTarget, EmailStore, OutboundEmail } from "./store.ts";
 
 const likeExact = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -8,7 +9,7 @@ const EMAIL_COLS = "id, company_id, thread_id, subject, body, to_address, delive
  * Almacén de correo sobre Supabase con la clave `service_role` (solo servidor). Esa clave se salta la RLS,
  * así que CADA consulta filtra por `company_id` a mano (salvo `findByResendId`, que parte del id único de Resend).
  */
-export class SupabaseEmailStore implements EmailStore {
+export class SupabaseEmailStore implements EmailStore, InboundStore, InboxReader {
   private readonly db: SupabaseClient;
 
   constructor(db: SupabaseClient) {
@@ -163,5 +164,145 @@ export class SupabaseEmailStore implements EmailStore {
       const { error: e2 } = await this.db.from("email_threads").update({ status, status_note: note }).eq("company_id", t.companyId).eq("id", t.threadId);
       if (e2) throw new Error("No se pudo actualizar el estado del hilo.");
     }
+  }
+
+  // --- Recepción ------------------------------------------------------------------------------------------------
+
+  private async threadRef(companyId: string, threadId: string): Promise<ThreadRef | null> {
+    const { data: t } = await this.db.from("email_threads").select("subject, contact_id, agent_id").eq("company_id", companyId).eq("id", threadId).maybeSingle();
+    if (!t) return null;
+    const [{ data: c }, { data: a }] = await Promise.all([
+      this.db.from("contacts").select("name, email").eq("company_id", companyId).eq("id", t.contact_id as string).maybeSingle(),
+      this.db.from("agents").select("slug, name, model").eq("company_id", companyId).eq("id", t.agent_id as string).maybeSingle(),
+    ]);
+    if (!c || !a) return null;
+    return {
+      companyId, threadId, subject: t.subject as string, contactId: t.contact_id as string, contactName: c.name as string, contactEmail: c.email as string,
+      agentId: t.agent_id as string, agentSlug: a.slug as string, agentName: a.name as string, agentModel: a.model as string,
+    };
+  }
+
+  async findInboundByResendId(resendId: string) {
+    const { data, error } = await this.db.from("emails").select("id, company_id, thread_id").eq("resend_message_id", resendId).eq("direction", "inbound").maybeSingle();
+    if (error) throw new Error("No se pudo buscar el correo recibido.");
+    if (!data) return null;
+    const thread = await this.threadRef(data.company_id as string, data.thread_id as string);
+    return thread ? { emailId: data.id as string, thread } : null;
+  }
+
+  async findThreadByMessageIds(messageIds: string[]): Promise<ThreadRef | null> {
+    // Solo ids sin comas, comillas ni paréntesis: así van seguros dentro del filtro.
+    const ids = messageIds.filter((m) => /^<[A-Za-z0-9._%+\-=@$!#&*\/^~]{1,300}>$/.test(m)).slice(0, 20);
+    if (ids.length === 0) return null;
+    const { data, error } = await this.db.from("emails").select("company_id, thread_id, message_id_header").in("message_id_header", ids);
+    if (error) throw new Error("No se pudo buscar el hilo por cabeceras.");
+    for (const id of ids) {
+      const row = (data ?? []).find((r) => r.message_id_header === id);
+      if (row) return this.threadRef(row.company_id as string, row.thread_id as string);
+    }
+    return null;
+  }
+
+  async findLatestThreadForAddress(companyId: string, address: string): Promise<ThreadRef | null> {
+    const contact = await this.findContactByEmail(companyId, address);
+    if (!contact) return null;
+    const { data } = await this.db.from("email_threads").select("id").eq("company_id", companyId).eq("contact_id", contact.id).order("last_message_at", { ascending: false }).limit(1);
+    return data?.[0] ? this.threadRef(companyId, data[0].id as string) : null;
+  }
+
+  async findContactByEmail(companyId: string, email: string) {
+    const { data, error } = await this.db.from("contacts").select("id, name, email").eq("company_id", companyId).eq("email", email.trim().toLowerCase()).maybeSingle();
+    if (error) throw new Error("No se pudo buscar el contacto.");
+    return data ? { id: data.id as string, name: data.name as string, email: data.email as string } : null;
+  }
+
+  async createContact(companyId: string, c: { name: string; email: string }) {
+    const email = c.email.trim().toLowerCase();
+    const { data, error } = await this.db.from("contacts").insert({ company_id: companyId, name: c.name.slice(0, 200), email }).select("id, name, email").single();
+    if (data) return { id: data.id as string, name: data.name as string, email: data.email as string };
+    if (error?.code === "23505") {
+      const existing = await this.findContactByEmail(companyId, email);
+      if (existing) return existing;
+    }
+    throw new Error("No se pudo crear el contacto.");
+  }
+
+  async findAgentBySlug(companyId: string, slug: string) {
+    const { data, error } = await this.db.from("agents").select("id, slug, name, model").eq("company_id", companyId).eq("slug", slug).maybeSingle();
+    if (error) throw new Error("No se pudo buscar el agente.");
+    return data ? { id: data.id as string, slug: data.slug as string, name: data.name as string, model: data.model as string } : null;
+  }
+
+  async createThread(companyId: string, t: { contactId: string; agentId: string; subject: string }) {
+    const { data, error } = await this.db
+      .from("email_threads")
+      .insert({ company_id: companyId, contact_id: t.contactId, agent_id: t.agentId, subject: t.subject.slice(0, 300), status: "replied" })
+      .select("id")
+      .single();
+    if (error || !data) throw new Error("No se pudo crear el hilo.");
+    return data.id as string;
+  }
+
+  async insertInbound(companyId: string, threadId: string, e: InboundEmailData): Promise<string> {
+    const row = {
+      company_id: companyId, thread_id: threadId, direction: "inbound", delivery_status: "received",
+      from_address: e.fromAddress, to_address: e.toAddress || "(sin destinatario)", subject: e.subject.slice(0, 500), body: e.body,
+      attachments: e.attachments.map((a) => ({ name: a.filename, size: a.size })), resend_message_id: e.resendId,
+      message_id_header: e.messageId, in_reply_to: e.inReplyTo, references_headers: e.references, occurred_at: e.occurredAt, ingested_at: new Date().toISOString(),
+    };
+    let { data, error } = await this.db.from("emails").insert(row).select("id").single();
+    if (error?.code === "23505") {
+      // Mismo correo de Resend ya guardado (aviso repetido o en paralelo): se devuelve el existente.
+      const dup = await this.findInboundByResendId(e.resendId);
+      if (dup) return dup.emailId;
+      // Message-ID repetido con otro id de Resend: se guarda sin él para no perder el correo.
+      ({ data, error } = await this.db.from("emails").insert({ ...row, message_id_header: null }).select("id").single());
+    }
+    if (error || !data) throw new Error("No se pudo guardar el correo recibido.");
+    return data.id as string;
+  }
+
+  async markThreadReplied(companyId: string, threadId: string, at: string): Promise<void> {
+    const { error } = await this.db.from("email_threads").update({ status: "replied", status_note: null, last_message_at: at }).eq("company_id", companyId).eq("id", threadId);
+    if (error) throw new Error("No se pudo actualizar el hilo.");
+  }
+
+  async ensureTask(companyId: string, t: { agentId: string; emailId: string; title: string; model: string }) {
+    const { data, error } = await this.db
+      .from("tasks")
+      .insert({ company_id: companyId, agent_id: t.agentId, title: t.title, status: "running", model: t.model, source_email_id: t.emailId })
+      .select("id")
+      .single();
+    if (data) return { taskId: data.id as string, created: true };
+    if (error?.code === "23505") {
+      const { data: existing } = await this.db.from("tasks").select("id").eq("company_id", companyId).eq("source_email_id", t.emailId).maybeSingle();
+      if (existing) return { taskId: existing.id as string, created: false };
+    }
+    throw new Error("No se pudo crear la tarea del agente.");
+  }
+
+  async listLive(companyId: string, limit: number): Promise<LiveMessage[]> {
+    const { data, error } = await this.db
+      .from("emails")
+      .select("id, thread_id, body, occurred_at, ingested_at")
+      .eq("company_id", companyId)
+      .eq("direction", "inbound")
+      .not("ingested_at", "is", null)
+      .order("ingested_at", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error("No se pudieron leer los correos recibidos.");
+    const out: LiveMessage[] = [];
+    const refs = new Map<string, ThreadRef | null>();
+    for (const r of data ?? []) {
+      const tid = r.thread_id as string;
+      if (!refs.has(tid)) refs.set(tid, await this.threadRef(companyId, tid));
+      const t = refs.get(tid);
+      if (!t) continue;
+      out.push({
+        emailId: r.id as string, threadId: tid, threadSubject: t.subject, receivedAt: r.occurred_at as string,
+        contactName: t.contactName, contactEmail: t.contactEmail, agentSlug: t.agentSlug, text: (r.body as string).slice(0, 2000),
+      });
+    }
+    return out;
   }
 }

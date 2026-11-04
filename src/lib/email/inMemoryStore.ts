@@ -1,3 +1,4 @@
+import type { InboundEmailData, InboundStore, ThreadRef } from "./inboundStore.ts";
 import { contentHash } from "./service.ts";
 import type { ChainHeaders, ClaimResult, DeliveryStatus, DeliveryTarget, EmailStore, OutboundEmail } from "./store.ts";
 
@@ -6,12 +7,14 @@ type Row = {
   id: string; companyId: string; threadId: string; subject: string; body: string; toAddress: string; fromAddress: string;
   deliveryStatus: string; hasAttachments: boolean; approvalId: string | null; resendId: string | null;
   messageId: string | null; inReplyTo: string | null; references: string[]; at: number;
+  direction?: "inbound"; ingested?: boolean;
 };
-type Thread = { id: string; companyId: string; agentId: string; contactId: string; status: string; note: string | null };
+type Thread = { id: string; companyId: string; agentId: string; contactId: string; status: string; note: string | null; subject?: string };
 
 /** Almacén en memoria para tests. Repite las reglas del disparador de la base (aprobación, texto y límite diario). */
-export class InMemoryEmailStore implements EmailStore {
-  agents: { id: string; companyId: string; slug: string; name: string; dailyLimit: number }[] = [];
+export class InMemoryEmailStore implements EmailStore, InboundStore {
+  agents: { id: string; companyId: string; slug: string; name: string; dailyLimit: number; model?: string }[] = [];
+  tasks: { id: string; companyId: string; agentId: string; emailId: string; title: string; model: string }[] = [];
   contacts: { id: string; companyId: string; name: string; email: string }[] = [];
   threads: Thread[] = [];
   emails: Row[] = [];
@@ -79,7 +82,7 @@ export class InMemoryEmailStore implements EmailStore {
   }
   private countSent(companyId: string, agentId: string) {
     const threads = this.threads.filter((t) => t.companyId === companyId && t.agentId === agentId).map((t) => t.id);
-    return this.emails.filter((e) => e.companyId === companyId && threads.includes(e.threadId) && e.deliveryStatus !== "pending_approval").length;
+    return this.emails.filter((e) => e.companyId === companyId && e.direction !== "inbound" && threads.includes(e.threadId) && e.deliveryStatus !== "pending_approval").length;
   }
   async chainHeaders(companyId: string, threadId: string): Promise<ChainHeaders> {
     const last = this.emails.filter((e) => e.companyId === companyId && e.threadId === threadId && e.messageId).sort((a, b) => b.at - a.at)[0];
@@ -118,8 +121,77 @@ export class InMemoryEmailStore implements EmailStore {
     t.status = "sent";
   }
 
+  // --- Recepción ---------------------------------------------------------------------------------------------
+
+  private ref(r: { threadId: string; companyId: string }): ThreadRef | null {
+    const t = this.threads.find((x) => x.id === r.threadId && x.companyId === r.companyId);
+    const c = t && this.contacts.find((x) => x.id === t.contactId);
+    const a = t && this.agents.find((x) => x.id === t.agentId);
+    if (!t || !c || !a) return null;
+    return {
+      companyId: t.companyId, threadId: t.id, subject: t.subject ?? "Propuesta", contactId: c.id, contactName: c.name, contactEmail: c.email,
+      agentId: a.id, agentSlug: a.slug, agentName: a.name, agentModel: a.model ?? "claude-haiku-5-5",
+    };
+  }
+  async findInboundByResendId(resendId: string) {
+    const e = this.emails.find((x) => x.direction === "inbound" && x.resendId === resendId);
+    const thread = e && this.ref(e);
+    return e && thread ? { emailId: e.id, thread } : null;
+  }
+  async findThreadByMessageIds(ids: string[]) {
+    for (const id of ids) {
+      const e = this.emails.find((x) => x.messageId === id);
+      if (e) return this.ref(e);
+    }
+    return null;
+  }
+  async findLatestThreadForAddress(companyId: string, address: string) {
+    const c = this.contacts.find((x) => x.companyId === companyId && x.email === address.toLowerCase());
+    const t = c && [...this.threads].reverse().find((x) => x.companyId === companyId && x.contactId === c.id);
+    return t ? this.ref({ threadId: t.id, companyId }) : null;
+  }
+  async findContactByEmail(companyId: string, email: string) {
+    return this.contacts.find((x) => x.companyId === companyId && x.email === email.toLowerCase()) ?? null;
+  }
+  async createContact(companyId: string, c: { name: string; email: string }) {
+    const contact = { id: `contact${++this.seq}`, companyId, name: c.name, email: c.email.toLowerCase() };
+    this.contacts.push(contact);
+    return contact;
+  }
+  async findAgentBySlug(companyId: string, slug: string) {
+    const a = this.agents.find((x) => x.companyId === companyId && x.slug === slug);
+    return a ? { id: a.id, slug: a.slug, name: a.name, model: a.model ?? "claude-haiku-5-5" } : null;
+  }
+  async createThread(companyId: string, t: { contactId: string; agentId: string; subject: string }) {
+    const thread: Thread = { id: `thread${++this.seq}`, companyId, agentId: t.agentId, contactId: t.contactId, status: "replied", note: null, subject: t.subject };
+    this.threads.push(thread);
+    return thread.id;
+  }
+  async insertInbound(companyId: string, threadId: string, e: InboundEmailData) {
+    const dup = this.emails.find((x) => x.direction === "inbound" && x.resendId === e.resendId);
+    if (dup) return dup.id;
+    const row: Row = {
+      id: `in${++this.seq}`, companyId, threadId, subject: e.subject, body: e.body, toAddress: e.toAddress, fromAddress: e.fromAddress,
+      deliveryStatus: "received", hasAttachments: false, approvalId: null, resendId: e.resendId, messageId: e.messageId, inReplyTo: e.inReplyTo,
+      references: e.references, at: this.clock++, direction: "inbound", ingested: true,
+    };
+    this.emails.push(row);
+    return row.id;
+  }
+  async markThreadReplied(companyId: string, threadId: string) {
+    const t = this.threads.find((x) => x.companyId === companyId && x.id === threadId)!;
+    Object.assign(t, { status: "replied", note: null });
+  }
+  async ensureTask(companyId: string, t: { agentId: string; emailId: string; title: string; model: string }) {
+    const existing = this.tasks.find((x) => x.companyId === companyId && x.emailId === t.emailId);
+    if (existing) return { taskId: existing.id, created: false };
+    const task = { id: `task${++this.seq}`, companyId, ...t };
+    this.tasks.push(task);
+    return { taskId: task.id, created: true };
+  }
+
   async findByResendId(resendId: string): Promise<DeliveryTarget | null> {
-    const e = this.emails.find((x) => x.resendId === resendId);
+    const e = this.emails.find((x) => x.resendId === resendId && x.direction !== "inbound");
     const t = e && this.threads.find((x) => x.id === e.threadId);
     const c = t && this.contacts.find((x) => x.id === t.contactId);
     if (!e || !t || !c) return null;

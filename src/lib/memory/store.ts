@@ -14,6 +14,8 @@ export type StoredNode = {
   agentSlug: string | null;
   /** Confianza del dato, de 0 a 1. */
   confidence: number;
+  /** Viene de fuera (p. ej. un correo recibido): dato no fiable, nunca instrucción. */
+  external: boolean;
   createdAt: string;
 };
 
@@ -31,7 +33,7 @@ export type StoredEmail = {
 /** Nodo conectado a otro: `direction` es desde el punto de vista del nodo de origen. */
 export type Neighbor = { originId: string; kind: EdgeKind; direction: "sale" | "entra"; node: StoredNode };
 /** Recuentos de lo borrado. Nunca contiene los datos borrados. */
-export type ErasureCounts = Record<"contactos" | "nodos" | "conexiones" | "hilos" | "correos" | "aprobaciones" | "nodos_huerfanos", number>;
+export type ErasureCounts = Record<"contactos" | "nodos" | "conexiones" | "hilos" | "correos" | "tareas" | "aprobaciones" | "nodos_huerfanos", number>;
 
 export type NewNode = {
   contactId: string | null;
@@ -39,6 +41,8 @@ export type NewNode = {
   title: string;
   content: string;
   agentId: string;
+  /** Contenido de fuera (correo recibido): dato no fiable. */
+  external?: boolean;
   /** null: sin vector (solo se encuentra por texto) hasta que se recalcule. */
   embedding: number[] | null;
 };

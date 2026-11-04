@@ -27,6 +27,7 @@ export class InMemoryStore implements MemoryStore {
       content: n.content,
       agentSlug: n.agentId,
       confidence: 1,
+      external: n.external ?? false,
       createdAt: new Date(Date.now() + this.seq).toISOString(),
       embedding: n.embedding,
     };
@@ -149,7 +150,7 @@ export class InMemoryStore implements MemoryStore {
 
     const counts: ErasureCounts = {
       contactos: 1, nodos: mine.size, conexiones: touching.length, hilos: emails.length ? 1 : 0,
-      correos: emails.length, aprobaciones: 0, nodos_huerfanos: before - this.nodes.length,
+      correos: emails.length, tareas: 0, aprobaciones: 0, nodos_huerfanos: before - this.nodes.length,
     };
     this.erasures.push({ companyId, contactId, requestedBy, erasedAt: new Date().toISOString(), counts });
     return counts;

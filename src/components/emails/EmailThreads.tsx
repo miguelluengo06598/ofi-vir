@@ -3,9 +3,11 @@
 import { ChevronLeft, Inbox } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useApprovals } from "@/components/ApprovalsProvider";
+import { useInbox } from "@/components/InboxProvider";
 import { Avatar, PillButton } from "@/components/glass";
 import { agentById } from "@/data/agents";
 import { contactDirectory, threadsFor, type ResolvedThread } from "@/data/emails";
+import { liveThreadsFor } from "./liveThreads";
 import { AttachmentList, EmailStatusBadge, PaperclipCount } from "./parts";
 
 const fmtWhen = (iso: string) =>
@@ -14,7 +16,13 @@ const fmtWhen = (iso: string) =>
 /** Pestaña «Correos» de la ficha de un contacto: hilos y, al abrir uno, la conversación. */
 export function EmailThreads({ contactId }: { contactId: string }) {
   const { decisions, emailEdits } = useApprovals();
-  const threads = useMemo(() => threadsFor(contactId, decisions, emailEdits), [contactId, decisions, emailEdits]);
+  const { messages, fresh } = useInbox();
+  const email = contactDirectory[contactId]?.email;
+  const threads = useMemo(() => {
+    const base = threadsFor(contactId, decisions, emailEdits);
+    const live = email ? liveThreadsFor(contactId, email, messages) : [];
+    return [...live, ...base].sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+  }, [contactId, decisions, emailEdits, email, messages]);
   const [openId, setOpenId] = useState<string | null>(null);
   const open = threads.find((t) => t.id === openId);
 
@@ -41,7 +49,10 @@ export function EmailThreads({ contactId }: { contactId: string }) {
               className="flex w-full cursor-pointer flex-col gap-1 rounded-card border border-glass-border bg-black/20 p-3 text-left hover:bg-white/10"
             >
               <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <EmailStatusBadge status={t.status} />
+                <span className="flex items-center gap-2">
+                  <EmailStatusBadge status={t.status} />
+                  {t.messages.some((m) => fresh.has(m.id)) && <span className="rounded-pill bg-accent/40 px-2 py-0.5 text-tiny text-white">Nuevo</span>}
+                </span>
                 <time dateTime={t.lastAt} className="text-tiny text-ink-2">
                   {fmtWhen(t.lastAt)}
                 </time>

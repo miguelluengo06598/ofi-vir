@@ -1,5 +1,6 @@
 "use server";
 
+import { devContext } from "@/lib/devContext";
 import { emailConfigFromEnv } from "@/lib/email/config";
 import { ResendSender } from "@/lib/email/sender";
 import { aprobarYEnviar, type AprobarYEnviarResult } from "@/lib/email/service";
@@ -13,10 +14,10 @@ export type AprobarCorreoResult = AprobarYEnviarResult | { estado: "sin_backend"
  * Mientras no haya inicio de sesión, empresa y persona salen de DEV_COMPANY_ID y DEV_USER_ID.
  */
 export async function aprobarCorreo(input: { agentSlug: string; toEmail: string; subject: string; body: string }): Promise<AprobarCorreoResult> {
-  const companyId = process.env.DEV_COMPANY_ID?.trim();
-  const userId = process.env.DEV_USER_ID?.trim();
+  const ctx = devContext();
   const store = SupabaseEmailStore.fromEnv();
-  if (!companyId || !userId || !store) return { estado: "sin_backend" };
+  if (!ctx || !store) return { estado: "sin_backend" };
+  const { companyId, userId } = ctx;
 
   const config = emailConfigFromEnv();
   const sender = config.apiKey ? new ResendSender(config.apiKey) : null;

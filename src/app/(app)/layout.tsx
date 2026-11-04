@@ -3,12 +3,14 @@ import { Background } from "@/components/Background";
 import { ContactDialog } from "@/components/emails/ContactDialog";
 import { ConsultDialog } from "@/components/experts/ConsultDialog";
 import { Dock, TopBar } from "@/components/glass";
+import { InboxProvider } from "@/components/InboxProvider";
 import { ChainDialog } from "@/components/handoffs/ChainDialog";
 import { SimulationProvider } from "@/components/SimulationProvider";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ApprovalsProvider>
+      <InboxProvider>
       <SimulationProvider>
         <a
           href="#contenido"
@@ -29,6 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <ContactDialog />
         <ChainDialog />
       </SimulationProvider>
+      </InboxProvider>
     </ApprovalsProvider>
   );
 }

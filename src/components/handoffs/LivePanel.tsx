@@ -1,11 +1,14 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Pause, Play, Radio, X } from "lucide-react";
+import { Mail, Pause, Play, Radio, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useApprovals } from "@/components/ApprovalsProvider";
 import { GlassPanel, PillButton } from "@/components/glass";
+import { useInbox } from "@/components/InboxProvider";
 import { useSimulation } from "@/components/SimulationProvider";
 import { agentById, firstName } from "@/data/agents";
+import { contactDirectory } from "@/data/emails";
 import { kindLabel } from "@/data/handoffs";
 import { HandoffPair, HandoffStatusText } from "./parts";
 
@@ -15,6 +18,8 @@ const ANNOUNCE_EVERY_MS = 10_000;
 /** Panel «En directo»: los últimos traspasos. En móvil se despliega desde un botón sobre el dock. */
 export function LivePanel() {
   const { events, latest, paused, toggle, openChain } = useSimulation();
+  const { messages, fresh } = useInbox();
+  const { openContact } = useApprovals();
   const [open, setOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const lastAnnounced = useRef(0);
@@ -29,7 +34,19 @@ export function LivePanel() {
     setAnnouncement(`Traspaso de ${firstName(agentById(h.fromAgentId).name)} a ${firstName(agentById(h.toAgentId).name)}: ${h.summary}`);
   }, [latest]);
 
+  // Correo real recibido: se anuncia como mucho cada 10 s, igual que los traspasos.
+  const newest = messages[0];
+  useEffect(() => {
+    if (!newest || !fresh.has(newest.emailId)) return;
+    const now = Date.now();
+    if (now - lastAnnounced.current < ANNOUNCE_EVERY_MS) return;
+    lastAnnounced.current = now;
+    setAnnouncement(`Correo recibido de ${newest.contactName}: ${newest.threadSubject}`);
+  }, [newest, fresh]);
+
   const recent = events.slice(-SHOWN).reverse();
+  const mails = messages.slice(0, 3);
+  const directoryId = (email: string) => Object.entries(contactDirectory).find(([, c]) => c.email.toLowerCase() === email.toLowerCase())?.[0];
 
   return (
     <>
@@ -56,6 +73,41 @@ export function LivePanel() {
           </h2>
           <PillButton icon={paused ? Play : Pause} compact aria-label={paused ? "Reanudar la simulación" : "Pausar la simulación"} onClick={toggle} />
         </div>
+        {mails.length > 0 && (
+          <ul aria-label="Correos recibidos" className="flex flex-col border-b border-glass-border pb-1">
+            {mails.map((m) => {
+              const id = directoryId(m.contactEmail);
+              const body = (
+                <>
+                  <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-accent/40">
+                    <Mail size={16} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="line-clamp-1 block text-tiny leading-snug font-semibold">
+                      Correo de {m.contactName}
+                      {fresh.has(m.emailId) && <span className="ml-2 rounded-pill bg-accent/40 px-1.5 py-0.5 font-normal">Nuevo</span>}
+                    </span>
+                    <span className="line-clamp-2 block text-tiny leading-snug text-ink-2">{m.threadSubject}</span>
+                    <time dateTime={m.receivedAt} className="text-tiny text-ink-3">
+                      {new Date(m.receivedAt).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                    </time>
+                  </span>
+                </>
+              );
+              return (
+                <li key={m.emailId}>
+                  {id ? (
+                    <button type="button" aria-label={`Abrir los correos de ${m.contactName}: ${m.threadSubject}`} onClick={() => openContact(id)} className="flex w-full cursor-pointer items-center gap-3 rounded-card px-2 py-2 text-left transition-colors hover:bg-white/10">
+                      {body}
+                    </button>
+                  ) : (
+                    <div className="flex w-full items-center gap-3 px-2 py-2">{body}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
         <ul className="flex flex-col">
           <AnimatePresence initial={false}>
             {recent.map((e) => (
