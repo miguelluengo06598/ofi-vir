@@ -72,7 +72,7 @@ describe("toMemoryData", () => {
     const n1 = await svc.addNode(A, dato("Uno", "a"));
     const n2 = await svc.addNode(A, { ...dato("Dos", "b"), type: "tarea" });
     const huerfano = await svc.addNode(A, { ...dato("Suelto", "c"), contactId: null });
-    store.contacts.push({ id: CONTACT, companyId: A, name: "Laura Gómez", organization: "Clínica Sol" });
+    store.contacts.push({ id: CONTACT, companyId: A, name: "Laura Gómez", email: "laura@clinicasol.example", organization: "Clínica Sol", jobTitle: "Directora" });
     store.edges.push({ id: "e1", companyId: A, from: n1.id, to: n2.id, kind: "tiene_pendiente" }, { id: "e2", companyId: A, from: n1.id, to: huerfano.id, kind: "recibio" });
     const data = toMemoryData(await svc.loadGraph(A));
     assert.deepEqual(data.clients.map((c) => [c.name, c.company]), [["Laura Gómez", "Clínica Sol"]]);

@@ -19,6 +19,7 @@ Plataforma web donde una empresa tiene su **oficina virtual** con **agentes de I
 - **Resend** para enviar y recibir correo (webhooks de entrada y de estado de entrega).
 - **API de Claude** para los agentes: `claude-haiku-5-5` para tareas simples y `claude-sonnet-5-5` para las difíciles. El modelo es **configurable por agente** (campo en su configuración), no está fijado en el código.
 - **Embeddings de la memoria**: **Voyage `voyage-3.5`** (1024 dimensiones, coincide con `vector(1024)` de `memory_nodes`). Se usa siempre a través de la interfaz `Embedder` (`src/lib/memory/embedder.ts`): ningún otro código llama a Voyage directamente, así el proveedor se puede cambiar sin tocar el servicio. Los tests usan un embedder falso y determinista.
+- **Servicio de memoria** (`src/lib/memory/service.ts`): `guardarRecuerdo` (sin duplicados), `buscarEnMemoria` (texto + significado, vecinos, resumido y con tope de tamaño; pasar el resultado al modelo con `formatearParaModelo`), `historialDelContacto`, `corregirNodo` y `borrarContacto` (RGPD: función SQL `erase_contact`, constancia en `erasure_log` sin datos personales).
 - **Multiempresa**: cada tabla y cada dato lleva `company_id`, y toda consulta se hace en el contexto de una empresa.
 - Migración gradual: cada dato simulado se sustituye por una función de acceso a datos con la misma forma de tipos, de modo que los componentes cambien lo mínimo.
 
