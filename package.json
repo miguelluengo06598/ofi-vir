@@ -10,14 +10,17 @@
     "dev:all": "bash scripts/dev-all.sh",
     "supabase:stop": "supabase stop",
     "supabase:status": "supabase status",
-    "test:db": "supabase test db"
+    "test:db": "supabase test db",
+    "test": "node --test \"src/lib/memory/*.test.ts\""
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "framer-motion": "^14.9.0",
     "lucide-react": "^1.66.0",
     "next": "16.4.3",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

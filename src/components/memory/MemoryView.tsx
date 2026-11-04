@@ -22,8 +22,8 @@ import { MemoryGraph, type GraphCluster } from "./MemoryGraph";
 import { MemoryList } from "./MemoryList";
 import { NodeGlyph } from "./NodeGlyph";
 
-export function MemoryView() {
-  const [data, setData] = useState<MemoryData>(initialMemory);
+export function MemoryView({ initialData }: { initialData?: MemoryData | null }) {
+  const [data, setData] = useState<MemoryData>(() => initialData ?? initialMemory());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [types, setTypes] = useState<Set<NodeType>>(new Set());
@@ -117,7 +117,7 @@ export function MemoryView() {
   };
 
   const restore = () => {
-    setData(initialMemory());
+    setData(initialData ?? initialMemory());
     setSelectedId(null);
     setAnnouncement("Datos de ejemplo restaurados.");
   };
