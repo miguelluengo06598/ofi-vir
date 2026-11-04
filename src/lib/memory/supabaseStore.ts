@@ -67,7 +67,7 @@ export class SupabaseMemoryStore implements MemoryStore {
         node_type: n.type,
         title: n.title,
         content: n.content,
-        embedding: toVector(n.embedding),
+        embedding: n.embedding ? toVector(n.embedding) : null,
         created_by_agent_id: n.agentId,
       })
       .select(NODE_COLS)

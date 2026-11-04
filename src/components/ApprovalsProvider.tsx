@@ -11,6 +11,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { DepartmentId } from "@/components/glass";
+import { aprobarCorreo } from "@/app/actions/aprobarCorreo";
 import { approvals } from "@/data/approvals";
 import { buildOffice, hiredAgentId, type HiredAgent } from "@/data/departments";
 import type { EmailEdit } from "@/data/emails";
@@ -51,6 +52,12 @@ type ApprovalsContextValue = {
   hire: (marketId: string, departmentId: DepartmentId) => void;
   finishArrival: () => void;
   decide: (approvalId: string, decision: Decision["decision"]) => void;
+  /** Borradores de correo que se están aprobando y enviando ahora mismo. */
+  sending: ReadonlySet<string>;
+  /** Motivo por el que un correo no se pudo enviar (sigue pendiente), por id de aprobación. */
+  sendErrors: Record<string, string>;
+  /** Aprueba un borrador de correo y lo envía de verdad (con el texto editado, si lo hay). */
+  approveEmail: (approvalId: string) => Promise<void>;
   edit: (approvalId: string, body: string) => void;
   /** Conversaciones de Mensajes (compartidas para que las consultas añadan avisos del sistema). */
   conversations: Conversation[];
@@ -70,6 +77,8 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [emailEdits, setEmailEdits] = useState<Record<string, EmailEdit>>({});
+  const [sending, setSending] = useState<ReadonlySet<string>>(new Set());
+  const [sendErrors, setSendErrors] = useState<Record<string, string>>({});
   const [contactTarget, setContactTarget] = useState<string | null>(null);
   const [hired, setHired] = useState<HiredAgent[]>([]);
   const [balance, setBalance] = useState(initialBalance);
@@ -86,6 +95,40 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
     (approvalId: string, decision: Decision["decision"]) =>
       setDecisions((d) => (d.some((x) => x.approvalId === approvalId) ? d : [...d, { approvalId, decision }])),
     [],
+  );
+  const approveEmail = useCallback(
+    async (approvalId: string) => {
+      const a = approvals.find((x) => x.id === approvalId);
+      if (!a?.email) return decide(approvalId, "approved");
+      if (sending.has(approvalId)) return;
+      setSending((s) => new Set(s).add(approvalId));
+      setSendErrors((all) => {
+        const rest = { ...all };
+        delete rest[approvalId];
+        return rest;
+      });
+      const edited = emailEdits[approvalId];
+      try {
+        const r = await aprobarCorreo({
+          agentSlug: a.agentId,
+          toEmail: a.email.toEmail,
+          subject: edited?.subject ?? a.email.subject,
+          body: edited?.body ?? a.email.body,
+        });
+        // Sin backend configurado la interfaz sigue en modo simulado; con backend, solo se resuelve si salió el correo.
+        if (r.estado === "enviado" || r.estado === "sin_backend") decide(approvalId, "approved");
+        else setSendErrors((e) => ({ ...e, [approvalId]: r.mensaje }));
+      } catch {
+        setSendErrors((e) => ({ ...e, [approvalId]: "No se pudo contactar con el servidor. El correo no se ha enviado." }));
+      } finally {
+        setSending((s) => {
+          const next = new Set(s);
+          next.delete(approvalId);
+          return next;
+        });
+      }
+    },
+    [decide, emailEdits, sending],
   );
   const edit = useCallback(
     (approvalId: string, body: string) => setEdits((e) => ({ ...e, [approvalId]: body })),
@@ -157,6 +200,9 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
       hire,
       finishArrival,
       decide,
+      sending,
+      sendErrors,
+      approveEmail,
       edit,
       conversations,
       setConversations,
@@ -168,7 +214,7 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
     }),
     [
       decisions, resolved, edits, emailEdits, editEmail, contactTarget, openContact, closeContact, office, balance, limitEur, topUp, setLimit, hired, arrival, hire,
-      finishArrival, decide, edit, conversations, consultations, consultTarget, openConsult, closeConsult, consult,
+      finishArrival, decide, sending, sendErrors, approveEmail, edit, conversations, consultations, consultTarget, openConsult, closeConsult, consult,
     ],
   );
 

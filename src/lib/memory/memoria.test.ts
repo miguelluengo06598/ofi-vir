@@ -102,6 +102,17 @@ describe("guardarRecuerdo", () => {
     assert.equal((await store.listNodes(A)).length, 0);
   });
 
+  it("con permitirSinVector guarda el nodo aunque falle el embedder (para no perder un aviso) y se encuentra por texto", async () => {
+    const store = new InMemoryStore();
+    const roto: Embedder = { model: "roto", dimensions: EMBEDDING_DIMENSIONS, embed: async () => { throw new Error("sin red"); } };
+    const svc = createMemoryService({ store, embedder: roto });
+    const r = await svc.guardarRecuerdo(A, recuerdo({ nodos: [{ clave: "n", tipo: "dato", titulo: "Correo no válido", contenido: "Rebotó laura@clinicasol.example" }], conexiones: [] }), { permitirSinVector: true });
+    assert.equal(r.nodos[0].reutilizado, false);
+    assert.equal((await store.listNodes(A)).length, 1);
+    const hits = await createMemoryService({ store, embedder: null }).buscarEnMemoria(A, "correo no válido");
+    assert.equal(hits.resultados[0].titulo, "Correo no válido");
+  });
+
   it("valida claves repetidas, conexiones a claves inexistentes y correos inválidos", async () => {
     const { svc } = setup();
     const n = recuerdo().nodos;

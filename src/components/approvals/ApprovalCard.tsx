@@ -9,7 +9,9 @@ import type { Approval } from "@/data/approvals";
 import { EmailDraft } from "@/components/emails/EmailDraft";
 
 export function ApprovalCard({ approval, agent, delay }: { approval: Approval; agent: OfficeAgent; delay: number }) {
-  const { edits, emailEdits, decide, edit, editEmail } = useApprovals();
+  const { edits, emailEdits, decide, edit, editEmail, sending, sendErrors, approveEmail } = useApprovals();
+  const isSending = sending.has(approval.id);
+  const sendError = sendErrors[approval.id];
   const { preview, email } = approval;
   // Los correos se editan en asunto y cuerpo; el resto de peticiones, solo en el texto.
   const emailEdit = emailEdits[approval.id];
@@ -51,8 +53,14 @@ export function ApprovalCard({ approval, agent, delay }: { approval: Approval; a
               </>
             ) : (
               <>
-                <PillButton icon={Check} active aria-pressed={undefined} onClick={() => decide(approval.id, "approved")}>
-                  Aprobar
+                <PillButton
+                  icon={Check}
+                  active
+                  aria-pressed={undefined}
+                  disabled={isSending}
+                  onClick={() => (email ? void approveEmail(approval.id) : decide(approval.id, "approved"))}
+                >
+                  {isSending ? "Enviando…" : email ? "Aprobar y enviar" : "Aprobar"}
                 </PillButton>
                 <PillButton
                   icon={Pencil}
@@ -64,7 +72,7 @@ export function ApprovalCard({ approval, agent, delay }: { approval: Approval; a
                 >
                   Editar
                 </PillButton>
-                <PillButton icon={X} onClick={() => decide(approval.id, "rejected")}>
+                <PillButton icon={X} disabled={isSending} onClick={() => decide(approval.id, "rejected")}>
                   Rechazar
                 </PillButton>
               </>
@@ -88,6 +96,12 @@ export function ApprovalCard({ approval, agent, delay }: { approval: Approval; a
         <h3 className="text-h2">{approval.title}</h3>
         <p className="text-small text-ink-2">{approval.detail}</p>
       </div>
+
+      {sendError && (
+        <p role="alert" className="rounded-card border border-status-error/60 bg-black/30 p-3 text-small">
+          <span className="font-semibold">No se ha enviado.</span> {sendError}
+        </p>
+      )}
 
       {email ? (
         <EmailDraft

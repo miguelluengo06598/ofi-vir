@@ -135,11 +135,11 @@ export function createMemoryService(deps: { store: MemoryStore; embedder: Embedd
     /**
      * Guarda un recuerdo: crea el contacto (o reutiliza el que tenga ese correo), sus nodos y sus conexiones.
      * No duplica: un nodo con el mismo contacto, tipo y título (sin mayúsculas ni tildes) se reutiliza y
-     * una conexión repetida se ignora. Los vectores se calculan antes de escribir: si falla el embedder, no se guarda nada.
+     * una conexión repetida se ignora. Los vectores se calculan antes de escribir: si falla el embedder, no se guarda nada
+   * (salvo con `permitirSinVector`, que guarda los nodos sin vector en lugar de perderlos).
      */
-    async guardarRecuerdo(companyId: string, input: RecuerdoInput) {
+    async guardarRecuerdo(companyId: string, input: RecuerdoInput, opciones: { permitirSinVector?: boolean } = {}) {
       const data = recuerdoSchema.parse(input);
-      const embedder = requireEmbedder();
 
       const found = data.contacto ? await store.findContactByEmail(companyId, data.contacto.email) : null;
       // Un mismo (tipo, título) repetido dentro de la petición cuenta como un único nodo.
@@ -158,9 +158,16 @@ export function createMemoryService(deps: { store: MemoryStore; embedder: Embedd
         }
       }
       const toCreate = [...unique].filter(([u]) => !existing.has(u));
-      const vectors = toCreate.length
-        ? await embedder.embed(toCreate.map(([, n]) => embeddingText(n.titulo, n.contenido)), "document")
-        : [];
+      let vectors: (number[] | null)[] = [];
+      if (toCreate.length) {
+        try {
+          vectors = await requireEmbedder().embed(toCreate.map(([, n]) => embeddingText(n.titulo, n.contenido)), "document");
+        } catch (e) {
+          // Solo para avisos que no se pueden perder (p. ej. un rebote): se guarda sin vector y se recalcula luego.
+          if (!opciones.permitirSinVector) throw e;
+          vectors = toCreate.map(() => null);
+        }
+      }
 
       // A partir de aquí solo se escribe.
       const contact = data.contacto

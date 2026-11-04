@@ -11,7 +11,7 @@
     "supabase:stop": "supabase stop",
     "supabase:status": "supabase status",
     "test:db": "supabase test db",
-    "test": "node --test \"src/lib/memory/*.test.ts\""
+    "test": "node --test \"src/lib/*/*.test.ts\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -20,6 +20,8 @@
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "resend": "^6.37.0",
+    "svix": "^2.9.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {

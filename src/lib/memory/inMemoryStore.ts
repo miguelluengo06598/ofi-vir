@@ -5,7 +5,7 @@ import type {
   StoredContact, StoredEdge, StoredEmail, StoredNode,
 } from "./store.ts";
 
-type Row = StoredNode & { embedding: number[] };
+type Row = StoredNode & { embedding: number[] | null };
 
 /** Almacén en memoria para tests: reproduce el aislamiento por empresa, la búsqueda y el borrado en cascada. */
 export class InMemoryStore implements MemoryStore {
@@ -41,8 +41,8 @@ export class InMemoryStore implements MemoryStore {
 
   async searchByEmbedding(companyId: string, q: number[], limit: number): Promise<SearchHit[]> {
     return this.nodes
-      .filter((n) => n.companyId === companyId)
-      .map((n) => ({ id: n.id, title: n.title, type: n.type, similarity: cosine(n.embedding, q) }))
+      .filter((n) => n.companyId === companyId && n.embedding !== null)
+      .map((n) => ({ id: n.id, title: n.title, type: n.type, similarity: cosine(n.embedding!, q) }))
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
   }

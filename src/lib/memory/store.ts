@@ -39,7 +39,8 @@ export type NewNode = {
   title: string;
   content: string;
   agentId: string;
-  embedding: number[];
+  /** null: sin vector (solo se encuentra por texto) hasta que se recalcule. */
+  embedding: number[] | null;
 };
 
 export type SearchHit = { id: string; title: string; type: NodeType; similarity: number };
