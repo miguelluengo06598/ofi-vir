@@ -1,0 +1,27 @@
+{
+  "name": "oficina-virtual-videos",
+  "private": true,
+  "description": "Vídeos del producto (Remotion) con los componentes reales de la oficina y datos de ejemplo.",
+  "type": "module",
+  "scripts": {
+    "preparar": "node scripts/preparar.mjs",
+    "studio": "node scripts/preparar.mjs && remotion studio",
+    "renderizar": "node scripts/renderizar.ts",
+    "tipos": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.536",
+    "@remotion/cli": "4.0.536",
+    "@remotion/renderer": "4.0.536",
+    "@remotion/google-fonts": "4.0.536",
+    "@remotion/tailwind-v4": "4.0.536",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.536",
+    "tailwindcss": "^4"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "typescript": "^5"
+  }
+}

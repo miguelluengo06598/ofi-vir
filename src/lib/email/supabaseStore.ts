@@ -267,10 +267,15 @@ export class SupabaseEmailStore implements EmailStore, InboundStore, InboxReader
     if (error) throw new Error("No se pudo actualizar el hilo.");
   }
 
-  async ensureTask(companyId: string, t: { agentId: string; emailId: string; title: string; model: string }) {
+  async ensureTask(companyId: string, t: { agentId: string; emailId: string; title: string; model: string; eventoId?: string | null; enColaHasta?: Date | null }) {
     const { data, error } = await this.db
       .from("tasks")
-      .insert({ company_id: companyId, agent_id: t.agentId, title: t.title, status: "running", model: t.model, source_email_id: t.emailId })
+      .insert({
+        company_id: companyId, agent_id: t.agentId, title: t.title, model: t.model, source_email_id: t.emailId,
+        // Origen obligatorio: el correo recibido (y su registro de evento si pasó por el filtro).
+        origen: "evento_externo", evento_id: t.eventoId ?? null, origen_ref: { canal: "correo" },
+        ...(t.enColaHasta ? { status: "scheduled", aplazada_hasta: t.enColaHasta.toISOString() } : { status: "running" }),
+      })
       .select("id")
       .single();
     if (data) return { taskId: data.id as string, created: true };

@@ -7,6 +7,7 @@
  * SOLO SERVIDOR. Recibe sus dependencias por parámetro (motor, almacén, créditos) para poder probarlo sin base ni red.
  */
 import type { EngineDeps } from "../../agents/loop.ts";
+import type { OrigenNuevo } from "../../agents/store.ts";
 import { ejecutarTarea } from "../../agents/loop.ts";
 import type { LlmClient } from "../../agents/llm.ts";
 import { calcularCosteIA, CONSUMOS_FIJOS, creditosParaTarea, MODELOS, type TipoDeTareaId } from "../../creditos/tarifas.ts";
@@ -91,7 +92,12 @@ export function creditosEstimadosDe(tipo: TipoDeTareaId, llamadas: HerramientaSi
 }
 
 /** Una simulación. Lanza `SimuladorError` (404 agente, 402 sin saldo pasada la cuota). */
-export async function simularAgente(deps: DepsSimulador, e: { companyId: string; agentId: string; mensaje: string; canal: Canal; historial?: MensajeHistorial[]; titulo?: string; origen?: "web" | "documento" }): Promise<ResultadoSimulacion> {
+/** Quién pide la simulación: una persona (su id) o un proceso interno de SAMGPLE (examen o revisión de certificación). */
+export type QuienSimula = string | { procesoInterno: string; solicitudId?: string | null };
+const origenDeSimulacion = (q: QuienSimula): OrigenNuevo =>
+  typeof q === "string" ? { tipo: "orden_usuario", ordenadoPor: q, via: "simulador" } : { tipo: "orden_usuario", ordenadoPor: null, procesoInterno: q.procesoInterno, solicitudId: q.solicitudId ?? null };
+
+export async function simularAgente(deps: DepsSimulador, e: { companyId: string; agentId: string; mensaje: string; canal: Canal; ordenadoPor: QuienSimula; historial?: MensajeHistorial[]; titulo?: string; origen?: "web" | "documento" }): Promise<ResultadoSimulacion> {
   const { engine, almacen } = deps;
   const ahora = (deps.ahora ?? (() => new Date()))();
   const agent = await engine.store.getAgent(e.companyId, e.agentId);
@@ -105,7 +111,7 @@ export async function simularAgente(deps: DepsSimulador, e: { companyId: string;
   const gratis = usadas < deps.config.gratisAlMes;
   const creditosSim = creditosParaTarea(deps.config.tipoTarea);
 
-  const taskId = await engine.store.createTask(e.companyId, { agentId: agent.id, title: recortar(e.titulo ?? `Simulación: ${e.mensaje}`, 120), model: agent.model, esSimulacion: true });
+  const taskId = await engine.store.createTask(e.companyId, { agentId: agent.id, title: recortar(e.titulo ?? `Simulación: ${e.mensaje}`, 120), model: agent.model, esSimulacion: true, origen: origenDeSimulacion(e.ordenadoPor) });
   let reservaId: string | null = null;
   if (!gratis) {
     try {
@@ -210,7 +216,7 @@ export function canalPorDefecto(herramientas: string[]): Canal {
 }
 
 /** Ejecuta los casos de la plantilla del agente y marca cuáles cumplen: comprobación automática de herramientas + evaluador Haiku. */
-export async function probarCasosDePlantilla(deps: DepsSimulador, e: { companyId: string; agentId: string; casos?: string[] }): Promise<ResultadoCasos> {
+export async function probarCasosDePlantilla(deps: DepsSimulador, e: { companyId: string; agentId: string; ordenadoPor: QuienSimula; casos?: string[] }): Promise<ResultadoCasos> {
   const agent = await deps.engine.store.getAgent(e.companyId, e.agentId);
   if (!agent) throw new SimuladorError(404, "agente_no_encontrado", "No existe ese agente en vuestra oficina.");
   const plantillaId = await deps.almacen.plantillaDelAgente(e.companyId, agent.id);
@@ -227,7 +233,7 @@ export async function probarCasosDePlantilla(deps: DepsSimulador, e: { companyId
   for (const caso of casos) {
     let sim: ResultadoSimulacion;
     try {
-      sim = await simularAgente(deps, { companyId: e.companyId, agentId: e.agentId, mensaje: caso.entrada, canal, titulo: `Caso de prueba: ${caso.titulo}` });
+      sim = await simularAgente(deps, { companyId: e.companyId, agentId: e.agentId, mensaje: caso.entrada, canal, ordenadoPor: e.ordenadoPor, titulo: `Caso de prueba: ${caso.titulo}` });
     } catch (err) {
       if (err instanceof SimuladorError && err.status === 402) {
         resultados.push({ id: caso.id, titulo: caso.titulo, cumple: false, motivo: `No se ejecutó: ${err.message}`, comprobaciones: { faltanHerramientas: [], herramientasProhibidasUsadas: [] }, simulacion: null });

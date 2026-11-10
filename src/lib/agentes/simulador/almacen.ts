@@ -80,6 +80,7 @@ export function almacenSoloLectura(real: AlmacenHerramientas): AlmacenHerramient
     crearAprobacion: prohibido("crear una aprobación"),
     consumirAprobacion: prohibido("consumir una aprobación"),
     crearTareaHumana: prohibido("crear una tarea para el equipo"),
+    proponerSeguimiento: prohibido("proponer un seguimiento"),
     crearTraspasoDirecto: prohibido("crear un traspaso"),
   };
 }

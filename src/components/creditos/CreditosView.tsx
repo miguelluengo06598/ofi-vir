@@ -10,6 +10,7 @@ import { RutinasPanel } from "./RutinasPanel";
 import { SaldoPanel } from "./SaldoPanel";
 import { Aviso } from "./partes";
 import { PillButton } from "@/components/glass";
+import { PausaOficina } from "@/components/oficina/PausaOficina";
 
 /** Vista única «Créditos» (sustituye a la antigua vista Monedero). Todos los datos salen de /api/creditos. */
 export function CreditosView() {
@@ -29,6 +30,7 @@ export function CreditosView() {
       )}
       {estado === "listo" && (
         <>
+          <PausaOficina />
           <SaldoPanel />
           <PacksPanel />
           <ConsumoPanel />

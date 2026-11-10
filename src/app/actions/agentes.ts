@@ -35,7 +35,7 @@ export async function lanzarTareaDePrueba(input: { agentSlug: string }): Promise
     if (!agent.instructions.trim() || !agent.allowedTools.some((t) => t === "buscar_en_memoria" || t === "redactar_correo")) {
       return { estado: "sin_herramientas", mensaje: "Este agente aún no tiene instrucciones ni herramientas del motor configuradas." };
     }
-    const taskId = await crearTarea(motor.deps, ctx.companyId, { agentSlug: slug.data, title: "Tarea de prueba: lead ficticio" });
+    const taskId = await crearTarea(motor.deps, ctx.companyId, { agentSlug: slug.data, title: "Tarea de prueba: lead ficticio", origen: { tipo: "orden_usuario", ordenadoPor: ctx.userId, via: "boton_tarea_de_prueba" } });
     // Se ejecuta tras responder; los pasos se guardan según ocurren y la interfaz los lee con `verTarea`.
     after(async () => {
       try {
@@ -218,7 +218,7 @@ export async function simularConAgente(input: { agentSlug: string; mensaje: stri
   try {
     const p = await prepararSimulador(input.agentSlug);
     if (p.error !== undefined) return { ok: false, mensaje: p.error };
-    return { ok: true, resultado: await simularAgente(p.api.deps, { companyId: p.ctx.companyId, agentId: p.agent.id, ...v.data }) };
+    return { ok: true, resultado: await simularAgente(p.api.deps, { companyId: p.ctx.companyId, agentId: p.agent.id, ordenadoPor: p.ctx.userId, ...v.data }) };
   } catch (e) {
     console.error("simularConAgente:", e instanceof Error ? e.message : "error desconocido");
     return { ok: false, mensaje: mensajeDeError(e) };
@@ -230,7 +230,7 @@ export async function probarCasosDeAgente(input: { agentSlug: string }): Promise
   try {
     const p = await prepararSimulador(input.agentSlug);
     if (p.error !== undefined) return { ok: false, mensaje: p.error };
-    return { ok: true, resultado: await probarCasosDePlantilla(p.api.deps, { companyId: p.ctx.companyId, agentId: p.agent.id }) };
+    return { ok: true, resultado: await probarCasosDePlantilla(p.api.deps, { companyId: p.ctx.companyId, agentId: p.agent.id, ordenadoPor: p.ctx.userId }) };
   } catch (e) {
     console.error("probarCasosDeAgente:", e instanceof Error ? e.message : "error desconocido");
     return { ok: false, mensaje: mensajeDeError(e) };

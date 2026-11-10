@@ -4,7 +4,7 @@ import { ejecutarTareaPeriodica, TAREAS_PERIODICAS } from "@/lib/creditos/tareas
 
 /**
  * Tareas periódicas de créditos. GET o POST /api/cron/<tarea> con `Authorization: Bearer $CRON_SECRET`.
- * Tareas: caducar-creditos, revisar-estados, renovar-bonos, recertificacion, control-calidad, rutinas, renovar-conexiones, abrir-aplazadas, procesar-traspasos, examenes-certificacion. Fuera de producción admite `?ahora=<fecha ISO>`
+ * Tareas: caducar-creditos, revisar-estados, renovar-bonos, recertificacion, control-calidad, rutinas, renovar-conexiones, abrir-aplazadas, procesar-pendientes, examenes-certificacion. Fuera de producción admite `?ahora=<fecha ISO>`
  * para simular el paso del tiempo.
  */
 async function manejar(req: Request, ctx: { params: Promise<{ tarea: string }> }) {

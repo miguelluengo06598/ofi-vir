@@ -16,6 +16,20 @@ export type OfficeTask = {
   /** Coste en créditos (estimado si la tarea no ha terminado). */
   cost: number;
   time: string;
+  /** Por qué empezó la tarea: los agentes nunca trabajan por iniciativa propia. */
+  porque?: string;
+};
+
+/** Motivo de la tarea en curso de cada agente (ejemplo): un evento, un traspaso, una orden o una rutina activada por una persona. */
+const porqueEmpezo: Record<string, string> = {
+  "lucia-ramos": "Traspaso de Daniel",
+  "daniel-prieto": "Formulario de la web",
+  "sofia-navarro": "Chat de la web",
+  "hugo-lara": "Correo recibido",
+  "carla-medina": "Orden de Marcos",
+  "nuria-campos": "Traspaso de Lucía",
+  "tomas-vidal": "Rutina: facturación de fin de mes",
+  "elena-bravo": "Rutina: informe de los lunes",
 };
 
 /** Hora de inicio de la tarea en curso de cada agente. */
@@ -53,6 +67,7 @@ export function buildTasks(
       status: "running",
       cost: getAgentProfile(a.id).avgCostPerTask,
       time: startedAt[a.id] ? `Desde las ${startedAt[a.id]}` : "Ahora",
+      porque: porqueEmpezo[a.id],
     }));
 
   const withExpert: OfficeTask[] = consultations.map((c) => ({

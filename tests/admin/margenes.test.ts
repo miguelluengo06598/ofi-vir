@@ -8,6 +8,7 @@ import { after, before, describe, it } from "node:test";
 import { createClient } from "@supabase/supabase-js";
 import { sesionAdminIdesie } from "../../src/lib/admin/acceso.ts";
 import { obtenerMargenes, primerDiaDelMes } from "../../src/lib/admin/margenes.ts";
+import { altaEnEmpresa, rolDePlataforma } from "../ayuda/miembros.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
@@ -31,7 +32,7 @@ async function usuario(companyId: string, role: "owner" | "admin" | "member" | "
   const { data, error } = await db.auth.admin.createUser({ email, password, email_confirm: true });
   assert.ifError(error);
   authUsers.push(data.user!.id);
-  assert.ifError((await db.from("users").insert({ id: data.user!.id, company_id: companyId, full_name: etiqueta, email, role })).error);
+  assert.ifError((role === "admin_idesie" ? await rolDePlataforma(db, { id: data.user!.id, nombre: etiqueta, email, rol: "admin_samgple" }) : await altaEnEmpresa(db, { id: data.user!.id, companyId, nombre: etiqueta, email, rol: role })).error);
   const c = createClient(url, anon, { auth: { persistSession: false } });
   const s = await c.auth.signInWithPassword({ email, password });
   assert.ifError(s.error);
@@ -90,11 +91,10 @@ describe("acceso: solo admin_idesie", () => {
     assert.equal(await sesionAdminIdesie({ get: () => "Basic abc" }, db, {}), null);
   });
 
-  it("persona de desarrollo: solo sin cabecera, solo fuera de producción y solo si es admin_idesie", async () => {
-    assert.deepEqual(await sesionAdminIdesie(cab(), db, { DEV_ADMIN_USER_ID: idesie.id }), { userId: idesie.id });
-    assert.equal(await sesionAdminIdesie(cab(), db, { DEV_ADMIN_USER_ID: idesie.id, NODE_ENV: "production" }), null, "en producción nunca");
-    assert.equal(await sesionAdminIdesie(cab(), db, { DEV_ADMIN_USER_ID: owner.id }), null, "un propietario como DEV_ADMIN no sirve");
-    assert.equal(await sesionAdminIdesie(cab("no-es-un-jwt"), db, { DEV_ADMIN_USER_ID: idesie.id }), null, "token falso ≠ modo desarrollo");
+  it("las variables DEV no sustituyen una sesión de plataforma", async () => {
+    assert.equal(await sesionAdminIdesie(cab(), db, { DEV_ADMIN_USER_ID: idesie.id }), null);
+    assert.equal(await sesionAdminIdesie(cab(), db, { DEV_ADMIN_USER_ID: owner.id }), null);
+    assert.equal(await sesionAdminIdesie(cab("no-es-un-jwt"), db, { DEV_ADMIN_USER_ID: idesie.id }), null);
   });
 
   it("el navegador (rol authenticated) no puede leer márgenes, costes ni alertas, ni siquiera con su sesión", async () => {

@@ -6,7 +6,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(56);
+select plan(57);
 
 create schema tests;
 grant usage on schema tests to anon, authenticated;
@@ -66,9 +66,12 @@ insert into auth.users (instance_id, id, aud, role, email, created_at, updated_a
   ('00000000-0000-0000-0000-000000000000', tests.lola(), 'authenticated', 'authenticated', 'lola@hogarmediterraneo.example', now(), now()),
   ('00000000-0000-0000-0000-000000000000', tests.creator(), 'authenticated', 'authenticated', 'creador@estudiocalamo.example', now(), now());
 insert into public.companies (id, name) values (tests.company_b(), 'Taller Delta');
-insert into public.users (id, company_id, full_name, email, role) values
-  (tests.diana(), tests.company_b(), 'Diana Ferrer', 'diana@tallerdelta.example', 'owner'),
-  (tests.lola(), tests.company_a(), 'Lola Marín', 'lola@hogarmediterraneo.example', 'member');
+insert into public.users (id, full_name, email) values
+  (tests.diana(), 'Diana Ferrer', 'diana@tallerdelta.example'),
+  (tests.lola(), 'Lola Marín', 'lola@hogarmediterraneo.example');
+insert into public.company_members (company_id, user_id, rol) values
+  (tests.company_b(), tests.diana(), 'propietario'),
+  (tests.company_a(), tests.lola(), 'miembro');
 insert into public.departments (id, company_id, slug, name) values (tests.dept_b(), tests.company_b(), 'ventas', 'Ventas');
 insert into public.agents (id, company_id, department_id, slug, name, role, creator_name) values
   (tests.agent_b(), tests.company_b(), tests.dept_b(), 'rosa-agent', 'Rosa Agente', 'Ventas', 'Estudio Cálamo');
@@ -79,7 +82,9 @@ insert into public.emails (company_id, thread_id, direction, from_address, to_ad
   (tests.company_b(), 'b0000000-0000-4000-8000-000000000008', 'inbound', 'cliente@delta.example', 'rosa@delta.example', 'Presupuesto', 'Hola', 'received');
 insert into public.approvals (id, company_id, agent_id, kind, title, payload) values
   (tests.approval_b(), tests.company_b(), tests.agent_b(), 'email', 'Enviar presupuesto', '{"subject":"Presupuesto","body":"Hola"}');
-insert into public.tasks (company_id, agent_id, title, model) values (tests.company_b(), tests.agent_b(), 'Tarea de Delta', 'claude-haiku-5-5');
+-- Toda tarea tiene origen: aquí, un mensaje que llegó de fuera.
+with e as (insert into public.eventos_externos (company_id, canal, estado) values (tests.company_b(), 'whatsapp', 'aceptado') returning id)
+insert into public.tasks (company_id, agent_id, title, model, origen, evento_id) select tests.company_b(), tests.agent_b(), 'Tarea de Delta', 'claude-haiku-5-5', 'evento_externo', e.id from e;
 insert into public.handoff_chains (company_id, title, goal) values (tests.company_b(), 'Cadena Delta', 'Objetivo');
 insert into public.memory_nodes (id, company_id, contact_id, node_type, title, created_by_agent_id, embedding) values
   (tests.node_b(), tests.company_b(), tests.contact_b(), 'contacto', 'Cliente de Delta', tests.agent_b(), array_fill(0.5::real, array[1024])::extensions.vector),
@@ -93,7 +98,7 @@ update public.memory_nodes set embedding = array_fill(0.5::real, array[1024])::e
 select tests.act_as(tests.marcos());
 
 select is((select count(*) from public.companies where id <> tests.company_a()), 0::bigint, 'A no ve otras empresas');
-select is((select count(*) from public.users where company_id <> tests.company_a()), 0::bigint, 'A no ve miembros de B');
+select is((select count(*) from public.company_members where company_id <> tests.company_a()), 0::bigint, 'A no ve miembros de B');
 select is((select count(*) from public.departments where company_id <> tests.company_a()), 0::bigint, 'A no ve departamentos de B');
 select is((select count(*) from public.agents where company_id <> tests.company_a()), 0::bigint, 'A no ve agentes de B');
 select is((select count(*) from public.contacts where company_id <> tests.company_a()), 0::bigint, 'A no ve contactos de B');
@@ -143,7 +148,11 @@ select tests.act_as(tests.lola());
 select is((select count(*) from public.agents), 10::bigint, 'Un miembro ve los agentes de su empresa');
 select throws_ok($$insert into public.departments (company_id, slug, name) values (tests.company_a(), 'x', 'X')$$, '42501', null, 'Un miembro no puede crear departamentos');
 select is(tests.affected($q$update public.agents set daily_email_limit = 999 where company_id = tests.company_a()$q$), 0::bigint, 'Un miembro no puede cambiar el límite de correos de un agente');
-select is(tests.affected($q$update public.approvals set status = 'approved' where id = tests.approval_a()$q$), 1::bigint, 'Un miembro sí puede decidir una aprobación de su empresa');
+select is(tests.affected($q$update public.approvals set status = 'approved' where id = tests.approval_a()$q$), 0::bigint, 'Un miembro SIN permiso de aprobar no decide aprobaciones');
+reset role;
+update public.company_members set puede_aprobar = true where company_id = tests.company_a() and user_id = tests.lola();
+select tests.act_as(tests.lola());
+select is(tests.affected($q$update public.approvals set status = 'approved' where id = tests.approval_a()$q$), 1::bigint, 'Un miembro CON permiso de aprobar sí decide una aprobación de su empresa');
 select throws_ok($$insert into public.emails (company_id, thread_id, direction, from_address, to_address, subject, body, delivery_status) values (tests.company_a(), (select id from public.email_threads limit 1), 'inbound', 'a@x.example', 'b@x.example', 's', 'b', 'received')$$, '42501', null, 'Las personas no escriben correos directamente (solo el servidor)');
 
 -- ——— 3. Diana (empresa B): ve solo lo suyo ———
@@ -214,8 +223,9 @@ select throws_ok(
   '23514', 'Correo saliente sin aprobación registrada', 'Un correo de B no puede usar una aprobación de A');
 
 -- ——— 6. Coste calculado de las tareas ———
-insert into public.tasks (id, company_id, agent_id, title, model, input_tokens, output_tokens, creator_fee_credits)
-  values ('b0000000-0000-4000-8000-00000000000c', tests.company_b(), tests.agent_b(), 'Coste', 'claude-haiku-5-5', 1000000, 1000000, 2);
+with e as (insert into public.eventos_externos (company_id, canal, estado) values (tests.company_b(), 'whatsapp', 'aceptado') returning id)
+insert into public.tasks (id, company_id, agent_id, title, model, input_tokens, output_tokens, creator_fee_credits, origen, evento_id)
+  select 'b0000000-0000-4000-8000-00000000000c', tests.company_b(), tests.agent_b(), 'Coste', 'claude-haiku-5-5', 1000000, 1000000, 2, 'evento_externo', e.id from e;
 select is((select ai_cost_credits from public.tasks where id = 'b0000000-0000-4000-8000-00000000000c'), 600.0000::numeric, 'Coste de IA = tokens × tarifa del modelo (100 + 500 créditos)');
 select is((select cost_credits from public.tasks where id = 'b0000000-0000-4000-8000-00000000000c'), 602.0000::numeric, 'Coste total = IA + tarifa del creador');
 update public.tasks set model = 'claude-sonnet-5-5' where id = 'b0000000-0000-4000-8000-00000000000c';

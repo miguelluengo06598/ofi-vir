@@ -41,8 +41,11 @@ export interface InboundStore {
   insertInbound(companyId: string, threadId: string, e: InboundEmailData): Promise<string>;
   /** El hilo pasa a «Respondido» y se actualiza su última actividad. */
   markThreadReplied(companyId: string, threadId: string, at: string): Promise<void>;
-  /** Una tarea por correo recibido (si ya existe, devuelve la misma). */
-  ensureTask(companyId: string, t: { agentId: string; emailId: string; title: string; model: string }): Promise<{ taskId: string; created: boolean }>;
+  /**
+   * Una tarea por correo recibido (si ya existe, devuelve la misma), con origen `evento_externo`. `enColaHasta`: el filtro la dejó en cola
+   * (límite de eventos por minuto) y se ejecutará a partir de esa hora.
+   */
+  ensureTask(companyId: string, t: { agentId: string; emailId: string; title: string; model: string; eventoId?: string | null; enColaHasta?: Date | null }): Promise<{ taskId: string; created: boolean }>;
 }
 
 export type LiveMessage = {

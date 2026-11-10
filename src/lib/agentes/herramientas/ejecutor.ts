@@ -14,8 +14,9 @@ import type { LlmTool } from "../../agents/llm.ts";
 import { sospechar, ToolError } from "../../agents/tools.ts";
 import type { AgentInfo } from "../../agents/store.ts";
 import { nombreDeProveedor } from "../../integraciones/proveedores.ts";
+import { mensajeSiAutoencargo } from "../../agents/autoencargo.ts";
 import { IntegracionNoConectadaError } from "./integraciones.ts";
-import { comoHerramientaDeClaude, obtenerHerramienta } from "./registro.ts";
+import { comoHerramientaDeClaude, obtenerHerramienta, REGISTRO } from "./registro.ts";
 import type { AlmacenHerramientas, ContextoEjecucion, Herramienta, Permiso, ResultadoLlamada } from "./tipos.ts";
 
 export type ResultadoHerramienta = {
@@ -83,10 +84,13 @@ async function nucleo(ctx: ContextoEjecucion, nombre: string, entradaCruda: unkn
     return { texto: limpio, error, estado, permiso, pausaTarea: extra.pausa ?? false, approvalId };
   };
 
-  // a) ¿Existe, la tiene el agente y no es «prohibida»?
-  const conf = h ? await almacen.herramientaDeAgente(ctx.companyId, ctx.agent.id, h.id) : null;
+  // a) ¿Existe, la tiene el agente y no es «prohibida»? (Las de la plataforma las tienen todos y siempre acaban en una persona.)
+  const conf = h?.plataforma ? { permiso: "sola" as Permiso, limiteDiario: null } : h ? await almacen.herramientaDeAgente(ctx.companyId, ctx.agent.id, h.id) : null;
   if (!h || !conf || conf.permiso === "prohibida") {
     permiso = conf?.permiso ?? null;
+    // Sin autoencargos: programarse trabajo o crear tareas no existe; se le explica qué puede hacer en su lugar.
+    const autoencargo = mensajeSiAutoencargo(nombre);
+    if (autoencargo) return cerrar("bloqueada", autoencargo);
     // Pedir una herramienta que no se tiene delata a un modelo manipulado.
     if (ctx.externalContent) sospechar(ctx, `el modelo intentó usar una herramienta que no tiene («${nombre.slice(0, 40)}»)`);
     return cerrar("no_disponible", "Esa herramienta no está disponible para ti.");
@@ -242,9 +246,10 @@ export async function resolverAprobacion(ctx: ContextoEjecucion, approvalId: str
  */
 export async function herramientasParaClaude(almacen: AlmacenHerramientas, companyId: string, agent: Pick<AgentInfo, "id">): Promise<LlmTool[]> {
   const filas = await almacen.herramientasDeAgente(companyId, agent.id);
-  return filas
+  const propias = filas
     .filter((f) => f.permiso !== "prohibida")
     .map((f) => obtenerHerramienta(f.toolId))
-    .filter((h): h is Herramienta => !!h)
-    .map(comoHerramientaDeClaude);
+    .filter((h): h is Herramienta => !!h && !h.plataforma);
+  // Las herramientas de la plataforma (proponer_seguimiento) las tiene todo agente.
+  return [...propias, ...REGISTRO.filter((h) => h.plataforma)].map(comoHerramientaDeClaude);
 }

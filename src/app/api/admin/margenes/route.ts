@@ -4,7 +4,7 @@ import { mesActual, obtenerMargenes, primerDiaDelMes } from "@/lib/admin/margene
 
 const noEncontrado = () => Response.json({ error: "no_encontrado" }, { status: 404, headers: { "cache-control": "no-store" } });
 
-/** Solo `admin_idesie`. Cualquier otra persona (o sin sesión) recibe 404. */
+/** Solo `admin_samgple` (platform_roles). Cualquier otra persona (o sin sesión) recibe 404. */
 export async function GET(req: Request) {
   const db = dbAdminDesdeEntorno();
   if (!db) return Response.json({ error: "backend_sin_configurar" }, { status: 503 });

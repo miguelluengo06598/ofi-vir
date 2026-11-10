@@ -9,6 +9,7 @@ import { InMemoryAgentStore } from "./inMemoryStore.ts";
 import { crearTarea, ejecutarTarea, type EngineDeps } from "./loop.ts";
 import { costeEur } from "./pricing.ts";
 import type { AgentInfo } from "./store.ts";
+import { ORDEN_DE_PRUEBA } from "./pruebas.ts";
 
 const C = "a64499d1-7f43-4a43-abc8-41a313dc4018";
 const VENTAS = "dep-ventas";
@@ -34,7 +35,7 @@ const setup = (script: (LlmResponse | Error)[], over: Partial<EngineDeps> = {}) 
   return { store, memStore, memory, llm, deps };
 };
 const run = async (s: ReturnType<typeof setup>, instruccion = "Ha llegado un lead.") => {
-  const id = await crearTarea(s.deps, C, { agentSlug: "lucia-ramos", title: "Lead de prueba" });
+  const id = await crearTarea(s.deps, C, { origen: ORDEN_DE_PRUEBA, agentSlug: "lucia-ramos", title: "Lead de prueba" });
   return { id, r: await ejecutarTarea(s.deps, C, id, instruccion) };
 };
 
@@ -188,7 +189,7 @@ describe("motor de agentes", () => {
       }),
       fin("Propongo agendar la demo."),
     ]);
-    const id = await crearTarea(s.deps, C, { agentSlug: "lucia-ramos", title: "Responder a Laura" });
+    const id = await crearTarea(s.deps, C, { origen: ORDEN_DE_PRUEBA, agentSlug: "lucia-ramos", title: "Responder a Laura" });
     s.store.tasks.get(id)!.sourceEmailId = "mail-1";
     s.store.emails.set("mail-1", {
       from: "Laura <laura@clinicasol.example>", subject: "Re: propuesta", occurredAt: "2026-11-04T10:00:00Z", contactId: "contacto-1",
@@ -220,7 +221,7 @@ describe("motor de agentes", () => {
   it("si la tarea ya trata de un contacto, lo guardado sin indicar contacto cuelga de él y recuerda su tarea de origen", async () => {
     const s = setup([llamada("t1", "guardar_recuerdo", { nodos: [{ clave: "d", tipo: "dato", titulo: "Prefiere las mañanas", contenido: "x" }] }), fin("ok")]);
     const c = await s.memStore.insertContact(C, { name: "Laura Gómez", email: "laura@clinicasol.example" });
-    const id = await crearTarea(s.deps, C, { agentSlug: "lucia-ramos", title: "T", contactId: c.contact.id });
+    const id = await crearTarea(s.deps, C, { origen: ORDEN_DE_PRUEBA, agentSlug: "lucia-ramos", title: "T", contactId: c.contact.id });
     await ejecutarTarea(s.deps, C, id, "Hola");
     const n = (await s.memStore.listNodes(C)).find((x) => x.title === "Prefiere las mañanas")!;
     assert.equal(n.contactId, c.contact.id);
@@ -265,7 +266,7 @@ describe("coste", () => {
 
 describe("tareas sospechosas", () => {
   const conCorreo = async (s: ReturnType<typeof setup>, text: string) => {
-    const id = await crearTarea(s.deps, C, { agentSlug: "lucia-ramos", title: "Responder" });
+    const id = await crearTarea(s.deps, C, { origen: ORDEN_DE_PRUEBA, agentSlug: "lucia-ramos", title: "Responder" });
     s.store.tasks.get(id)!.sourceEmailId = "m1";
     s.store.emails.set("m1", { from: "x <x@y.es>", subject: "Hola", text, occurredAt: "2026-11-04T10:00:00Z", contactId: null });
     return id;

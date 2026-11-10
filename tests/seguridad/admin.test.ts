@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { admin, COMPANY_A, createUser, loginAs, RUN } from "./entorno.ts";
+import { rolDePlataforma } from "../ayuda/miembros.ts";
 
 const BASE = process.env.SEC_BASE_URL ?? process.env.APP_URL ?? "http://localhost:3000";
 const alcanzable = await fetch(`${BASE}/api/admin/margenes`, { signal: AbortSignal.timeout(60_000) }).then(() => true, () => false);
@@ -18,7 +19,7 @@ before(async () => {
   const email = `sec-adm-idesie-${RUN}@test.example`, password = `Pw-${RUN}-idesie-Aa1!`;
   const { data } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   idAdmin = data.user!.id;
-  assert.ifError((await admin.from("users").insert({ id: idAdmin, company_id: COMPANY_A, full_name: "Prueba idesie", email, role: "admin_idesie" })).error);
+  assert.ifError((await rolDePlataforma(admin, { id: idAdmin, nombre: "Prueba SAMGPLE", email, rol: "admin_samgple" })).error);
   tokenAdmin = (await (await loginAs(email, password)).auth.getSession()).data.session!.access_token;
 });
 after(async () => { if (idAdmin) await admin.auth.admin.deleteUser(idAdmin); });

@@ -114,7 +114,7 @@ export async function aplicarDatosDeRevision(db: Db, env: Record<string, string 
     { company_id: CLINICA, agent_id: SARA_ID, tipo: "faq", titulo: "Preguntas frecuentes de pacientes", estado: "listo" },
     { company_id: CLINICA, agent_id: null, tipo: "web", titulo: "Web de la clínica: tratamientos y horarios", origen: "https://clinicadentalsol.example", estado: "listo" },
   ]), "conocimiento de Sara");
-  ok(await db.from("tasks").insert({ company_id: CLINICA, agent_id: SARA_ID, title: "Simulación: ¿a qué hora abrís los sábados?", model: "claude-haiku-5-5", es_simulacion: true, status: "done" }), "simulación de Sara");
+  ok(await db.from("tasks").insert({ company_id: CLINICA, agent_id: SARA_ID, title: "Simulación: ¿a qué hora abrís los sábados?", model: "claude-haiku-5-5", es_simulacion: true, status: "done", origen: "orden_usuario", origen_ref: { proceso_interno: "datos_de_prueba" } }), "simulación de Sara");
   ok(await db.rpc("_agent_version_snapshot", { p_company_id: CLINICA, p_agent_id: SARA_ID, p_version: 1 }), "foto de Sara");
   ok(await db.from("agents").update({ estado: "en_certificacion" }).eq("id", SARA_ID), "estado de Sara");
   await solicitud(db, { id: SARA_SOLICITUD, company_id: CLINICA, agent_id: SARA_ID, agent_version: 1, tipo: "nueva", via: "rapida_plantilla", estado: "pendiente_revision", resumen_cambios: "Agente nuevo creado desde la plantilla Sara.", enviado_en: haceHorasLaborables(7), en_cola_desde: haceHorasLaborables(6) });

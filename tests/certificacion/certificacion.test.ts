@@ -22,6 +22,7 @@ import { crearServicioCreditos } from "../../src/lib/creditos/servicio.ts";
 import { FakeEmbedder } from "../../src/lib/memory/fakeEmbedder.ts";
 import { createMemoryService } from "../../src/lib/memory/service.ts";
 import { SupabaseMemoryStore } from "../../src/lib/memory/supabaseStore.ts";
+import { sesionDePrueba } from "../../src/lib/empresas/pruebas.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "", key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
 if (!url || !key) throw new Error("Faltan variables de Supabase: ejecuta con `npm run test:certificacion` (usa .env.local).");
@@ -59,7 +60,7 @@ async function oficina(o: { casos?: number } = {}) {
   assert.ifError((await db.from("agents").insert({ id: agentId, company_id: companyId, department_id: departmentId, slug: `a-${agentId.slice(0, 6)}`, name: "Nora", role: "Atención", creator_name: "Empresa", model: "claude-haiku-5-5", objetivo: "Atender dudas", tono: "Cercano", nunca_hace: "Nunca da precios.", estado: "en_pruebas" })).error);
   // Requisitos para enviar a certificación: reglas completas, aviso de IA y al menos una simulación hecha.
   assert.ifError((await db.from("agent_rules").insert({ agent_id: agentId, company_id: companyId, mensaje_fuera_horario: "Ahora estamos cerrados.", aviso_ia_texto: "Soy un asistente de IA." })).error);
-  assert.ifError((await db.from("tasks").insert({ company_id: companyId, agent_id: agentId, title: "Simulación", model: "claude-haiku-5-5", es_simulacion: true, status: "done" })).error);
+  assert.ifError((await db.from("tasks").insert({ company_id: companyId, agent_id: agentId, title: "Simulación", model: "claude-haiku-5-5", es_simulacion: true, origen: "orden_usuario", origen_ref: { proceso_interno: "prueba" }, status: "done" })).error);
   const n = o.casos ?? 10;
   if (n) assert.ifError((await db.from("agent_test_cases").insert(Array.from({ length: n }, (_, i) => ({ company_id: companyId, agent_id: agentId, titulo: `Caso ${i}`, entrada: `«Pregunta ${i}»`, esperado: "Responde con amabilidad." })))).error);
   return { companyId, agentId };
@@ -161,7 +162,7 @@ describe("examen de punta a punta (modelo de reglas)", () => {
 describe("rutas de certificación", () => {
   async function api(rol: "owner" | "member" | null, companyId: string): Promise<DepsApiCertificacion> {
     const userId = (await db.from("users").select("id").limit(1).single()).data!.id as string;   // enviado_por apunta a public.users
-    return { db, autenticar: async () => (rol ? { companyId, userId, rol } : null) as never };
+    return { db, autenticar: async () => (rol ? sesionDePrueba(companyId, userId, rol) : null) };
   }
   const post = (cuerpo: unknown) => new Request("http://x/api/agentes/a/certificar", { method: "POST", body: JSON.stringify(cuerpo) });
   it("sin sesión 401, sin rol 403, con companyId 400, de otra empresa 404", async () => {

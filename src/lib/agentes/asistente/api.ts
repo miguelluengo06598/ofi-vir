@@ -14,6 +14,7 @@ import { PeticionAplicarSchema, PeticionAsistenteSchema } from "./esquemas.ts";
 import { certificarCambiosPendientes, type EnvioCertificacion } from "../versiones/servicio.ts";
 import { aplicarPropuesta, AsistenteError, turnoAsistente, type DepsAsistente } from "./servicio.ts";
 import { SupabaseAlmacenAsistente } from "./supabaseAlmacen.ts";
+import { esGestor } from "../../empresas/permisos.ts";
 
 export type DepsApiAsistente = {
   deps: DepsAsistente;
@@ -39,7 +40,7 @@ async function leerJson(req: Request): Promise<{ ok: true; datos: unknown } | { 
 async function entrar(req: Request, api: DepsApiAsistente, idAgente: string): Promise<{ res: Response } | { sesion: Sesion }> {
   const sesion = await api.autenticar(req);
   if (!sesion) return { res: fallo(401, "no_autenticado", "Inicia sesión para continuar.") };
-  if (sesion.rol !== "owner" && sesion.rol !== "admin") return { res: fallo(403, "sin_permiso", "Solo los propietarios y administradores pueden configurar agentes.") };
+  if (!esGestor(sesion.rol)) return { res: fallo(403, "sin_permiso", "Solo los propietarios y administradores pueden configurar agentes.") };
   if (!z.uuid().safeParse(idAgente).success) return { res: fallo(404, "agente_no_encontrado", "No existe ese agente en vuestra oficina.") };
   return { sesion };
 }

@@ -26,7 +26,7 @@ npm run dev                         # http://localhost:3000
 
 Para `.env.local`, `supabase status -o env` da la URL y las claves de Supabase local. Cada variable está explicada en [`.env.example`](.env.example) (obligatoria u opcional, servidor o navegador y de dónde sacarla). **Nunca subas `.env.local` ni pongas un secreto en una variable `NEXT_PUBLIC_`.**
 
-Usuario de la semilla (solo local): `marcos@hogarmediterraneo.example`.
+Personas de la semilla (solo local): `marcos@hogarmediterraneo.example` (propietario), `ana@hogarmediterraneo.example` (miembro) y `admin@samgple.example` (equipo SAMGPLE, sin acceso a empresas). Contraseñas en `supabase/seed.sql`.
 
 ## Scripts
 
@@ -37,6 +37,8 @@ Usuario de la semilla (solo local): `marcos@hogarmediterraneo.example`.
 | `npm test` | Pruebas unitarias (`src/lib/*/*.test.ts`). **No necesitan base de datos.** |
 | `npm run test:db` | Pruebas SQL (pgTAP) de `supabase/tests/`. Necesita Supabase local. |
 | `npm run test:creditos`, `test:traspasos`, `test:simulador`, `test:certificacion`, `test:reglas`, `test:conexiones`, `test:admin`, `test:panel`, `test:ciclo` | Pruebas de integración contra **Supabase local** (leen `.env.local`; se niegan a correr contra otra base). |
+| `npm run test:miembros` | Personas, empresas y roles: aislamiento entre empresas con sesiones reales, permisos e invitaciones (**Supabase local**). |
+| `npm run test:iniciativa` | Los agentes solo trabajan con un motivo (origen, cadena, filtro de eventos, rutinas, interruptores) contra **Supabase local**. |
 | `npm run test:seguridad` | Ataques reales contra la base local y la app: necesita Supabase local **y** `npm run dev` en marcha. |
 | `npm run db:reset` | `supabase db reset` + sincroniza plantillas con datos de prueba (solo base local). |
 | `npm run plantillas:sync` | Copia las plantillas de agentes de `src/lib/agentes/plantillas/` a la base. |

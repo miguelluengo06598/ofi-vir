@@ -55,6 +55,18 @@ export class InMemoryAlmacenHerramientas implements AlmacenHerramientas {
     return true;
   }
 
+  seguimientos: { id: string; approvalId: string; companyId: string; agentId: string; taskId: string; contactId: string | null; fecha: Date; motivo: string; mensaje: string; estado: "propuesto" | "aprobado" | "rechazado" }[] = [];
+  async proponerSeguimiento(companyId: string, s: { agentId: string; taskId: string; contactId: string | null; fecha: Date; motivo: string; mensaje: string }) {
+    const ahora = this.ahora().getTime();
+    if (!s.taskId) throw new ToolError("Un seguimiento solo se puede proponer desde una tarea tuya.");
+    if (s.fecha.getTime() < ahora + 3_600_000 || s.fecha.getTime() > ahora + 180 * 86_400_000) throw new ToolError("La fecha del seguimiento debe estar entre 1 hora y 180 días a partir de ahora.");
+    if (this.seguimientos.filter((x) => x.companyId === companyId && x.taskId === s.taskId).length >= 3) throw new ToolError("Ya has propuesto el máximo de seguimientos (3) para esta tarea.");
+    const approvalId = randomUUID(), id = randomUUID();
+    this.aprobaciones.set(approvalId, { companyId, agentId: s.agentId, kind: "other", titulo: `Seguimiento: ${s.motivo}`, detalle: s.motivo, payload: { tipo: "seguimiento", seguimiento_id: id }, status: "pending" });
+    this.seguimientos.push({ id, approvalId, companyId, ...s, estado: "propuesto" });
+    return { seguimientoId: id, approvalId };
+  }
+
   async crearTareaHumana(companyId: string, t: { agentId: string; taskId: string | null; contactId: string | null; titulo: string; contexto: string; urgencia: "baja" | "normal" | "alta" }) {
     const id = randomUUID();
     this.tareasHumanas.push({ id, companyId, ...t });

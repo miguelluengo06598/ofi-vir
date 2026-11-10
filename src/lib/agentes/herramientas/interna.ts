@@ -16,6 +16,8 @@ async function prepararTraspaso(ctx: ContextoEjecucion, i: { agente_destino: str
       const quiere = normalizeKey(i.agente_destino);
       const destino = configurados.find((c) => normalizeKey(c.agenteDestinoNombre) === quiere || c.agenteDestinoSlug === quiere)
         ?? configurados.find((c) => normalizeKey(c.agenteDestinoNombre).includes(quiere));
+      // Sin autoencargos: un agente nunca se pasa trabajo a sí mismo (la base también lo impide).
+      if (destino && destino.agenteDestinoId === ctx.agent.id) throw new ToolError("No puedes pasarte trabajo a ti mismo. Si hay que hacer algo más adelante, usa proponer_seguimiento; si no, termina.");
       if (!destino) {
         throw new ToolError(configurados.length
           ? `No tienes configurado un traspaso hacia «${i.agente_destino.slice(0, 40)}». Puedes pasar trabajo a: ${configurados.map((c) => `${c.agenteDestinoNombre} (${c.tipoTraspaso}: ${c.condicion})`).join("; ")}.`
@@ -70,6 +72,34 @@ export const HERRAMIENTAS_INTERNAS = [
       const { destino, tipo } = await prepararTraspaso(ctx, i);
       return { mensaje: `[Simulación] Traspaso (${tipo}) a ${destino.agenteDestinoNombre} «creado». No se ha creado nada real.` };
     },
+    aTexto: (s) => s.mensaje,
+  }),
+  definir({
+    id: "proponer_seguimiento",
+    nombre: "Proponer un seguimiento",
+    descripcionClaude: "Propón hacer algo en el FUTURO (p. ej. «escribir al lead en 3 días si no contesta»). No programa nada: crea una propuesta que una persona aprueba o rechaza; solo si la aprueba se hará en la fecha indicada. Indica en_dias (1-180) o fecha (ISO 8601 con zona), el motivo y el mensaje que prevés enviar. Es la ÚNICA forma de dejar algo para más tarde.",
+    descripcionEmpresa: "Cuando un agente cree que habrá que hacer algo más adelante (un recordatorio, volver a escribir), os lo propone en Aprobaciones con la fecha, el motivo y el mensaje previsto. Solo si lo aprobáis se programa.",
+    entrada: z.object({
+      en_dias: z.number().int().min(1).max(180).optional().describe("Dentro de cuántos días (1-180)"),
+      fecha: z.iso.datetime({ offset: true }).optional().describe("Fecha y hora exactas, ISO 8601 con zona (en lugar de en_dias)"),
+      motivo: z.string().trim().min(1).max(300).describe("Por qué hace falta el seguimiento"),
+      mensaje_previsto: z.string().trim().min(1).max(1500).describe("Lo que prevés escribir o hacer ese día"),
+    }).refine((x) => (x.en_dias === undefined) !== (x.fecha === undefined), { message: "Indica en_dias o fecha (solo una de las dos)." }),
+    salida: z.object({ mensaje: z.string() }),
+    // Siempre acaba en una persona: crea su propia aprobación y no programa nada por sí misma.
+    categoria: "interna", sensibilidad: "escritura", integracion: null, costeCreditos: null, plataforma: true, creaSuPropiaAprobacion: true,
+    async ejecutar(ctx, i) {
+      if (!ctx.task.id) throw new ToolError("Un seguimiento solo se puede proponer desde una tarea.");
+      const ahora = (ctx.ahora ?? (() => new Date()))();
+      const fecha = i.fecha ? new Date(i.fecha) : new Date(ahora.getTime() + (i.en_dias ?? 1) * 86_400_000);
+      // Ajuste preparado para el futuro (agents.seguimientos_sin_aprobacion): hoy está desactivado en la base y SIEMPRE se pide aprobación.
+      const r = await ctx.almacen.proponerSeguimiento(ctx.companyId, {
+        agentId: ctx.agent.id, taskId: ctx.task.id, contactId: ctx.task.contactId, fecha, motivo: neutralizar(i.motivo), mensaje: neutralizar(i.mensaje_previsto),
+      });
+      return { mensaje: `Seguimiento propuesto para el ${fecha.toISOString().slice(0, 10)} (aprobación ${r.approvalId.slice(0, 8)}). NO está programado: solo se hará si una persona lo aprueba. No lo vuelvas a proponer; termina con tu resumen.` };
+    },
+    simular: (_ctx, i) => ({ mensaje: `[Simulación] Seguimiento propuesto (${i.en_dias ? `en ${i.en_dias} días` : i.fecha}): pediría la aprobación de una persona. No se ha creado nada real.` }),
+    vistaPrevia: (i) => `Seguimiento ${i.en_dias ? `en ${i.en_dias} días` : `el ${i.fecha}`}\nMotivo: ${i.motivo}\nMensaje previsto: ${i.mensaje_previsto}`,
     aTexto: (s) => s.mensaje,
   }),
   definir({

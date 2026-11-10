@@ -81,3 +81,15 @@ export function useCreditos() {
   if (!c) throw new Error("useCreditos debe usarse dentro de CreditosProvider");
   return c;
 }
+
+/**
+ * Proveedor con un resumen fijo, para enseñar los paneles de créditos fuera de la oficina (web pública).
+ * No llama al servidor: cualquier acción responde que es una demostración.
+ */
+export function CreditosDeEjemplo({ resumen, children }: { resumen: ResumenCreditos; children: ReactNode }) {
+  const valor = useMemo<Valor>(() => {
+    const demo = async (): Promise<ResultadoAccion> => ({ ok: false, mensaje: "Demostración: no se compra ni se cambia nada." });
+    return { estado: "listo", resumen, recargar: async () => {}, comprar: demo, cancelarBono: demo, guardarAjustes: demo };
+  }, [resumen]);
+  return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
+}

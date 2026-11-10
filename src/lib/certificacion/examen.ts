@@ -171,7 +171,7 @@ export async function ejecutarExamen(deps: DepsExamen, e: { companyId: string; r
       if (gastado > tope) return { ...vacio, cumple: false, nota: 0, motivo: "No se ejecutó: se superó el tope de coste de IA del examen." };
       let sim: ResultadoSimulacion;
       try {
-        sim = await simularAgente({ ...deps.sim, config: { ...deps.sim.config, gratisAlMes: Number.MAX_SAFE_INTEGER } }, { companyId: copia.companyId, agentId: copia.agentId, mensaje: c.entrada, canal: c.canal, origen: c.fuente, titulo: `Examen: ${c.titulo}` });
+        sim = await simularAgente({ ...deps.sim, config: { ...deps.sim.config, gratisAlMes: Number.MAX_SAFE_INTEGER } }, { companyId: copia.companyId, agentId: copia.agentId, mensaje: c.entrada, canal: c.canal, origen: c.fuente, ordenadoPor: { procesoInterno: "examen_certificacion", solicitudId: e.requestId }, titulo: `Examen: ${c.titulo}` });
       } catch (err) {
         if (c.bloque === "objetivo") tecnicos.add(c.id);
         return { ...vacio, estadoTarea: "error", cumple: false, nota: 0, motivo: `Error técnico al ejecutar el caso: ${err instanceof Error ? err.message.slice(0, 200) : "desconocido"}.` };
@@ -233,14 +233,23 @@ export async function ejecutarExamen(deps: DepsExamen, e: { companyId: string; r
 }
 
 /** Ejecuta los exámenes pendientes (tarea periódica y `after` tras enviar). Un fallo de una solicitud no impide las demás. */
-export async function procesarExamenesPendientes(deps: DepsExamen, opciones: { limite?: number; companyId?: string } = {}): Promise<{ procesados: number; errores: string[] }> {
+export async function procesarExamenesPendientes(deps: DepsExamen, opciones: { limite?: number; companyId?: string; excluirTipos?: string[] } = {}): Promise<{ procesados: number; errores: string[]; omitidos?: number }> {
   const { data, error } = await deps.db.rpc("certificacion_pendientes_examen", { p_limite: opciones.limite ?? 20 });
   if (error) throw new Error(`No se pudieron leer los exámenes pendientes: ${error.message}`);
-  const filas = (data ?? []) as { company_id: string; request_id: string }[];
+  let filas = (data ?? []) as { company_id: string; request_id: string }[];
+  // Recertificaciones automáticas (proceso interno de SAMGPLE): fuera si CONTROL_CALIDAD_AUTOMATICO no está activado.
+  let omitidos = 0;
+  if (opciones.excluirTipos?.length && filas.length) {
+    const { data: tipos, error: e2 } = await deps.db.from("certification_requests").select("id, tipo").in("id", filas.map((f) => f.request_id));
+    if (e2) throw new Error(`No se pudieron leer los tipos de solicitud: ${e2.message}`);
+    const excluidas = new Set((tipos ?? []).filter((t) => opciones.excluirTipos!.includes(t.tipo as string)).map((t) => t.id as string));
+    omitidos = filas.filter((f) => excluidas.has(f.request_id)).length;
+    filas = filas.filter((f) => !excluidas.has(f.request_id));
+  }
   const errores: string[] = [];
   let procesados = 0;
   for (const f of filas.filter((f) => !opciones.companyId || f.company_id === opciones.companyId)) {
     try { await ejecutarExamen(deps, { companyId: f.company_id, requestId: f.request_id }); procesados++; } catch (err) { errores.push(`${f.request_id}: ${err instanceof Error ? err.message : "error"}`); }
   }
-  return { procesados, errores };
+  return { procesados, errores, omitidos };
 }

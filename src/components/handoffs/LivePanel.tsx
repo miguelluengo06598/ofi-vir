@@ -9,7 +9,7 @@ import { useInbox } from "@/components/InboxProvider";
 import { useSimulation } from "@/components/SimulationProvider";
 import { agentById, firstName } from "@/data/agents";
 import { contactDirectory } from "@/data/emails";
-import { kindLabel } from "@/data/handoffs";
+import { chainById, kindLabel } from "@/data/handoffs";
 import { HandoffPair, HandoffStatusText } from "./parts";
 
 const SHOWN = 5;
@@ -132,6 +132,7 @@ export function LivePanel() {
                       <span className="text-ink-3">{kindLabel[e.handoff.kind]} · </span>
                       {e.handoff.summary}
                     </span>
+                    <span className="block text-tiny text-ink-3">Empezó por: {chainById(e.handoff.chainId).origen}</span>
                     <span className="mt-0.5 flex items-center gap-2">
                       <span className="text-tiny text-ink-3">{e.time}</span>
                       <HandoffStatusText status={e.status} />

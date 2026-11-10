@@ -88,6 +88,21 @@ export class SupabaseAlmacenHerramientas implements AlmacenHerramientas {
     return true;
   }
 
+  async proponerSeguimiento(companyId: string, s: { agentId: string; taskId: string; contactId: string | null; fecha: Date; motivo: string; mensaje: string }) {
+    const { data, error } = await this.db.rpc("seguimiento_proponer", {
+      p_company_id: companyId, p_agent_id: s.agentId, p_task_id: s.taskId, p_contact_id: s.contactId, p_fecha: s.fecha.toISOString(), p_motivo: s.motivo, p_mensaje: s.mensaje,
+    });
+    if (error) {
+      const m = error.message ?? "";
+      if (/FECHA_NO_VALIDA/.test(m)) throw new ToolError("La fecha del seguimiento debe estar entre 1 hora y 180 días a partir de ahora.");
+      if (/DEMASIADOS_SEGUIMIENTOS/.test(m)) throw new ToolError("Ya has propuesto el máximo de seguimientos (3) para esta tarea.");
+      if (/SEGUIMIENTO_SIN_TAREA/.test(m)) throw new ToolError("Un seguimiento solo se puede proponer desde una tarea tuya.");
+      throw new Error("No se pudo proponer el seguimiento.");
+    }
+    const r = data as { seguimiento_id: string; approval_id: string };
+    return { seguimientoId: r.seguimiento_id, approvalId: r.approval_id };
+  }
+
   async crearTareaHumana(companyId: string, t: { agentId: string; taskId: string | null; contactId: string | null; titulo: string; contexto: string; urgencia: "baja" | "normal" | "alta" }) {
     const { data, error } = await this.db.from("human_tasks").insert({
       company_id: companyId, agent_id: t.agentId, task_id: t.taskId, contact_id: t.contactId, titulo: t.titulo, contexto: t.contexto, urgencia: t.urgencia,

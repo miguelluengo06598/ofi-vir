@@ -115,7 +115,7 @@ const senderFalso: EmailSender = { async send(e) { enviados.push(e); return { id
     ]),
   ]);
   const deps1: EngineDeps = { store: agentStore, memory, contacts: memStore, llm: llm1 };
-  const t1 = await crearTarea(deps1, companyId, { agentSlug: "lucia-ramos", title: "Prueba: lead de Clínica Dental Campos" });
+  const t1 = await crearTarea(deps1, companyId, { agentSlug: "lucia-ramos", title: "Prueba: lead de Clínica Dental Campos", origen: { tipo: "orden_usuario", ordenadoPor: userId, via: "prueba" } });
   const r1 = await ejecutarTarea(deps1, companyId, t1, instruccionLeadDePrueba());
   await mostrarPasos(t1);
   ok(r1.estado === "done" && r1.pasos === 4, "la tarea termina en 4 pasos");

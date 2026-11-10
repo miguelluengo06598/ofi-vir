@@ -58,7 +58,10 @@ const llm = new ScriptedLlm([
 const deps: EngineDeps = { store, memory, contacts: memStore, llm, aprender: false, catalogo: { almacen: new SupabaseAlmacenHerramientas(db, creditos), secretos: (c) => new GestorSecretos(c, async () => null) } };
 
 console.log("Sara recibe: «Quiero presupuesto de implantes»\n");
-const id = await crearTarea(deps, companyId, { agentSlug: sara.slug, title: "WhatsApp de Laura" });
+// El WhatsApp de Laura es un evento externo: es el ORIGEN de toda la cadena (Sara → Lucía → Iván).
+const { data: evento, error: eEvento } = await db.from("eventos_externos").insert({ company_id: companyId, canal: "whatsapp", estado: "aceptado", agent_id: sara.id }).select("id").single();
+if (eEvento || !evento) throw new Error(eEvento?.message ?? "No se pudo registrar el evento.");
+const id = await crearTarea(deps, companyId, { agentSlug: sara.slug, title: "WhatsApp de Laura", origen: { tipo: "evento_externo", eventoId: evento.id as string, canal: "whatsapp" } });
 await ejecutarTarea(deps, companyId, id, "Quiero presupuesto de implantes");
 const r = await procesarTraspasos(deps, { companyId });
 console.log(`Tareas de traspaso ejecutadas: ${r.ejecutadas} (errores: ${r.errores})\n`);

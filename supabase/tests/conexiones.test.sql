@@ -6,7 +6,8 @@ select plan(19);
 
 insert into public.companies (id, name) values ('c0000000-0000-4000-8000-0000000000a1', 'Conex A'), ('c0000000-0000-4000-8000-0000000000b1', 'Conex B');
 insert into auth.users (id, email) values ('c0000000-0000-4000-8000-0000000000c1', 'conex-a@test.example');
-insert into public.users (id, company_id, full_name, email, role) values ('c0000000-0000-4000-8000-0000000000c1', 'c0000000-0000-4000-8000-0000000000a1', 'Ana', 'conex-a@test.example', 'owner');
+insert into public.users (id, full_name, email) values ('c0000000-0000-4000-8000-0000000000c1', 'Ana', 'conex-a@test.example');
+insert into public.company_members (company_id, user_id, rol) values ('c0000000-0000-4000-8000-0000000000a1', 'c0000000-0000-4000-8000-0000000000c1', 'propietario');
 
 -- 1) Las funciones no las puede llamar la empresa (authenticated) ni anon ----------------------------------------------------
 select ok(not has_function_privilege('authenticated', 'public.conexion_guardar(uuid,uuid,text,text,text,jsonb,timestamptz,text)', 'execute'), 'authenticated no puede guardar conexiones');

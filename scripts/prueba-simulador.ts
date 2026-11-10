@@ -49,7 +49,7 @@ const memory = createMemoryService({ store: memStore, embedder: new FakeEmbedder
 const almacenCon = new SupabaseAlmacenConocimiento(db);
 for (const f of (await almacenCon.listar(companyId)).filter((f) => f.titulo.startsWith("Demo simulador"))) await db.from("agent_knowledge").delete().eq("company_id", companyId).eq("id", f.id);
 const trabajos: Promise<void>[] = [];
-const { data: user } = await db.from("users").select("id").eq("company_id", companyId).eq("role", "owner").limit(1).single();
+const { data: user } = await db.from("company_members").select("id:user_id").eq("company_id", companyId).eq("rol", "propietario").limit(1).single();
 await crearFuenteJson({ almacen: almacenCon, memoria: memory, descargar: async () => { throw new Error("sin red"); }, enSegundoPlano: (p) => void trabajos.push(p), registrarError: () => {} },
   { companyId, userId: user!.id }, { tipo: "texto", titulo: "Demo simulador: tarifas y horario", agenteId: null,
     texto: "Horario de la clínica: de lunes a viernes de 9:00 a 19:00 y los sábados de 9:00 a 13:00. Tarifas publicadas: limpieza dental 55 €, revisión 30 €, blanqueamiento 190 €. Las tarifas incluyen IVA." } as never);

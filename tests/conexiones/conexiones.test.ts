@@ -19,6 +19,7 @@ import { InMemoryAgentStore } from "../../src/lib/agents/inMemoryStore.ts";
 import { InMemoryStore } from "../../src/lib/memory/inMemoryStore.ts";
 import { FakeEmbedder } from "../../src/lib/memory/fakeEmbedder.ts";
 import { createMemoryService } from "../../src/lib/memory/service.ts";
+import { altaEnEmpresa } from "../ayuda/miembros.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
@@ -60,7 +61,7 @@ async function empresaConUsuario(etiqueta: string, role: "owner" | "member" = "o
   const email = `con-${etiqueta}-${RUN}@test.example`, password = `Pw-${RUN}-${etiqueta}-Aa1!`;
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   assert.ifError(error);
-  assert.ifError((await admin.from("users").insert({ id: data.user!.id, company_id: companyId, full_name: `Prueba ${etiqueta}`, email, role })).error);
+  assert.ifError((await altaEnEmpresa(admin, { id: data.user!.id, companyId, nombre: `Prueba ${etiqueta}`, email, rol: role })).error);
   const c = createClient(url, anon, { auth: { persistSession: false } });
   const s = await c.auth.signInWithPassword({ email, password });
   assert.ifError(s.error);

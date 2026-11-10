@@ -9,6 +9,7 @@ import { autenticadorSupabase, type Sesion } from "../creditos/api.ts";
 import { depsExamenDesdeEntorno } from "./entorno.ts";
 import { ejecutarExamen, type DepsExamen } from "./examen.ts";
 import { CertificacionError, enviarACertificacion } from "./solicitudes.ts";
+import { esGestor } from "../empresas/permisos.ts";
 
 export type DepsApiCertificacion = {
   db: SupabaseClient;
@@ -25,7 +26,7 @@ const fallo = (status: number, error: string, mensaje: string, extra: Record<str
 export async function certificarHandler(req: Request, idAgente: string, api: DepsApiCertificacion): Promise<Response> {
   const sesion = await api.autenticar(req);
   if (!sesion) return fallo(401, "no_autenticado", "Inicia sesión para continuar.");
-  if (sesion.rol !== "owner" && sesion.rol !== "admin") return fallo(403, "sin_permiso", "Solo los propietarios y administradores pueden enviar un agente a certificación.");
+  if (!esGestor(sesion.rol)) return fallo(403, "sin_permiso", "Solo los propietarios y administradores pueden enviar un agente a certificación.");
   if (!z.uuid().safeParse(idAgente).success) return fallo(404, "agente_no_encontrado", "No existe ese agente en vuestra oficina.");
   let cuerpo: unknown;
   try { cuerpo = JSON.parse((await req.text()) || "{}"); } catch { return fallo(400, "json_invalido", "El cuerpo no es un JSON válido."); }

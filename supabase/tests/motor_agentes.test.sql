@@ -17,8 +17,8 @@ create temp table ids as select
 insert into public.companies (id, name) values ((select company_b from ids), 'Taller Delta');
 
 -- Coste: 1 M de tokens de cada clase con la tarifa de Haiku (0,092 + 0,46 + 0,0092 + 0,115 €).
-insert into public.tasks (id, company_id, agent_id, title, model, contact_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens)
-  values ((select task from ids), (select company_a from ids), (select lucia from ids), 'Tarea de prueba', 'claude-haiku-5-5', (select laura from ids), 1000000, 1000000, 1000000, 1000000);
+insert into public.tasks (id, company_id, agent_id, title, model, contact_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, origen, ordenado_por)
+  values ((select task from ids), (select company_a from ids), (select lucia from ids), 'Tarea de prueba', 'claude-haiku-5-5', (select laura from ids), 1000000, 1000000, 1000000, 1000000, 'orden_usuario', '0c33590a-4c2a-4b32-a388-2008558688f7');
 select is((select cost_eur from public.tasks where id = (select task from ids)), 0.676200::numeric, 'la base calcula el coste en euros con la tarifa del modelo (entrada, salida y caché)');
 select is((select ai_cost_credits from public.tasks where id = (select task from ids)), 600.0000::numeric, 'y el coste en créditos (la caché no suma créditos de entrada)');
 update public.tasks set output_tokens = 0 where id = (select task from ids);
@@ -28,7 +28,7 @@ update public.tasks set extra_cost_eur = 0.01 where id = (select task from ids);
 select is((select cost_eur from public.tasks where id = (select task from ids)), 0.226200::numeric, 'el coste del paso de memoria (Haiku) se suma al de la tarea');
 
 -- Un recuerdo conserva su rastro aunque se borre la tarea que lo originó: solo pierde el enlace.
-insert into public.tasks (id, company_id, agent_id, title, model) values ('d0000000-0000-4000-8000-0000000000d2', (select company_a from ids), (select lucia from ids), 'Otra', 'claude-haiku-5-5');
+insert into public.tasks (id, company_id, agent_id, title, model, origen, ordenado_por) values ('d0000000-0000-4000-8000-0000000000d2', (select company_a from ids), (select lucia from ids), 'Otra', 'claude-haiku-5-5', 'orden_usuario', '0c33590a-4c2a-4b32-a388-2008558688f7');
 insert into public.memory_nodes (id, company_id, node_type, title, source_task_id, confidence, created_by_agent_id)
   values ('d0000000-0000-4000-8000-0000000000e1', (select company_a from ids), 'dato', 'Hecho: de prueba', 'd0000000-0000-4000-8000-0000000000d2', 0.8, (select lucia from ids));
 delete from public.tasks where id = 'd0000000-0000-4000-8000-0000000000d2';

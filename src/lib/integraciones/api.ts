@@ -10,6 +10,7 @@ import { autenticadorSupabase, type Sesion } from "../creditos/api.ts";
 import { integracionesFaltantes } from "./faltantes.ts";
 import { urlDeLaApp } from "./proveedores.ts";
 import { completarConexion, conectarConClave, ConexionError, desconectar, iniciarConexion, listarConexiones, rechazarConexion, type DepsConexiones } from "./servicio.ts";
+import { esGestor } from "../empresas/permisos.ts";
 
 export type DepsApiConexiones = { deps: DepsConexiones; autenticar: (req: Request) => Promise<Sesion | null> };
 
@@ -21,7 +22,7 @@ const idValido = (id: string) => z.uuid().safeParse(id).success;
 async function entrar(req: Request, api: DepsApiConexiones, gestion: boolean): Promise<{ res: Response } | { sesion: Sesion }> {
   const sesion = await api.autenticar(req);
   if (!sesion) return { res: fallo(401, "no_autenticado", "Inicia sesión para continuar.") };
-  if (gestion && sesion.rol !== "owner" && sesion.rol !== "admin") return { res: fallo(403, "sin_permiso", "Solo los propietarios y administradores pueden conectar aplicaciones.") };
+  if (gestion && !esGestor(sesion.rol)) return { res: fallo(403, "sin_permiso", "Solo los propietarios y administradores pueden conectar aplicaciones.") };
   return { sesion };
 }
 

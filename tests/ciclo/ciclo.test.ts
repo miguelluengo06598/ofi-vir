@@ -28,6 +28,8 @@ import { recertificacion } from "../../src/lib/creditos/tareasPeriodicas.ts";
 import { FakeEmbedder } from "../../src/lib/memory/fakeEmbedder.ts";
 import { createMemoryService } from "../../src/lib/memory/service.ts";
 import { SupabaseMemoryStore } from "../../src/lib/memory/supabaseStore.ts";
+import { origenDeEvento } from "../ayuda/origen.ts";
+import { sesionDePrueba } from "../../src/lib/empresas/pruebas.ts";
 
 const { db, url } = clienteLocal();
 const deps: DepsCiclo = { db };
@@ -56,7 +58,7 @@ async function oficina(o: { plantilla?: string; herramientas?: { tool_id: string
   })).error);
   // Lo que exige el envío a certificación: reglas completas, aviso de IA, una simulación y (agente propio) 10 casos de prueba.
   assert.ifError((await db.from("agent_rules").insert({ agent_id: agentId, company_id: companyId, mensaje_fuera_horario: "Ahora estamos cerrados.", aviso_ia_texto: "Soy un asistente de IA." })).error);
-  assert.ifError((await db.from("tasks").insert({ company_id: companyId, agent_id: agentId, title: "Simulación", model: "claude-haiku-5-5", es_simulacion: true, status: "done" })).error);
+  assert.ifError((await db.from("tasks").insert({ company_id: companyId, agent_id: agentId, title: "Simulación", model: "claude-haiku-5-5", es_simulacion: true, origen: "orden_usuario", origen_ref: { proceso_interno: "prueba" }, status: "done" })).error);
   if (!o.plantilla) assert.ifError((await db.from("agent_test_cases").insert(Array.from({ length: 10 }, (_, i) => ({ company_id: companyId, agent_id: agentId, titulo: `Caso ${i}`, entrada: `«Pregunta ${i}»`, esperado: "Responde con amabilidad." })))).error);
   if (o.herramientas?.length) assert.ifError((await db.from("agent_tools").insert(o.herramientas.map((h) => ({ ...h, agent_id: agentId, company_id: companyId })))).error);
   return { companyId, departmentId, agentId, slug };
@@ -97,7 +99,7 @@ function motor(llm: LlmClient): EngineDeps {
 }
 async function tareaReal(o: Oficina, llm: ScriptedLlm) {
   const d = motor(llm);
-  const taskId = await crearTarea(d, o.companyId, { agentSlug: o.slug, title: "Tarea real" });
+  const taskId = await crearTarea(d, o.companyId, { origen: await origenDeEvento(db, o.companyId), agentSlug: o.slug, title: "Tarea real" });
   return ejecutarTarea(d, o.companyId, taskId, "Resume el estado de la oficina.");
 }
 
@@ -260,7 +262,7 @@ describe("un agente no certificado nunca ejecuta una tarea real", () => {
     // El agente se pausa mientras el modelo «piensa»: la tarea ya lanzada termina.
     const llm: LlmClient = { create: async () => { await cambiarEstado(db, { ...ids(o), accion: "pausar" }); return fin("Terminada."); } };
     const d = motor(llm);
-    const taskId = await crearTarea(d, o.companyId, { agentSlug: o.slug, title: "En curso" });
+    const taskId = await crearTarea(d, o.companyId, { origen: await origenDeEvento(db, o.companyId), agentSlug: o.slug, title: "En curso" });
     assert.equal((await ejecutarTarea(d, o.companyId, taskId, "Haz el resumen.")).estado, "done");
     assert.equal((await agente(o.agentId)).estado, "pausado");
   });
@@ -269,7 +271,7 @@ describe("un agente no certificado nunca ejecuta una tarea real", () => {
     const o = await oficina();
     const llm = new ScriptedLlm([fin("Simulado.")]);
     const d = motor(llm);
-    const taskId = await d.store.createTask(o.companyId, { agentId: o.agentId, title: "Simulación", model: "claude-haiku-5-5", esSimulacion: true });
+    const taskId = await d.store.createTask(o.companyId, { origen: { tipo: "orden_usuario", ordenadoPor: null, procesoInterno: "prueba" }, agentId: o.agentId, title: "Simulación", model: "claude-haiku-5-5", esSimulacion: true });
     const r = await ejecutarTarea({ ...d, catalogo: { almacen: new SupabaseAlmacenHerramientas(db, creditos), secretos: (c) => new GestorSecretos(c, async () => null) }, simulacion: {} }, o.companyId, taskId, "Hola");
     assert.equal(r.estado, "done"); assert.equal(llm.requests.length, 1);
   });
@@ -718,7 +720,7 @@ describe("avisos de certificación", () => {
 
 // ── 10) Rutas ────────────────────────────────────────────────────────────────────────────────────────
 describe("rutas del ciclo de vida", () => {
-  const api = (rol: "owner" | "member" | null, companyId: string, llm: LlmClient | null = null): DepsApiCiclo => ({ deps, llm, autenticar: async () => (rol ? { companyId, userId: null as unknown as string, rol } : null) });
+  const api = (rol: "owner" | "member" | null, companyId: string, llm: LlmClient | null = null): DepsApiCiclo => ({ deps, llm, autenticar: async () => (rol ? sesionDePrueba(companyId, null as unknown as string, rol) : null) });
   const post = (cuerpo: unknown) => new Request("http://x/api", { method: "POST", body: JSON.stringify(cuerpo) });
 
   it("sin sesión 401, sin rol 403, con companyId 400, de otra empresa 404", async () => {

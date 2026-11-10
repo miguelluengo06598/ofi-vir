@@ -21,7 +21,7 @@ select throws_ok(
 -- Alguien que no es de la empresa tampoco.
 select throws_ok(
   $q$select public.approve_email_draft('a64499d1-7f43-4a43-abc8-41a313dc4018', '451c5e13-ab4e-47d4-a16f-d2ff95f6b5bc', 'c0000000-0000-4000-8000-0000000000c1', 'x', 'y')$q$,
-  '23514', 'Quien aprueba no pertenece a la empresa', 'un desconocido no puede aprobar');
+  '23514', 'Quien aprueba no pertenece a la empresa o no tiene permiso para aprobar', 'un desconocido no puede aprobar');
 
 -- El navegador no puede ejecutar la aprobación: solo el servidor.
 set local role authenticated;

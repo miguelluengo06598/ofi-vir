@@ -67,6 +67,11 @@ export interface AlmacenHerramientas {
   /** Marca la aprobación como usada. false si ya se había usado (así no se ejecuta dos veces). */
   consumirAprobacion(companyId: string, c: { approvalId: string; agentId: string; taskId: string | null; toolId: string; decision: "aprobada" | "rechazada" }): Promise<boolean>;
 
+  /**
+   * Seguimiento propuesto por el agente: crea el seguimiento y su aprobación (una persona decide). NO programa nada: solo si se aprueba
+   * se crea la tarea con origen `seguimiento_aprobado`. Lanza ToolError si la fecha no es válida o hay demasiados.
+   */
+  proponerSeguimiento(companyId: string, s: { agentId: string; taskId: string; contactId: string | null; fecha: Date; motivo: string; mensaje: string }): Promise<{ seguimientoId: string; approvalId: string }>;
   crearTareaHumana(companyId: string, t: { agentId: string; taskId: string | null; contactId: string | null; titulo: string; contexto: string; urgencia: "baja" | "normal" | "alta" }): Promise<string>;
   traspasosConfigurados(companyId: string, agentIdOrigen: string): Promise<TraspasoConfigurado[]>;
   /**
@@ -150,6 +155,11 @@ export type Herramienta<E extends z.ZodType = z.ZodType, S extends z.ZodType = z
    * El ejecutor solo lo declara: lo cobra el servicio de créditos. El correo se cobra al ENVIARSE, no al redactarlo.
    */
   costeCreditos: ConsumoFijoId | null;
+  /**
+   * Herramienta de la plataforma: la tienen todos los agentes sin configurarla (p. ej. proponer_seguimiento). Su permiso no se
+   * puede relajar: siempre acaba en una persona.
+   */
+  plataforma?: boolean;
   /** La herramienta ya crea su propia aprobación (redactar_correo, pedir_aprobacion): no hace falta otra encima. */
   creaSuPropiaAprobacion?: boolean;
   /** Tras ejecutarla, la tarea queda en espera de una persona. */

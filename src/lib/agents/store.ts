@@ -16,6 +16,52 @@ export type AgentInfo = {
   allowedTools: string[];
 };
 
+/**
+ * Por qué existe una tarea. Los agentes NUNCA trabajan por iniciativa propia: sin un origen válido el motor no ejecuta nada.
+ *  - evento_externo: algo que llegó de fuera (correo, lead, WhatsApp, formulario), con la referencia del evento o del correo.
+ *  - traspaso: otro agente le pasó trabajo con pasar_a_agente (tiene tarea padre; la cadena debe llevar a un origen válido).
+ *  - orden_usuario: una persona lo pidió (quién y cuándo).
+ *  - rutina_usuario: una rutina creada y ACTIVADA por una persona.
+ *  - seguimiento_aprobado: un seguimiento propuesto por el agente y aprobado por una persona.
+ */
+export const ORIGENES = ["evento_externo", "traspaso", "orden_usuario", "rutina_usuario", "seguimiento_aprobado"] as const;
+export type TipoOrigen = (typeof ORIGENES)[number];
+/** Orígenes que pueden empezar una cadena (la raíz de cualquier traspaso tiene que ser uno de estos). */
+export const ORIGENES_RAIZ: readonly TipoOrigen[] = ["evento_externo", "orden_usuario", "rutina_usuario", "seguimiento_aprobado"];
+
+/** Lo que hay que dar al crear una tarea: el origen y su referencia obligatoria. */
+export type OrigenNuevo =
+  | { tipo: "evento_externo"; eventoId?: string | null; emailId?: string | null; canal: string }
+  | { tipo: "traspaso"; tareaPadreId: string }
+  | { tipo: "orden_usuario"; ordenadoPor: string; via?: string }
+  /** Exámenes de certificación: proceso interno de SAMGPLE, siempre simulado y en una empresa ficticia. */
+  | { tipo: "orden_usuario"; ordenadoPor: null; procesoInterno: string; solicitudId?: string | null }
+  | { tipo: "rutina_usuario"; rutinaId: string }
+  | { tipo: "seguimiento_aprobado"; seguimientoId: string };
+
+/** El origen tal como queda guardado en la tarea. */
+export type OrigenTarea = {
+  tipo: TipoOrigen | null;
+  ref: Record<string, unknown>;
+  eventoId: string | null;
+  tareaPadreId: string | null;
+  tareaRaizId: string | null;
+  ordenadoPor: string | null;
+  ordenadoEn: string | null;
+  rutinaId: string | null;
+  seguimientoId: string | null;
+};
+
+/** Un eslabón de la cadena de una tarea (nivel 0 = la propia tarea, el último = la raíz). */
+export type EslabonCadena = {
+  nivel: number; taskId: string; agentId: string; origen: TipoOrigen | null; tareaPadreId: string | null;
+  eventoId: string | null; sourceEmailId: string | null; ordenadoPor: string | null; rutinaId: string | null; seguimientoId: string | null;
+  esSimulacion: boolean; ref: Record<string, unknown>; title: string; startedAt: string;
+};
+
+/** Interruptores que se consultan antes de cada llamada al modelo. */
+export type ControlEjecucion = { paradaEmergencia: boolean; motivoParada: string | null; oficinaPausada: boolean };
+
 /** `scheduled` = aplazada: llegó fuera de horario y se procesará al abrir (reglas del agente). */
 export type TaskStatus = "running" | "expert" | "approval" | "done" | "failed" | "review" | "scheduled";
 
@@ -40,6 +86,9 @@ export type TaskInfo = {
   instruccionEntrada: string | null;
   /** Traspaso que originó la tarea (si nació de uno). */
   handoffId: string | null;
+  /** Por qué existe la tarea (ver `TipoOrigen`). */
+  origen: OrigenTarea;
+  esSimulacion: boolean;
 };
 
 export type StepKind = "instruccion" | "respuesta" | "herramienta" | "memoria" | "fin";
@@ -91,7 +140,14 @@ export interface AgentStore {
   getPricing(model: string): Promise<Pricing | null>;
   listDepartments(companyId: string): Promise<{ id: string; name: string; slug: string }[]>;
 
-  createTask(companyId: string, t: { agentId: string; title: string; model: string; contactId?: string | null; esSimulacion?: boolean }): Promise<string>;
+  /** Crea una tarea «en marcha» sin ejecutar. El origen es obligatorio (la base lo vuelve a exigir). */
+  createTask(companyId: string, t: { agentId: string; title: string; model: string; origen: OrigenNuevo; contactId?: string | null; esSimulacion?: boolean; instruccionEntrada?: string | null }): Promise<string>;
+  /** La cadena de la tarea hasta su raíz (tarea padre → … → origen). */
+  cadenaDeTarea(companyId: string, taskId: string): Promise<EslabonCadena[]>;
+  /** Parada de emergencia global y pausa de la oficina. */
+  controlDeEjecucion(companyId: string): Promise<ControlEjecucion>;
+  /** Anota que la puerta de ejecución bloqueó una tarea (una vez por tarea, motivo y fase). */
+  registrarBloqueo(companyId: string, b: { taskId: string; agentId: string | null; codigo: string; motivo: string; fase: "inicio" | "paso" }): Promise<void>;
   getTask(companyId: string, taskId: string): Promise<TaskInfo | null>;
   getSourceEmail(companyId: string, emailId: string): Promise<SourceEmail | null>;
   /** Vincula la tarea a un contacto (si aún no tiene): al borrar el contacto por RGPD se borra la tarea con sus pasos. */
@@ -115,8 +171,13 @@ export interface AgentStore {
 
   /** Estado de un traspaso según avanza la tarea del agente destino. */
   actualizarTraspaso(companyId: string, handoffId: string, status: "received" | "in_progress" | "done" | "rejected"): Promise<void>;
-  /** Tareas nacidas de un traspaso que aún no se han ejecutado. */
-  listarTareasDeTraspasoPendientes(o?: { companyId?: string; limite?: number }): Promise<{ companyId: string; taskId: string }[]>;
+  /**
+   * Tareas en marcha que aún no se han ejecutado y que procesa la cola (eventos externos, traspasos, rutinas, seguimientos).
+   * Nunca las de una oficina pausada ni con la parada de emergencia. Las órdenes de una persona no entran: se ejecutan al pedirlas.
+   */
+  listarTareasPendientes(o?: { companyId?: string; limite?: number }): Promise<{ companyId: string; taskId: string }[]>;
+  /** Otros correos agrupados en la misma tarea (varios mensajes seguidos de la misma persona). */
+  correosAgrupados(companyId: string, taskId: string): Promise<SourceEmail[]>;
 
   addStep(companyId: string, taskId: string, position: number, step: NewStep): Promise<void>;
   listSteps(companyId: string, taskId: string): Promise<TaskStep[]>;

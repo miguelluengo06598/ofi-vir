@@ -11,6 +11,7 @@ import { createMemoryService } from "../memory/service.ts";
 import type { ReglasAgente } from "./instrucciones.ts";
 import { ejecutarHerramienta, GestorSecretos, obtenerHerramienta, resolverAprobacion, type ContextoEjecucion, type Permiso } from "./herramientas/index.ts";
 import { InMemoryAlmacenHerramientas } from "./herramientas/inMemoryAlmacen.ts";
+import { ORDEN_DE_PRUEBA } from "../agents/pruebas.ts";
 import {
   crearServicioReglas, dentroDeHorario, componerMensaje, InMemoryAlmacenReglas, proximaApertura, reanudarAplazadas, REGLAS_POR_DEFECTO, tituloAvisoIa,
 } from "./reglas/index.ts";
@@ -65,7 +66,7 @@ function motor(script: ReturnType<typeof fin>[], r: ReglasAgente | null, relojAc
   return { store, memory, memStore, almacen, llm, deps, servicio };
 }
 const lanzar = async (m: ReturnType<typeof motor>, instruccion: string) => {
-  const id = await crearTarea(m.deps, C, { agentSlug: "lucia-ramos", title: "Mensaje" });
+  const id = await crearTarea(m.deps, C, { origen: ORDEN_DE_PRUEBA, agentSlug: "lucia-ramos", title: "Mensaje" });
   return { id, r: await ejecutarTarea(m.deps, C, id, instruccion) };
 };
 
@@ -161,7 +162,7 @@ async function ejecutor(r: ReglasAgente, permisos: Record<string, Permiso> = { r
   // Un contacto conocido.
   const g = await memory.guardarRecuerdo(C, { agentId: lucia.id, contacto: { nombre: "Laura Gómez", email: "laura@clinicasol.example" }, nodos: [{ clave: "a", tipo: "dato", titulo: "Pidió precios", contenido: "" }], conexiones: [] });
   const contactId = g.contacto!.id;
-  const taskId = await store.createTask(C, { agentId: lucia.id, title: "Tarea", model: "claude-haiku-5-5", contactId });
+  const taskId = await store.createTask(C, { origen: ORDEN_DE_PRUEBA, agentId: lucia.id, title: "Tarea", model: "claude-haiku-5-5", contactId });
   // WhatsApp todavía no tiene integración real: aquí se sustituye por una que deja constancia de lo que SE ENVIARÍA.
   const enviados: string[] = [];
   const wa = obtenerHerramienta("responder_whatsapp")!;

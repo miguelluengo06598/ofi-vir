@@ -78,3 +78,10 @@ coverage/
 /exports/
 /datos-reales/
 supabase/backups/
+
+# Vídeos del producto: se generan con `npm run videos` y se alojan fuera de git (ver src/config/videos.ts)
+/public/videos/
+/videos/node_modules/
+/videos/salida/
+
+/videos/public/scenes/

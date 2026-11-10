@@ -52,6 +52,23 @@ export type PlantillaAgente = {
   casosDePrueba: CasoDePrueba[];
   /** Resumen de lo que cambia en esta versión respecto a la anterior: lo ve la empresa al ofrecerle actualizar su agente. */
   novedades?: string;
+  /**
+   * Trabajo periódico que la plantilla SUGIERE (p. ej. un informe semanal). Nunca se crea ni se activa solo: la empresa lo ve como
+   * «rutina sugerida» y, si quiere, la añade (desactivada) y la activa ella, viendo su coste al mes. No cuenta para la huella.
+   */
+  rutinasSugeridas?: RutinaSugerida[];
+};
+
+export type RutinaSugerida = {
+  /** Id estable dentro de la plantilla (la rutina añadida guarda «plantilla:<plantilla>:<id>»). */
+  id: string;
+  nombre: string;
+  descripcion: string;
+  /** Lo que se le pide al agente en cada ejecución. */
+  instruccion: string;
+  tipoTarea: TipoTarea;
+  frecuencia: "cada_hora" | "diaria" | "laborables" | "semanal" | "mensual";
+  maxEjecucionesMes: number;
 };
 
 /** Solo para que el tipo se compruebe al escribir la plantilla. */

@@ -10,6 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import { ejecutarRutinasVencidas, listarRutinas, type Rutina } from "../../src/lib/creditos/rutinas.ts";
 import { crearServicioCreditos } from "../../src/lib/creditos/servicio.ts";
 import { caducarCreditos, ejecutarRutinas, renovarBonos, revisarEstados, type DepsTareas } from "../../src/lib/creditos/tareasPeriodicas.ts";
+import { rutinaDePrueba } from "../ayuda/persona.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
@@ -221,10 +222,11 @@ describe("rutinas", () => {
     return data!.id as string;
   }
   async function rutina(c: string, agentId: string, o: { tipo?: string; frecuencia?: string; proxima: Date; nombre?: string }) {
-    const { data, error } = await admin.from("agent_routines").insert({
+    // Una rutina la crea y la activa una persona (lo exige la base).
+    const { data, error } = await rutinaDePrueba(admin, {
       company_id: c, agent_id: agentId, nombre: o.nombre ?? "Rutina", instruccion: "Haz tu ronda.",
       tipo_tarea: o.tipo ?? "simple", frecuencia: o.frecuencia ?? "diaria", proxima_ejecucion_en: o.proxima.toISOString(),
-    }).select("id").single();
+    });
     assert.ifError(error);
     return data!.id as string;
   }

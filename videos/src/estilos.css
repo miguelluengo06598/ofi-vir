@@ -1,0 +1,18 @@
+/* Los mismos estilos que la app: tokens de cristal, escala tipográfica y colores (tailwind.config.ts). */
+@import "../../src/app/globals.css";
+
+/* Clases que usan los componentes de la oficina y los de los vídeos. */
+@source "../../src/components";
+@source "./";
+
+/* En vídeo todo se anima fotograma a fotograma: fuera las animaciones y transiciones CSS de la app. */
+.enter,
+.enter-slide,
+.arrival-glow {
+  animation: none !important;
+}
+*,
+*::before,
+*::after {
+  transition: none !important;
+}

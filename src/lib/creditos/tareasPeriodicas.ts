@@ -7,7 +7,9 @@
  *  renovar-bonos     (diaria)  SOLO LOCAL: simula la renovación del bono mensual. En producción lo hará Stripe.
  *  rutinas           (cada hora) procesa las rutinas vencidas de los agentes.
  *  renovar-conexiones (cada 15 min) renueva los tokens de las aplicaciones conectadas que caducan pronto.
- *  procesar-traspasos (cada 5 min) ejecuta las tareas que nacieron de un traspaso entre agentes.
+ *  procesar-pendientes (cada 5 min) la cola: ejecuta las tareas que ya existen con su origen (eventos, traspasos, rutinas, seguimientos).
+ *                    Ningún cron lanza a un agente para que «revise» o «busque trabajo»: solo ejecuta tareas con un motivo concreto.
+ *  control-calidad    (cada hora) proceso interno de SAMGPLE (muestreo con Haiku). Solo con CONTROL_CALIDAD_AUTOMATICO=true.
  *  examenes-certificacion (cada 5 min) ejecuta los exámenes técnicos de certificación pendientes (en segundo plano).
  *  recertificacion   (diaria)  30 días antes de que caduque una certificación crea la solicitud «periódica» y avisa; caducada, pausa al agente.
  *  abrir-aplazadas   (cada 15 min) procesa los mensajes que llegaron fuera de horario (regla «no responder») cuando abre el horario.
@@ -21,7 +23,7 @@ import type { ResultadoAplazadas } from "../agentes/reglas/aplazadas.ts";
 import type { ResultadoTraspasos } from "../agentes/traspasos/procesar.ts";
 import { muestrearYAlertar } from "../calidad/servicio.ts";
 
-export const TAREAS_PERIODICAS = ["caducar-creditos", "revisar-estados", "renovar-bonos", "recertificacion", "control-calidad", "rutinas", "renovar-conexiones", "abrir-aplazadas", "procesar-traspasos", "examenes-certificacion"] as const;
+export const TAREAS_PERIODICAS = ["caducar-creditos", "revisar-estados", "renovar-bonos", "recertificacion", "control-calidad", "rutinas", "renovar-conexiones", "abrir-aplazadas", "procesar-pendientes", "examenes-certificacion"] as const;
 export type TareaPeriodica = (typeof TAREAS_PERIODICAS)[number];
 
 export type DepsTareas = {
@@ -38,10 +40,15 @@ export type DepsTareas = {
   lanzarRutina?: Lanzador;
   /** Cómo se procesan las tareas aplazadas por horario. Sin él, `abrir-aplazadas` solo informa de cuántas hay. */
   procesarAplazadas?: (ahora: Date, empresaId?: string) => Promise<ResultadoAplazadas>;
-  /** Cómo se ejecutan las tareas de traspaso. Sin él, `procesar-traspasos` solo informa. */
+  /** Cómo se ejecuta la cola de tareas pendientes. Sin él, `procesar-pendientes` solo informa. */
   procesarTraspasos?: (empresaId?: string) => Promise<ResultadoTraspasos>;
   /** Cómo se ejecutan los exámenes de certificación pendientes. Sin él, `examenes-certificacion` solo informa. */
-  procesarExamenes?: (empresaId?: string) => Promise<{ procesados: number; errores: string[] }>;
+  procesarExamenes?: (empresaId?: string, opciones?: { excluirTipos?: string[] }) => Promise<{ procesados: number; errores: string[]; omitidos?: number }>;
+  /**
+   * Procesos internos automáticos de SAMGPLE con IA (muestreo de calidad y exámenes de recertificación periódica). Nunca los hacen los
+   * agentes de la empresa. Solo con CONTROL_CALIDAD_AUTOMATICO=true; en pruebas y por defecto, desactivados.
+   */
+  controlCalidadAutomatico?: boolean;
   /** Puntúa con Haiku las muestras reales ya anonimizada. Sin evaluador, se muestrea y se alertan las señales acumuladas. */
   procesarMuestrasCalidad?: (empresaId?: string) => Promise<{ evaluadas: number; revision: number; errores: number; alertas: number }>;
 };
@@ -157,18 +164,18 @@ export async function abrirAplazadas(d: DepsTareas) {
   return { vencidas: r.vencidas, reanudadas: r.reanudadas, errores: r.errores, procesadas: true };
 }
 
-/** 7) Tareas nacidas de traspasos. Sin motor (sin clave de Claude), solo cuenta cuántas esperan. */
-export async function procesarTraspasosPendientes(d: DepsTareas) {
+/** 7) La cola: tareas que ya existen con su origen (eventos, traspasos, rutinas, seguimientos). Sin motor, solo cuenta cuántas esperan. */
+export async function procesarPendientes(d: DepsTareas) {
   const log = d.log ?? console;
   if (!d.procesarTraspasos) {
-    const { data, error } = await d.db.rpc("tareas_de_traspaso_pendientes", { p_limite: 1000, p_company_id: d.empresaId ?? null });
-    if (error) throw new Error("procesar-traspasos: no se pudieron leer las tareas.");
+    const { data, error } = await d.db.rpc("tareas_pendientes_de_ejecutar", { p_limite: 1000, p_company_id: d.empresaId ?? null });
+    if (error) throw new Error("procesar-pendientes: no se pudieron leer las tareas.");
     const n = (data as unknown[] | null)?.length ?? 0;
-    log.warn(`[cron] procesar-traspasos: ${n} tareas de traspaso SIN EJECUTAR (no hay motor de agentes configurado).`);
+    log.warn(`[cron] procesar-pendientes: ${n} tareas SIN EJECUTAR (no hay motor de agentes configurado).`);
     return { pendientes: n, ejecutadas: 0, procesadas: false };
   }
   const r = await d.procesarTraspasos(d.empresaId);
-  return { ejecutadas: r.ejecutadas, errores: r.errores, procesadas: true };
+  return { ejecutadas: r.ejecutadas, errores: r.errores, bloqueadas: r.bloqueadas, procesadas: true };
 }
 
 /** 8) Exámenes técnicos de certificación pendientes. Sin motor (sin clave de Claude), solo cuenta cuántos esperan. */
@@ -182,8 +189,9 @@ export async function examenesDeCertificacion(d: DepsTareas) {
     log.warn(`[cron] examenes-certificacion: ${count ?? 0} exámenes SIN EJECUTAR (no hay motor de agentes configurado).`);
     return { pendientes: count ?? 0, procesados: 0, procesadas: false };
   }
-  const r = await d.procesarExamenes(d.empresaId);
-  return { procesados: r.procesados, errores: r.errores, procesadas: true };
+  // Las recertificaciones periódicas son un proceso interno automático: solo con CONTROL_CALIDAD_AUTOMATICO=true.
+  const r = await d.procesarExamenes(d.empresaId, d.controlCalidadAutomatico ? {} : { excluirTipos: ["periodica"] });
+  return { procesados: r.procesados, errores: r.errores, omitidosPorControlAutomatico: r.omitidos ?? 0, procesadas: true };
 }
 
 /**
@@ -202,6 +210,10 @@ export async function recertificacion(d: DepsTareas) {
 
 /** 10) Control continuo: toma el porcentaje configurable de tareas reales y Haiku puntúa la misma rúbrica del examen. */
 export async function controlCalidad(d: DepsTareas) {
+  if (!d.controlCalidadAutomatico) {
+    (d.log ?? console).info("[cron] control-calidad: omitido (CONTROL_CALIDAD_AUTOMATICO no está a true).");
+    return { omitido: "CONTROL_CALIDAD_AUTOMATICO desactivado", muestras: 0, alertas: 0, evaluadas: 0, enRevision: 0, errores: 0, procesadas: false };
+  }
   const base = await muestrearYAlertar(d.db, d.ahora, d.empresaId);
   if (!d.procesarMuestrasCalidad) {
     (d.log ?? console).warn(`[cron] control-calidad: ${base.muestras} muestras creadas, ${base.alertas} alertas; SIN EVALUAR (falta ANTHROPIC_API_KEY).`);
@@ -216,7 +228,7 @@ const TAREAS: Record<TareaPeriodica, (d: DepsTareas) => Promise<unknown>> = {
   recertificacion,
   "control-calidad": controlCalidad,
   "caducar-creditos": caducarCreditos, "revisar-estados": revisarEstados, "renovar-bonos": renovarBonos, rutinas: ejecutarRutinas,
-  "renovar-conexiones": renovarConexiones, "abrir-aplazadas": abrirAplazadas, "procesar-traspasos": procesarTraspasosPendientes,
+  "renovar-conexiones": renovarConexiones, "abrir-aplazadas": abrirAplazadas, "procesar-pendientes": procesarPendientes,
   "examenes-certificacion": examenesDeCertificacion,
 };
 export const ejecutarTareaPeriodica = (tarea: TareaPeriodica, d: DepsTareas) => TAREAS[tarea](d);

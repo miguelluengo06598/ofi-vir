@@ -7,6 +7,7 @@
  * (para cambiar de revisor y probar la segunda opinión), DEV_REVISOR_USER_ID o DEV_ADMIN_USER_ID; siempre que esté en `reviewers`.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { exigirRolPlataforma } from "../acceso.ts";
 
 export const ROLES_REVISOR = ["revisor_samgple", "admin_samgple"] as const;
 export type RolRevisor = (typeof ROLES_REVISOR)[number];
@@ -23,22 +24,18 @@ async function revisor(db: SupabaseClient, userId: string, esDeDesarrollo: boole
 }
 
 export async function sesionRevisor(
-  headers: Pick<Headers, "get">, db: SupabaseClient, env: Record<string, string | undefined> = process.env,
+  headers: Pick<Headers, "get">, db: SupabaseClient, _env: Record<string, string | undefined> = process.env,
 ): Promise<SesionRevisor | null> {
-  const cabecera = headers.get("authorization");
-  if (cabecera !== null) {
-    const token = /^Bearer (.+)$/.exec(cabecera)?.[1];
-    if (!token) return null;
-    const { data, error } = await db.auth.getUser(token);
-    return !error && data.user ? revisor(db, data.user.id, false) : null;
-  }
-  if (env.NODE_ENV === "production") return null;
-  const cookie = new RegExp(`(?:^|;\\s*)${COOKIE_DEV_REVISOR}=([0-9a-fA-F-]{36})`).exec(headers.get("cookie") ?? "")?.[1];
-  for (const id of [cookie, env.DEV_REVISOR_USER_ID?.trim(), env.DEV_ADMIN_USER_ID?.trim()]) {
-    const s = id ? await revisor(db, id, true) : null;
-    if (s) return s;
-  }
-  return null;
+  void _env;
+  const plataforma = await exigirRolPlataforma(ROLES_REVISOR, headers, db);
+  if (!plataforma) return null;
+  return {
+    userId: plataforma.userId,
+    rol: plataforma.roles.includes("admin_samgple") ? "admin_samgple" : "revisor_samgple",
+    nombre: plataforma.nombre,
+    categorias: plataforma.categorias,
+    esDeDesarrollo: false,
+  };
 }
 
 /** Los revisores activos (para el selector de persona de desarrollo y para mostrar nombres). */

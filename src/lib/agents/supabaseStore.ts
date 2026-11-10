@@ -2,11 +2,13 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { LlmUsage } from "./llm.ts";
 import type { Pricing } from "./pricing.ts";
 import type {
-  AgentInfo, AgentStore, DraftResult, HandoffKind, HandoffResult, LearnedNode, NewStep, TaskLearning, SourceEmail, TaskInfo, TaskPatch, TaskStatus, TaskStep,
+  AgentInfo, AgentStore, ControlEjecucion, DraftResult, EslabonCadena, HandoffKind, HandoffResult, LearnedNode, NewStep, OrigenNuevo, TaskLearning, SourceEmail,
+  TaskInfo, TaskPatch, TaskStatus, TaskStep, TipoOrigen,
 } from "./store.ts";
+import { columnasDeOrigen, origenDeFila } from "./origen.ts";
 
 const AGENT_COLS = "id, slug, name, role, department_id, model, instructions, allowed_tools, departments(name)";
-const TASK_COLS = "id, agent_id, title, status, model, contact_id, source_email_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_eur, steps, review_reason, suspicious, memory_input_tokens, memory_output_tokens, extra_cost_eur, instruccion_entrada, handoff_id";
+const TASK_COLS = "id, agent_id, title, status, model, contact_id, source_email_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_eur, steps, review_reason, suspicious, memory_input_tokens, memory_output_tokens, extra_cost_eur, instruccion_entrada, handoff_id, es_simulacion, origen, origen_ref, evento_id, tarea_padre_id, tarea_raiz_id, ordenado_por, ordenado_en, rutina_id, seguimiento_id";
 const num = (v: unknown) => Number(v ?? 0);
 const toLearned = (r: Record<string, unknown>): LearnedNode => ({
   id: r.id as string, type: r.node_type as string, title: r.title as string, content: r.content as string, confidence: num(r.confidence), createdAt: r.created_at as string,
@@ -68,10 +70,13 @@ export class SupabaseAgentStore implements AgentStore {
     return (data ?? []).map((d) => ({ id: d.id as string, name: d.name as string, slug: d.slug as string }));
   }
 
-  async createTask(companyId: string, t: { agentId: string; title: string; model: string; contactId?: string | null; esSimulacion?: boolean }) {
+  async createTask(companyId: string, t: { agentId: string; title: string; model: string; origen: OrigenNuevo; contactId?: string | null; esSimulacion?: boolean; instruccionEntrada?: string | null }) {
     const { data, error } = await this.db
       .from("tasks")
-      .insert({ company_id: companyId, agent_id: t.agentId, title: t.title, model: t.model, status: "running", contact_id: t.contactId ?? null, es_simulacion: t.esSimulacion ?? false })
+      .insert({
+        company_id: companyId, agent_id: t.agentId, title: t.title, model: t.model, status: "running", contact_id: t.contactId ?? null,
+        es_simulacion: t.esSimulacion ?? false, instruccion_entrada: t.instruccionEntrada ?? null, ...columnasDeOrigen(t.origen),
+      })
       .select("id")
       .single();
     if (error || !data) throw new Error("No se pudo crear la tarea.");
@@ -88,6 +93,7 @@ export class SupabaseAgentStore implements AgentStore {
       memoryUsage: { inputTokens: num(r.memory_input_tokens), outputTokens: num(r.memory_output_tokens) },
       extraCostEur: num(r.extra_cost_eur),
       instruccionEntrada: (r.instruccion_entrada as string | null) ?? null, handoffId: (r.handoff_id as string | null) ?? null,
+      origen: origenDeFila(r), esSimulacion: Boolean(r.es_simulacion),
     };
   }
 
@@ -151,10 +157,55 @@ export class SupabaseAgentStore implements AgentStore {
     if (error) throw new Error("No se pudo actualizar el traspaso.");
   }
 
-  async listarTareasDeTraspasoPendientes(o: { companyId?: string; limite?: number } = {}) {
-    const { data, error } = await this.db.rpc("tareas_de_traspaso_pendientes", { p_limite: o.limite ?? 50, p_company_id: o.companyId ?? null });
-    if (error) throw new Error("No se pudieron leer las tareas de traspaso.");
+  async listarTareasPendientes(o: { companyId?: string; limite?: number } = {}) {
+    const { data, error } = await this.db.rpc("tareas_pendientes_de_ejecutar", { p_limite: o.limite ?? 50, p_company_id: o.companyId ?? null });
+    if (error) throw new Error("No se pudieron leer las tareas pendientes.");
     return ((data ?? []) as { company_id: string; task_id: string }[]).map((r) => ({ companyId: r.company_id, taskId: r.task_id }));
+  }
+
+  async cadenaDeTarea(companyId: string, taskId: string): Promise<EslabonCadena[]> {
+    const { data, error } = await this.db.rpc("tarea_cadena", { p_company_id: companyId, p_task_id: taskId });
+    if (error) throw new Error("No se pudo leer la cadena de la tarea.");
+    return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+      nivel: num(r.nivel), taskId: r.task_id as string, agentId: r.agent_id as string, origen: (r.origen as TipoOrigen | null) ?? null,
+      tareaPadreId: (r.tarea_padre_id as string | null) ?? null, eventoId: (r.evento_id as string | null) ?? null, sourceEmailId: (r.source_email_id as string | null) ?? null,
+      ordenadoPor: (r.ordenado_por as string | null) ?? null, rutinaId: (r.rutina_id as string | null) ?? null, seguimientoId: (r.seguimiento_id as string | null) ?? null,
+      esSimulacion: Boolean(r.es_simulacion), ref: (r.origen_ref as Record<string, unknown> | null) ?? {}, title: r.title as string, startedAt: r.started_at as string,
+    }));
+  }
+
+  async controlDeEjecucion(companyId: string): Promise<ControlEjecucion> {
+    const [g, e, c] = await Promise.all([
+      this.db.from("plataforma_control").select("parada_emergencia, motivo").eq("id", true).maybeSingle(),
+      this.db.from("company_credit_settings").select("agentes_pausados").eq("company_id", companyId).maybeSingle(),
+      this.db.from("companies").select("estado").eq("id", companyId).maybeSingle(),
+    ]);
+    // Si no se puede leer, se para: la puerta nunca abre por un error.
+    if (g.error || e.error || c.error) throw new Error("No se pudo comprobar si los agentes pueden trabajar.");
+    // Una empresa suspendida o borrada por SAMGPLE (o que no existe) cuenta como oficina pausada: no empieza nada.
+    // En implantación es operativa: sus agentes certificados y activos trabajan igual que en una empresa activa.
+    const empresaActiva = c.data?.estado === "activa" || c.data?.estado === "en_implantacion";
+    return { paradaEmergencia: g.data?.parada_emergencia === true, motivoParada: (g.data?.motivo as string | null) ?? null, oficinaPausada: e.data?.agentes_pausados === true || !empresaActiva };
+  }
+
+  async registrarBloqueo(companyId: string, b: { taskId: string; agentId: string | null; codigo: string; motivo: string; fase: "inicio" | "paso" }) {
+    const { error } = await this.db.from("tareas_bloqueadas").upsert(
+      { company_id: companyId, task_id: b.taskId, agent_id: b.agentId, codigo: b.codigo, motivo: b.motivo.slice(0, 500), fase: b.fase },
+      { onConflict: "task_id,codigo,fase", ignoreDuplicates: true },
+    );
+    if (error) throw new Error("No se pudo anotar el bloqueo.");
+  }
+
+  async correosAgrupados(companyId: string, taskId: string): Promise<SourceEmail[]> {
+    const { data, error } = await this.db.from("eventos_externos").select("email_id").eq("company_id", companyId).eq("task_id", taskId).eq("estado", "agrupado")
+      .not("email_id", "is", null).order("recibido_en");
+    if (error) throw new Error("No se pudieron leer los mensajes agrupados.");
+    const out: SourceEmail[] = [];
+    for (const r of data ?? []) {
+      const m = await this.getSourceEmail(companyId, r.email_id as string);
+      if (m) out.push(m);
+    }
+    return out;
   }
 
   async aplazarTarea(companyId: string, taskId: string, a: { hasta: Date; instruccion: string | null }) {

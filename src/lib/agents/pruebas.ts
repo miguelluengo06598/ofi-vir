@@ -18,3 +18,6 @@ export function instruccionLeadDePrueba(): string {
     }),
   ].join("\n");
 }
+
+/** Origen para las pruebas en memoria: una orden de una persona ficticia (en la base haría falta una persona real). */
+export const ORDEN_DE_PRUEBA = { tipo: "orden_usuario", ordenadoPor: "persona-de-prueba", via: "prueba" } as const;

@@ -24,6 +24,7 @@ import { depsExamenDesdeEntorno } from "../../certificacion/entorno.ts";
 import { ejecutarExamen } from "../../certificacion/examen.ts";
 import { autenticadorSupabase, type Sesion } from "../../creditos/api.ts";
 import { guardarCorreccion, listarCorrecciones, MAX_REGLA, proponerRegla, retirarCorreccion } from "../correcciones/servicio.ts";
+import { esGestor } from "../../empresas/permisos.ts";
 import {
   actualizarPlantilla, cambiarEstado, CambiosSchema, cancelarSolicitud, cicloDelAgente, CicloError, guardarVersion, listarVersiones, restaurarVersion, type DepsCiclo,
 } from "./servicio.ts";
@@ -44,7 +45,7 @@ type Entrada = { res: Response } | { sesion: Sesion; cuerpo: unknown };
 async function entrar(req: Request, api: DepsApiCiclo, idAgente: string, o: { soloAdmin: boolean; conCuerpo?: boolean }): Promise<Entrada> {
   const sesion = await api.autenticar(req);
   if (!sesion) return { res: fallo(401, "no_autenticado", "Inicia sesión para continuar.") };
-  if (o.soloAdmin && sesion.rol !== "owner" && sesion.rol !== "admin") return { res: fallo(403, "sin_permiso", "Solo los propietarios y administradores pueden cambiar un agente.") };
+  if (o.soloAdmin && !esGestor(sesion.rol)) return { res: fallo(403, "sin_permiso", "Solo los propietarios y administradores pueden cambiar un agente.") };
   if (!z.uuid().safeParse(idAgente).success) return { res: NO_EXISTE() };
   if (!o.conCuerpo) return { sesion, cuerpo: null };
   let cuerpo: unknown;

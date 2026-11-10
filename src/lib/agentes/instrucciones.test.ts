@@ -6,6 +6,7 @@ import {
   registrarInstruccionesDeTarea, vistaPreviaParaEmpresa, type AgenteCargado, type EntradaInstrucciones, type FuenteInstrucciones,
 } from "./instrucciones.ts";
 import { BASE_PLANTILLA_EJEMPLO, ENTRADA_SARA } from "./instruccionesEjemplo.ts";
+import { ORDEN_DE_PRUEBA } from "../agents/pruebas.ts";
 
 type Cambios = Omit<Partial<EntradaInstrucciones>, "agente" | "reglas"> & { agente?: Partial<EntradaInstrucciones["agente"]>; reglas?: Partial<EntradaInstrucciones["reglas"]> };
 const con = (cambios: Cambios = {}): EntradaInstrucciones => ({
@@ -227,7 +228,7 @@ describe("hash y versión en la tarea", () => {
 
   it("registra en la tarea el hash, la versión del agente y los recortes", async () => {
     const store = new InMemoryAgentStore();
-    const taskId = await store.createTask("emp-1", { agentId: "ag", title: "t", model: "claude-haiku-5-5" });
+    const taskId = await store.createTask("emp-1", { origen: ORDEN_DE_PRUEBA, agentId: "ag", title: "t", model: "claude-haiku-5-5" });
     const m = montarInstrucciones(con({ agente: { instruccionesEmpresa: "z".repeat(LIMITES_PARTES.instruccionesEmpresa + 1) } }));
     await registrarInstruccionesDeTarea(store, "emp-1", taskId, m);
     assert.deepEqual(store.instrucciones.get(taskId), { hash: m.hash, agentVersion: 2, recortes: m.recortes });

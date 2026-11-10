@@ -16,7 +16,7 @@ export type NavItem = { href: string; label: string; icon: LucideIcon };
 
 /** Píldoras centrales de la TopBar. */
 export const topNav: NavItem[] = [
-  { href: "/", label: "Oficina", icon: Building2 },
+  { href: "/oficina", label: "Oficina", icon: Building2 },
   { href: "/agentes", label: "Agentes", icon: Bot },
   { href: "/marketplace", label: "Marketplace", icon: Store },
   { href: "/memoria", label: "Memoria", icon: Network },
@@ -25,7 +25,7 @@ export const topNav: NavItem[] = [
 
 /** Botones circulares del Dock. */
 export const dockNav: NavItem[] = [
-  { href: "/", label: "Oficina", icon: Building2 },
+  { href: "/oficina", label: "Oficina", icon: Building2 },
   { href: "/mensajes", label: "Mensajes", icon: MessageSquare },
   { href: "/tareas", label: "Tareas", icon: ListChecks },
   { href: "/aprobaciones", label: "Aprobaciones", icon: CheckCircle2 },
@@ -35,7 +35,8 @@ export const dockNav: NavItem[] = [
   { href: "/favoritos", label: "Favoritos", icon: Star },
 ];
 
-export const currentUser = { name: "Marcos Gil" };
+/** Nombre provisional usado por datos simulados; la TopBar recibe la persona real desde el servidor. */
+export const currentUser = { name: "Tu equipo" };
 
 /** Coincidencia de ruta activa: «/» solo exacta; el resto por prefijo. */
 export function isActive(pathname: string, href: string) {

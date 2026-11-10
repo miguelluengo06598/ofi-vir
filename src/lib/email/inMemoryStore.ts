@@ -182,7 +182,7 @@ export class InMemoryEmailStore implements EmailStore, InboundStore {
     const t = this.threads.find((x) => x.companyId === companyId && x.id === threadId)!;
     Object.assign(t, { status: "replied", note: null });
   }
-  async ensureTask(companyId: string, t: { agentId: string; emailId: string; title: string; model: string }) {
+  async ensureTask(companyId: string, t: { agentId: string; emailId: string; title: string; model: string; eventoId?: string | null; enColaHasta?: Date | null }) {
     const existing = this.tasks.find((x) => x.companyId === companyId && x.emailId === t.emailId);
     if (existing) return { taskId: existing.id, created: false };
     const task = { id: `task${++this.seq}`, companyId, ...t };

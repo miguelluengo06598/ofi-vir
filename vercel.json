@@ -8,7 +8,7 @@
     { "path": "/api/cron/control-calidad", "schedule": "5 * * * *" },
     { "path": "/api/cron/renovar-conexiones", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/abrir-aplazadas", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/procesar-traspasos", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/procesar-pendientes", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/examenes-certificacion", "schedule": "*/5 * * * *" }
   ]
 }

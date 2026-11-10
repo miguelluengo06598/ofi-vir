@@ -13,6 +13,7 @@ import { SupabaseFuenteInstrucciones } from "../fuenteInstrucciones.ts";
 import { SupabaseAlmacenSimulador } from "./almacen.ts";
 import { PeticionCasosSchema, PeticionSimularSchema } from "./esquemas.ts";
 import { probarCasosDePlantilla, SimuladorError, simularAgente, type DepsSimulador } from "./servicio.ts";
+import { esGestor } from "../../empresas/permisos.ts";
 
 export type DepsApiSimulador = { deps: DepsSimulador; autenticar: (req: Request) => Promise<Sesion | null> };
 
@@ -22,7 +23,7 @@ const fallo = (status: number, error: string, mensaje: string, extra: Record<str
 async function entrar(req: Request, api: DepsApiSimulador, idAgente: string): Promise<{ res: Response } | { sesion: Sesion; cuerpo: unknown }> {
   const sesion = await api.autenticar(req);
   if (!sesion) return { res: fallo(401, "no_autenticado", "Inicia sesión para continuar.") };
-  if (sesion.rol !== "owner" && sesion.rol !== "admin") return { res: fallo(403, "sin_permiso", "Solo los propietarios y administradores pueden probar agentes.") };
+  if (!esGestor(sesion.rol)) return { res: fallo(403, "sin_permiso", "Solo los propietarios y administradores pueden probar agentes.") };
   if (!z.uuid().safeParse(idAgente).success) return { res: fallo(404, "agente_no_encontrado", "No existe ese agente en vuestra oficina.") };
   let cuerpo: unknown;
   try { cuerpo = JSON.parse((await req.text()) || "{}"); } catch { return { res: fallo(400, "json_invalido", "El cuerpo no es un JSON válido.") }; }
@@ -42,7 +43,7 @@ export async function simularHandler(req: Request, idAgente: string, api: DepsAp
   const v = PeticionSimularSchema.safeParse(entrada.cuerpo);
   if (!v.success) return fallo(400, "peticion_invalida", "La petición no es válida.", { incidencias: incidencias(v.error) });
   try {
-    return json(await simularAgente(api.deps, { companyId: entrada.sesion.companyId, agentId: idAgente, ...v.data }));
+    return json(await simularAgente(api.deps, { companyId: entrada.sesion.companyId, agentId: idAgente, ordenadoPor: entrada.sesion.userId, ...v.data }));
   } catch (e) {
     return responderError(e);
   }
@@ -54,7 +55,7 @@ export async function casosHandler(req: Request, idAgente: string, api: DepsApiS
   const v = PeticionCasosSchema.safeParse(entrada.cuerpo);
   if (!v.success) return fallo(400, "peticion_invalida", "La petición no es válida.", { incidencias: incidencias(v.error) });
   try {
-    return json(await probarCasosDePlantilla(api.deps, { companyId: entrada.sesion.companyId, agentId: idAgente, casos: v.data.casos }));
+    return json(await probarCasosDePlantilla(api.deps, { companyId: entrada.sesion.companyId, agentId: idAgente, ordenadoPor: entrada.sesion.userId, casos: v.data.casos }));
   } catch (e) {
     return responderError(e);
   }

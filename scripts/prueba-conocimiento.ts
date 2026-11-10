@@ -184,7 +184,7 @@ const llm = new ScriptedLlm([
   fin("Hecho."),
 ]);
 const deps: EngineDeps = { store: agentStore, memory: memoria, contacts: memStore, llm, aprender: false };
-const tareaId = await crearTarea(deps, companyId, { agentSlug: lucia.slug, title: "Demo: atender consulta (conocimiento con trampa)" });
+const tareaId = await crearTarea(deps, companyId, { agentSlug: lucia.slug, title: "Demo: atender consulta (conocimiento con trampa)", origen: { tipo: "orden_usuario", ordenadoPor: process.env.DEV_USER_ID!.trim(), via: "prueba" } });
 const res = await ejecutarTarea(deps, companyId, tareaId, "Un paciente pregunta cómo es la recepción.");
 const tarea = (await agentStore.getTask(companyId, tareaId))!;
 for (const s of await agentStore.listSteps(companyId, tareaId)) {

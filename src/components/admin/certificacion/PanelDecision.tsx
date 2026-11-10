@@ -3,7 +3,7 @@
 import { Check, Loader2, MessageSquareWarning, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { decidirSolicitud } from "@/app/admin/certificacion/acciones";
+import { decidirSolicitud } from "@/app/(admin)/admin/certificacion/acciones";
 import { PillButton } from "@/components/glass";
 import { CHECKLIST, NOMBRE_DECISION, type Decision, type PuntoId } from "@/lib/admin/certificacion/config";
 

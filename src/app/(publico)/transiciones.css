@@ -1,0 +1,80 @@
+/*
+ * Transiciones entre páginas de la web pública (View Transitions de React 19.3 + Next 16).
+ *  - La escena de fondo y la cabecera no animan: forman parte de la raíz, que no se funde (sin parpadeo).
+ *  - El contenido de la página («pagina») sale rápido y entra con un leve desplazamiento.
+ *  - El panel principal de cada plantilla («panel-principal», clase morph) se transforma de una página a otra.
+ *  - Con movimiento reducido no hay ninguna animación: el cambio es instantáneo.
+ * Solo se animan transform y opacity.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(.pagina) {
+  animation: 140ms ease-out both vt-salir;
+}
+::view-transition-new(.pagina) {
+  animation: 300ms cubic-bezier(0.22, 1, 0.36, 1) 60ms both vt-entrar;
+}
+
+::view-transition-group(.morph) {
+  animation-duration: 450ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-old(.morph) {
+  animation: 180ms ease-out both vt-fundido reverse;
+}
+::view-transition-new(.morph) {
+  animation: 320ms ease-out 100ms both vt-fundido;
+}
+
+@keyframes vt-salir {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes vt-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes vt-fundido {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* Luz del departamento en el héroe: respira despacio (solo opacity, capa sin cristal). */
+@keyframes respirar {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Destello al llegar una partícula de luz (capa sin cristal: solo opacity). */
+@keyframes destello {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

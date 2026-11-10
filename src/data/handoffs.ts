@@ -46,6 +46,8 @@ export type Chain = {
   id: string;
   title: string;
   goal: string;
+  /** Por qué empezó la cadena (su origen): un evento externo, una orden o una rutina activada por una persona. */
+  origen: string;
   handoffs: Handoff[];
 };
 
@@ -63,11 +65,12 @@ const dept: Record<string, DepartmentId> = {
   "elena-bravo": "direccion",
 };
 
-function chain(id: string, title: string, goal: string, steps: Step[]): Chain {
+function chain(id: string, title: string, goal: string, origen: string, steps: Step[]): Chain {
   return {
     id,
     title,
     goal,
+    origen,
     handoffs: steps.map((s) => ({ ...s, chainId: id, fromDepartmentId: dept[s.fromAgentId], toDepartmentId: dept[s.toAgentId] })),
   };
 }
@@ -77,6 +80,7 @@ export const chains: Chain[] = [
     "cadena-clinicas",
     "De un anuncio a una venta",
     "Convertir los leads de la campaña «Clínicas dentales – Madrid» en clientes y decidir si merece más presupuesto.",
+    "Lead nuevo de Meta",
     [
       {
         id: "h-clinicas-1",
@@ -198,6 +202,7 @@ export const chains: Chain[] = [
     "cadena-cobro",
     "Cobro duplicado resuelto",
     "Corregir un cobro duplicado reclamado por una clienta y evitar que se repita.",
+    "Correo recibido de una clienta",
     [
       {
         id: "h-cobro-1",
@@ -253,6 +258,7 @@ export const chains: Chain[] = [
     "cadena-boletin",
     "Del boletín a nuevas oportunidades",
     "Aprovechar las respuestas al boletín de octubre para generar oportunidades de venta.",
+    "Orden de Marcos: enviar el boletín de octubre",
     [
       {
         id: "h-boletin-1",

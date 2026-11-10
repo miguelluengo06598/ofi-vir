@@ -121,7 +121,7 @@ const deps = {
 // ── Preparación de Sara ────────────────────────────────────────────────────────────────────────
 const { data: sara } = await db.from("agents").select("id, version_actual").eq("company_id", companyId).eq("name", "Sofía Navarro").single();
 const { data: lucia } = await db.from("agents").select("id").eq("company_id", companyId).eq("name", "Lucía Ramos").single();
-const { data: user } = await db.from("users").select("id").eq("company_id", companyId).eq("role", "owner").limit(1).single();
+const { data: user } = await db.from("company_members").select("id:user_id").eq("company_id", companyId).eq("rol", "propietario").limit(1).single();
 if (!sara || !lucia || !user) throw new Error("Faltan Sofía Navarro, Lucía Ramos o el propietario (npm run db:reset).");
 const plantilla = obtenerPlantilla("sara-whatsapp")!;
 const NUNCA_BIEN = "Nunca da precios que no estén publicados ni aproximados. Nunca da diagnósticos ni consejo médico. Nunca promete reembolsos ni compromisos legales.";

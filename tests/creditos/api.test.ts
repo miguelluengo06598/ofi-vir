@@ -12,6 +12,8 @@ import {
   ajustesHandler, autenticadorSupabase, cancelarBonoHandler, comprarHandler, movimientosHandler, pagosSimuladosActivos, resumenHandler, type DepsApi,
 } from "../../src/lib/creditos/api.ts";
 import { crearServicioCreditos, CreditosError, type ServicioCreditos } from "../../src/lib/creditos/servicio.ts";
+import { rutinaDePrueba } from "../ayuda/persona.ts";
+import { altaEnEmpresa } from "../ayuda/miembros.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
@@ -30,7 +32,7 @@ async function usuario(companyId: string, role: "owner" | "admin" | "member", et
   const password = `Pw-${RUN}-${etiqueta}-Aa1!`;
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   assert.ifError(error);
-  assert.ifError((await admin.from("users").insert({ id: data.user!.id, company_id: companyId, full_name: `Prueba ${etiqueta}`, email, role })).error);
+  assert.ifError((await altaEnEmpresa(admin, { id: data.user!.id, companyId, nombre: `Prueba ${etiqueta}`, email, rol: role })).error);
   const c = createClient(url, anon, { auth: { persistSession: false } });
   const s = await c.auth.signInWithPassword({ email, password });
   assert.ifError(s.error);
@@ -81,11 +83,9 @@ describe("autenticación y pagos simulados", () => {
     }
     const falso = { id: "x", token: "no-es-un-jwt" };
     assert.equal((await resumen(falso)).status, 401);
-    const conDev = deps({ autenticar: autenticadorSupabase(admin, { DEV_COMPANY_ID: A, DEV_USER_ID: ownerA.id }) });
-    assert.equal((await resumen(falso, conDev)).status, 401, "token inválido ≠ modo desarrollo");
-    assert.equal((await resumen(null, conDev)).status, 200, "sin cabecera y fuera de producción: persona de desarrollo");
-    const prod = deps({ autenticar: autenticadorSupabase(admin, { NODE_ENV: "production", DEV_COMPANY_ID: A, DEV_USER_ID: ownerA.id }) });
-    assert.equal((await resumen(null, prod)).status, 401, "en producción nunca hay persona de desarrollo");
+    const conVariablesDev = deps({ autenticar: autenticadorSupabase(admin, { DEV_COMPANY_ID: A, DEV_USER_ID: ownerA.id }) });
+    assert.equal((await resumen(falso, conVariablesDev)).status, 401, "un token inválido no abre una ruta privada");
+    assert.equal((await resumen(null, conVariablesDev)).status, 401, "DEV_* no suplanta una sesión en rutas privadas");
   });
 
   it("PAGOS_SIMULADOS: solo con «true» y nunca en producción", () => {
@@ -347,7 +347,7 @@ describe("GET /api/creditos/resumen", () => {
     await servicio.cobrarConsumoFijo(c, "correo", { agentId: hugo, departmentId: dep }, `correo:${randomUUID()}`);
 
     const rutina = (nombre: string, tipo: string, frecuencia: string, activa: boolean) =>
-      admin.from("agent_routines").insert({ company_id: c, agent_id: lucia, nombre, instruccion: "x", tipo_tarea: tipo, frecuencia, activa, proxima_ejecucion_en: new Date(Date.now() + 86_400_000).toISOString() });
+      rutinaDePrueba(admin, { company_id: c, agent_id: lucia, nombre, instruccion: "x", tipo_tarea: tipo, frecuencia, proxima_ejecucion_en: new Date(Date.now() + 86_400_000).toISOString() }, activa);
     assert.ifError((await rutina("Diaria simple", "simple", "diaria", true)).error);
     assert.ifError((await rutina("Laborables estándar", "estandar", "laborables", true)).error);
     assert.ifError((await rutina("Pausada", "experta", "cada_hora", false)).error);
@@ -396,7 +396,7 @@ describe("la empresa A no puede leer ni modificar nada de la empresa B", () => {
     const depB = (await admin.from("departments").insert({ company_id: B, slug: "secreto", name: "Departamento secreto de B" }).select("id").single()).data!.id as string;
     const agB = (await admin.from("agents").insert({ company_id: B, department_id: depB, slug: `secreto-${RUN}`, name: "Agente secreto de B", role: "x", creator_name: "x", model: "claude-haiku-5-5", allowed_tools: [], instructions: "x" }).select("id").single()).data!.id as string;
     await servicio.cobrarConsumoFijo(B, "traspaso", { agentId: agB, departmentId: depB }, `t:${randomUUID()}`);
-    await admin.from("agent_routines").insert({ company_id: B, agent_id: agB, nombre: "Rutina secreta de B", instruccion: "x", tipo_tarea: "experta", frecuencia: "diaria", proxima_ejecucion_en: new Date(Date.now() + 86_400_000).toISOString() });
+    await rutinaDePrueba(admin, { company_id: B, agent_id: agB, nombre: "Rutina secreta de B", instruccion: "x", tipo_tarea: "experta", frecuencia: "diaria", proxima_ejecucion_en: new Date(Date.now() + 86_400_000).toISOString() });
     await admin.from("company_credit_settings").update({ tope_mensual_creditos: 123456, bono_mensual_pack_id: "empresa" }).eq("company_id", B);
 
     const deA = await resumen(ownerA);

@@ -20,6 +20,8 @@ import { crearServicioCreditos } from "../../src/lib/creditos/servicio.ts";
 import { FakeEmbedder } from "../../src/lib/memory/fakeEmbedder.ts";
 import { createMemoryService } from "../../src/lib/memory/service.ts";
 import { SupabaseMemoryStore } from "../../src/lib/memory/supabaseStore.ts";
+import { personaDePrueba } from "../ayuda/persona.ts";
+import { sesionDePrueba } from "../../src/lib/empresas/pruebas.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "", key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
 if (!url || !key) throw new Error("Faltan variables de Supabase: ejecuta con `npm run test:simulador` (usa .env.local).");
@@ -74,7 +76,7 @@ describe("simulador de agentes con la base real", () => {
       fin("Hecho."),
     ]);
     const antes = await foto(companyId);
-    const r = await simularAgente(d, { companyId, agentId: sara.id, mensaje: "Quiero contratar el plan anual", canal: "whatsapp" });
+    const r = await simularAgente(d, { ordenadoPor: { procesoInterno: "prueba" }, companyId, agentId: sara.id, mensaje: "Quiero contratar el plan anual", canal: "whatsapp" });
     assert.deepEqual(await foto(companyId), antes, "ninguna tabla real cambia");
     assert.equal(r.estado, "done");
     assert.deepEqual(r.herramientas.map((h) => [h.herramienta, h.estado]), [["guardar_recuerdo", "ok"], ["crear_cita", "pendiente_aprobacion"], ["pasar_a_agente", "ok"], ["pasar_a_humano", "ok"], ["responder_whatsapp", "ok"]]);
@@ -101,7 +103,7 @@ describe("simulador de agentes con la base real", () => {
   it("una ficha de traspaso inválida se rechaza también en la simulación (Claude recibe el error y no cuenta como traspaso)", async () => {
     const { companyId, sara } = await oficina();
     const { d, llm } = deps([llamada("1", "pasar_a_agente", { agente_destino: "Lucía", resumen: "x", ficha: { nombre: "Laura" } }), fin("No pude.")]);
-    const r = await simularAgente(d, { companyId, agentId: sara.id, mensaje: "Plan anual", canal: "interno" });
+    const r = await simularAgente(d, { ordenadoPor: { procesoInterno: "prueba" }, companyId, agentId: sara.id, mensaje: "Plan anual", canal: "interno" });
     assert.equal(r.traspasos.length, 0);
     assert.equal(r.herramientas[0].estado, "error");
     assert.match(JSON.stringify(llm.requests[1].messages), /contacto|interes/);
@@ -110,13 +112,13 @@ describe("simulador de agentes con la base real", () => {
   it("el historial y el canal: un mensaje de fuera va como <contenido_externo>; uno interno, no", async () => {
     const { companyId, sara } = await oficina();
     const a = deps([fin("ok")]);
-    await simularAgente(a.d, { companyId, agentId: sara.id, mensaje: "¿Y el sábado?", canal: "whatsapp", historial: [{ rol: "persona", texto: "Hola" }, { rol: "agente", texto: "¡Hola!" }] });
+    await simularAgente(a.d, { ordenadoPor: { procesoInterno: "prueba" }, companyId, agentId: sara.id, mensaje: "¿Y el sábado?", canal: "whatsapp", historial: [{ rol: "persona", texto: "Hola" }, { rol: "agente", texto: "¡Hola!" }] });
     const u = JSON.stringify(a.llm.requests[0].messages[0].content);
     assert.match(u, /<contenido_externo origen=\\"whatsapp\\">/);
     assert.match(u, /Persona: Hola/);
     assert.match(u, /Agente: ¡Hola!/);
     const b = deps([fin("ok")]);
-    await simularAgente(b.d, { companyId, agentId: sara.id, mensaje: "Revisa la agenda", canal: "interno" });
+    await simularAgente(b.d, { ordenadoPor: { procesoInterno: "prueba" }, companyId, agentId: sara.id, mensaje: "Revisa la agenda", canal: "interno" });
     assert.doesNotMatch(JSON.stringify(b.llm.requests[0].messages[0].content), /contenido_externo/);
   });
 
@@ -124,10 +126,10 @@ describe("simulador de agentes con la base real", () => {
     const { companyId, sara } = await oficina();
     const saldo = async () => (await creditos.obtenerSaldo(companyId)).disponible;
     const s0 = await saldo();
-    const a = await simularAgente(deps([fin("1")], 1).d, { companyId, agentId: sara.id, mensaje: "uno", canal: "interno" });
+    const a = await simularAgente(deps([fin("1")], 1).d, { ordenadoPor: { procesoInterno: "prueba" }, companyId, agentId: sara.id, mensaje: "uno", canal: "interno" });
     assert.equal(a.simulacion.gratis, true);
     assert.equal(await saldo(), s0);
-    const b = await simularAgente(deps([fin("2")], 1).d, { companyId, agentId: sara.id, mensaje: "dos", canal: "interno" });
+    const b = await simularAgente(deps([fin("2")], 1).d, { ordenadoPor: { procesoInterno: "prueba" }, companyId, agentId: sara.id, mensaje: "dos", canal: "interno" });
     assert.equal(b.simulacion.gratis, false);
     assert.equal(b.simulacion.creditosCobrados, 2);
     assert.equal(await saldo(), s0 - 2);
@@ -140,7 +142,7 @@ describe("simulador de agentes con la base real", () => {
   it("pasada la cuota y sin saldo: 402, no se ejecuta el modelo y no se cobra nada", async () => {
     const { companyId, sara } = await oficina({ saldo: false });
     const m = deps([fin("no debería llamarse")], 0);
-    await assert.rejects(simularAgente(m.d, { companyId, agentId: sara.id, mensaje: "hola", canal: "interno" }), (e) => e instanceof SimuladorError && e.status === 402);
+    await assert.rejects(simularAgente(m.d, { ordenadoPor: { procesoInterno: "prueba" }, companyId, agentId: sara.id, mensaje: "hola", canal: "interno" }), (e) => e instanceof SimuladorError && e.status === 402);
     assert.equal(m.llm.requests.length, 0);
     assert.equal((await db.from("credit_ledger").select("id", { count: "exact", head: true }).eq("company_id", companyId)).count, 0);
   });
@@ -164,7 +166,7 @@ describe("simulador de agentes con la base real", () => {
       llamada("4", "crear_cita", { titulo: "x", inicio: "2026-11-17T17:30:00+01:00" }), fin("ok"),                  // d: usó crear_cita → fallo automático
     ], 50, () => plantilla);
     const antes = await foto(companyId);
-    const r = await probarCasosDePlantilla(m.d, { companyId, agentId: sara.id });
+    const r = await probarCasosDePlantilla(m.d, { ordenadoPor: { procesoInterno: "prueba" }, companyId, agentId: sara.id });
     assert.deepEqual(await foto(companyId), antes);
     assert.deepEqual(r.casos.map((c) => [c.id, c.cumple]), [["a", true], ["b", false], ["c", false], ["d", false]]);
     assert.deepEqual([r.total, r.cumplen, r.fallan], [4, 1, 3]);
@@ -178,18 +180,20 @@ describe("simulador de agentes con la base real", () => {
 
   it("un agente propio (sin plantilla) no tiene casos de prueba: 422", async () => {
     const { companyId, lucia } = await oficina();
-    await assert.rejects(probarCasosDePlantilla(deps([]).d, { companyId, agentId: lucia.id }), (e) => e instanceof SimuladorError && e.status === 422);
+    await assert.rejects(probarCasosDePlantilla(deps([]).d, { ordenadoPor: { procesoInterno: "prueba" }, companyId, agentId: lucia.id }), (e) => e instanceof SimuladorError && e.status === 422);
   });
 
   it("ruta: sin sesión 401; miembro 403; empresa en el cuerpo 400; agente de otra empresa 404; un propietario simula", async () => {
     const a = await oficina(), b = await oficina();
     const m = deps([fin("ok")]);
     const api = (sesion: DepsApiSimulador["autenticar"]): DepsApiSimulador => ({ deps: m.d, autenticar: sesion });
-    const propietaria = api(async () => ({ companyId: a.companyId, userId: randomUUID(), rol: "owner" }));
+    // Quien ordena una simulación queda registrado: tiene que ser una persona real de la empresa.
+    const duena = await personaDePrueba(db, a.companyId);
+    const propietaria = api(async () => sesionDePrueba(a.companyId, duena, "owner"));
     const peticion = (cuerpo: unknown) => new Request("http://local/x", { method: "POST", body: JSON.stringify(cuerpo) });
     const ok = { mensaje: "Hola", canal: "interno" };
     assert.equal((await simularHandler(peticion(ok), a.sara.id, api(async () => null))).status, 401);
-    assert.equal((await simularHandler(peticion(ok), a.sara.id, api(async () => ({ companyId: a.companyId, userId: randomUUID(), rol: "member" })))).status, 403);
+    assert.equal((await simularHandler(peticion(ok), a.sara.id, api(async () => sesionDePrueba(a.companyId, randomUUID(), "member")))).status, 403);
     assert.equal((await simularHandler(peticion({ ...ok, companyId: b.companyId }), a.sara.id, propietaria)).status, 400);
     assert.equal((await simularHandler(peticion({ mensaje: "Hola", canal: "sms" }), a.sara.id, propietaria)).status, 400);
     assert.equal((await simularHandler(peticion(ok), b.sara.id, propietaria)).status, 404, "agente de otra empresa");

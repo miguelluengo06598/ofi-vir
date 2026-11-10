@@ -10,6 +10,7 @@ import {
   SENSIBILIDADES, type ContextoEjecucion, type Permiso,
 } from "./herramientas/index.ts";
 import { InMemoryAlmacenHerramientas } from "./herramientas/inMemoryAlmacen.ts";
+import { ORDEN_DE_PRUEBA } from "../agents/pruebas.ts";
 
 const A = "a64499d1-7f43-4a43-abc8-41a313dc4018";
 const B = "b0000000-0000-4000-8000-000000000001";
@@ -32,7 +33,7 @@ async function setup(permisos: Record<string, Permiso | [Permiso, number]> = {})
     const [permiso, limiteDiario] = Array.isArray(p) ? p : [p, null];
     almacen.tools.push({ companyId: A, agentId: lucia.id, toolId, permiso, limiteDiario });
   }
-  const taskId = await store.createTask(A, { agentId: lucia.id, title: "Tarea de prueba", model: "claude-haiku-5-5" });
+  const taskId = await store.createTask(A, { origen: ORDEN_DE_PRUEBA, agentId: lucia.id, title: "Tarea de prueba", model: "claude-haiku-5-5" });
   const ctx = (over: Partial<ContextoEjecucion> = {}): ContextoEjecucion => ({
     companyId: A, agent: lucia, task: { id: taskId, contactId: null }, externalContent: false, memory, contacts: memStore, store, sospechas: [],
     almacen, secretos: new GestorSecretos(A, async () => TOKEN), esSimulacion: false, ...over,
@@ -68,13 +69,14 @@ describe("registro de herramientas", () => {
   it("herramientasParaClaude ofrece solo las permitidas, en formato de la API (con JSON Schema)", async () => {
     const s = await setup({ buscar_en_memoria: "sola", redactar_correo: "prohibida", pasar_a_humano: "humano", crear_cita: "aprobacion", herramienta_inventada: "sola" });
     const tools = await herramientasParaClaude(s.almacen, A, lucia);
-    assert.deepEqual(tools.map((t) => t.name).sort(), ["buscar_en_memoria", "crear_cita", "pasar_a_humano"]);
+    // proponer_seguimiento es de la plataforma: la tienen todos los agentes (y siempre acaba en una persona).
+    assert.deepEqual(tools.map((t) => t.name).sort(), ["buscar_en_memoria", "crear_cita", "pasar_a_humano", "proponer_seguimiento"]);
     const busca = tools.find((t) => t.name === "buscar_en_memoria")!;
     assert.equal((busca.input_schema as { type: string }).type, "object");
     assert.ok("consulta" in (busca.input_schema as { properties: object }).properties);
     assert.equal(Object.keys(busca).sort().join(), "description,input_schema,name");
     // Otra empresa no ve las herramientas de esta.
-    assert.deepEqual(await herramientasParaClaude(s.almacen, B, lucia), []);
+    assert.deepEqual((await herramientasParaClaude(s.almacen, B, lucia)).map((t) => t.name), ["proponer_seguimiento"]);
   });
 });
 
@@ -362,6 +364,7 @@ describe("registro de llamadas y simulador", () => {
       borrar_contacto_crm: { id_crm: "1", motivo: "duplicado" }, fusionar_contactos_crm: { id_principal: "1", id_secundario: "2", motivo: "duplicado" },
       ver_huecos_agenda: { desde: "2026-11-12", hasta: "2026-11-13" }, crear_cita: { titulo: "Demo", inicio: "2026-11-12T10:00:00+01:00" },
       leer_campanas_meta: {}, consultar_cuenta_demo: {}, pasar_a_agente: { agente_destino: "Hugo", resumen: "r", ficha: { asunto: "a", detalle: "d" } }, pedir_aprobacion: { asunto: "a", detalle: "d" },
+      proponer_seguimiento: { en_dias: 3, motivo: "No ha contestado", mensaje_previsto: "Hola de nuevo" },
     };
     for (const h of REGISTRO) {
       const entrada = h.entrada.parse(ejemplos[h.id]);

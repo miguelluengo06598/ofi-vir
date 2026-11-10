@@ -16,6 +16,7 @@ import { aprobarYEnviar } from "../../src/lib/email/service.ts";
 import { SupabaseEmailStore } from "../../src/lib/email/supabaseStore.ts";
 import { admin, COMPANY_A, createUser, psql, RUN } from "./entorno.ts";
 import { borrarAgente, crearAgente } from "./datos.ts";
+import { origenDeEvento } from "../ayuda/origen.ts";
 
 const NOMBRE = `Zacarias Quillfeather${RUN}`;
 const APELLIDO = `Quillfeather${RUN}`;
@@ -60,7 +61,7 @@ before(async () => {
   user = await createUser(COMPANY_A, "owner", "borrado");
 
   // 1) Un lead entra por la instrucción de la tarea; el agente lo guarda, redacta un correo y hace un traspaso.
-  const t1 = await crearTarea(deps(new ScriptedLlm([])), COMPANY_A, { agentSlug: agente.slug, title: `Lead de ${NOMBRE}` });
+  const t1 = await crearTarea(deps(new ScriptedLlm([])), COMPANY_A, { origen: await origenDeEvento(admin, COMPANY_A), agentSlug: agente.slug, title: `Lead de ${NOMBRE}` });
   const llm1 = new ScriptedLlm([
     llamada("a1", "guardar_recuerdo", {
       contacto: { nombre: NOMBRE, email: EMAIL, organizacion: "Plumas SL" },

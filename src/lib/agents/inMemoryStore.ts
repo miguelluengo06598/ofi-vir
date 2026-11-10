@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 import type { LlmUsage } from "./llm.ts";
 import { costeEur, USO_VACIO, type Pricing } from "./pricing.ts";
 import type {
-  AgentInfo, AgentStore, DraftResult, HandoffKind, HandoffResult, NewStep, SourceEmail, TaskInfo, TaskPatch, TaskStep,
+  AgentInfo, AgentStore, ControlEjecucion, DraftResult, EslabonCadena, HandoffKind, HandoffResult, NewStep, OrigenNuevo, SourceEmail, TaskInfo, TaskPatch, TaskStep,
 } from "./store.ts";
+import { origenGuardado } from "./origen.ts";
 
 /** Almacén en memoria para los tests: misma forma que el de Supabase, sin base de datos. */
 export class InMemoryAgentStore implements AgentStore {
@@ -22,14 +23,57 @@ export class InMemoryAgentStore implements AgentStore {
   async getPricing(model: string) { return this.pricing.get(model) ?? null; }
   async listDepartments() { return this.departments; }
 
-  async createTask(companyId: string, t: { agentId: string; title: string; model: string; contactId?: string | null; esSimulacion?: boolean }) {
+  async createTask(companyId: string, t: { agentId: string; title: string; model: string; origen: OrigenNuevo; contactId?: string | null; esSimulacion?: boolean; instruccionEntrada?: string | null }) {
     const id = randomUUID();
+    const origen = origenGuardado(t.origen);
+    // Mismas reglas que la base (tasks_origen_validar): un traspaso tiene padre en la empresa y nunca es del mismo agente.
+    if (origen.tipo === "traspaso") {
+      const padre = this.own(companyId, origen.tareaPadreId!);
+      if (!padre) throw new Error("ORIGEN_INVALIDO: la tarea padre no existe en esta empresa");
+      if (padre.agentId === t.agentId) throw new Error("AUTOENCARGO: un agente no puede pasarse trabajo a sí mismo");
+      origen.tareaRaizId = padre.origen.tareaRaizId ?? padre.id;
+    } else origen.tareaRaizId = id;
     this.tasks.set(id, {
-      companyId, id, agentId: t.agentId, title: t.title, status: "running", model: t.model, contactId: t.contactId ?? null, sourceEmailId: null,
-      usage: USO_VACIO, costEur: 0, steps: 0, reviewReason: null, suspicious: false, memoryUsage: { inputTokens: 0, outputTokens: 0 }, extraCostEur: 0, instruccionEntrada: null, handoffId: null,
+      companyId, id, agentId: t.agentId, title: t.title, status: "running", model: t.model, contactId: t.contactId ?? null,
+      sourceEmailId: t.origen.tipo === "evento_externo" ? t.origen.emailId ?? null : null,
+      usage: USO_VACIO, costEur: 0, steps: 0, reviewReason: null, suspicious: false, memoryUsage: { inputTokens: 0, outputTokens: 0 }, extraCostEur: 0,
+      instruccionEntrada: t.instruccionEntrada ?? null, handoffId: null, origen, esSimulacion: t.esSimulacion ?? false,
     });
     return id;
   }
+  /** Para los tests: una tarea «antigua» o manipulada, sin pasar por las comprobaciones de `createTask`. */
+  insertarTareaCruda(companyId: string, t: Partial<TaskInfo> & { agentId: string }) {
+    const id = t.id ?? randomUUID();
+    this.tasks.set(id, {
+      companyId, id, title: "Tarea", status: "running", model: "claude-haiku-5-5", contactId: null, sourceEmailId: null, usage: USO_VACIO, costEur: 0, steps: 0,
+      reviewReason: null, suspicious: false, memoryUsage: { inputTokens: 0, outputTokens: 0 }, extraCostEur: 0, instruccionEntrada: null, handoffId: null, esSimulacion: false,
+      origen: { tipo: null, ref: {}, eventoId: null, tareaPadreId: null, tareaRaizId: null, ordenadoPor: null, ordenadoEn: null, rutinaId: null, seguimientoId: null },
+      ...t,
+    });
+    return id;
+  }
+  async cadenaDeTarea(companyId: string, taskId: string): Promise<EslabonCadena[]> {
+    const out: EslabonCadena[] = [];
+    let t = this.own(companyId, taskId);
+    for (let nivel = 0; t && nivel <= 50; nivel++) {
+      out.push({
+        nivel, taskId: t.id, agentId: t.agentId, origen: t.origen.tipo, tareaPadreId: t.origen.tareaPadreId, eventoId: t.origen.eventoId, sourceEmailId: t.sourceEmailId,
+        ordenadoPor: t.origen.ordenadoPor, rutinaId: t.origen.rutinaId, seguimientoId: t.origen.seguimientoId, esSimulacion: t.esSimulacion, ref: t.origen.ref, title: t.title,
+        startedAt: new Date().toISOString(),
+      });
+      if (t.origen.tipo !== "traspaso" && t.origen.tipo !== "seguimiento_aprobado") break;
+      t = t.origen.tareaPadreId ? this.own(companyId, t.origen.tareaPadreId) : null;
+    }
+    return out;
+  }
+  control: ControlEjecucion = { paradaEmergencia: false, motivoParada: null, oficinaPausada: false };
+  async controlDeEjecucion() { return { ...this.control }; }
+  bloqueos: { companyId: string; taskId: string; agentId: string | null; codigo: string; motivo: string; fase: "inicio" | "paso" }[] = [];
+  async registrarBloqueo(companyId: string, b: { taskId: string; agentId: string | null; codigo: string; motivo: string; fase: "inicio" | "paso" }) {
+    if (!this.bloqueos.some((x) => x.taskId === b.taskId && x.codigo === b.codigo && x.fase === b.fase)) this.bloqueos.push({ companyId, ...b });
+  }
+  agrupados = new Map<string, SourceEmail[]>();
+  async correosAgrupados(_c: string, taskId: string) { return this.agrupados.get(taskId) ?? []; }
   private own(companyId: string, taskId: string) {
     const t = this.tasks.get(taskId);
     return t && t.companyId === companyId ? t : null;
@@ -64,9 +108,11 @@ export class InMemoryAgentStore implements AgentStore {
 
   traspasos = new Map<string, string>();
   async actualizarTraspaso(_c: string, handoffId: string, status: string) { this.traspasos.set(handoffId, status); }
-  async listarTareasDeTraspasoPendientes(o: { companyId?: string; limite?: number } = {}) {
+  async listarTareasPendientes(o: { companyId?: string; limite?: number } = {}) {
+    if (this.control.paradaEmergencia || this.control.oficinaPausada) return [];
+    const DE_LA_COLA = ["evento_externo", "traspaso", "rutina_usuario", "seguimiento_aprobado"];
     return [...this.tasks.values()]
-      .filter((t) => t.handoffId && t.status === "running" && (!o.companyId || t.companyId === o.companyId) && !(this.steps.get(t.id) ?? []).some((s) => s.position === 0))
+      .filter((t) => DE_LA_COLA.includes(t.origen.tipo ?? "") && !t.esSimulacion && t.status === "running" && (!o.companyId || t.companyId === o.companyId) && !(this.steps.get(t.id) ?? []).some((s) => s.position === 0))
       .slice(0, o.limite ?? 50).map((t) => ({ companyId: t.companyId, taskId: t.id }));
   }
   aplazadas = new Map<string, { hasta: Date; instruccion: string | null }>();

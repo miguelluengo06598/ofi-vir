@@ -8,6 +8,9 @@ select plan(28);
 insert into public.agents (id, company_id, department_id, slug, name, role, creator_name)
 values ('aaaaaaaa-0000-4000-8000-0000000000c1', 'a64499d1-7f43-4a43-abc8-41a313dc4018', '3bd58844-d48e-4d17-aa9b-d45d078a606a', 'sara-k', 'Sara K', 'Prueba', 'IDESIE'),
        ('aaaaaaaa-0000-4000-8000-0000000000c2', 'a64499d1-7f43-4a43-abc8-41a313dc4018', '36be8074-504e-4ef4-aa98-135ad3e9acb0', 'lucia-k', 'Lucía K', 'Prueba', 'IDESIE');
+-- Otra empresa (con su propia persona) para comprobar que su conocimiento no se mezcla.
+insert into public.companies (id, name) values ('1de51e00-0000-4000-8000-000000000001', 'Otra empresa');
+insert into public.company_members (company_id, user_id, rol) values ('1de51e00-0000-4000-8000-000000000001', '1de51e00-0000-4000-8000-0000000000a1', 'propietario');
 insert into public.agent_knowledge (id, company_id, agent_id, tipo, titulo, estado, fragmentos, created_by) values
   ('bbbbbbbb-0000-4000-8000-0000000000a1', 'a64499d1-7f43-4a43-abc8-41a313dc4018', null, 'texto', 'Oficina', 'listo', 1, '0c33590a-4c2a-4b32-a388-2008558688f7'),
   ('bbbbbbbb-0000-4000-8000-0000000000a2', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'aaaaaaaa-0000-4000-8000-0000000000c1', 'faq', 'Solo Sara', 'listo', 1, '0c33590a-4c2a-4b32-a388-2008558688f7'),

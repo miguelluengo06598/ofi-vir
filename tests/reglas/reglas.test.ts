@@ -13,6 +13,7 @@ import { crearServicioReglas, reanudarAplazadas, SupabaseAlmacenReglas } from ".
 import { FakeEmbedder } from "../../src/lib/memory/fakeEmbedder.ts";
 import { createMemoryService } from "../../src/lib/memory/service.ts";
 import { SupabaseMemoryStore } from "../../src/lib/memory/supabaseStore.ts";
+import { origenDeEvento } from "../ayuda/origen.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "", key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
 if (!url || !key) throw new Error("Faltan variables de Supabase: ejecuta con `npm run test:reglas` (usa .env.local).");
@@ -46,7 +47,7 @@ describe("reglas de agente con la base real", () => {
   it("fuera de horario con «no_responder»: la tarea queda aplazada con su mensaje y se procesa al abrir, una sola vez", async () => {
     const { companyId, slug } = await preparar({ fuera_de_horario: "no_responder" });
     const m = motor([fin("Respondido al abrir")]);
-    const id = await crearTarea(m.deps, companyId, { agentSlug: slug, title: "Mensaje" });
+    const id = await crearTarea(m.deps, companyId, { origen: await origenDeEvento(db, companyId), agentSlug: slug, title: "Mensaje" });
     const r = await ejecutarTarea(m.deps, companyId, id, MENSAJE);
     assert.equal(r.estado, "scheduled");
     assert.equal(m.llm.requests.length, 0, "no se llamó al modelo");
@@ -66,7 +67,7 @@ describe("reglas de agente con la base real", () => {
   it("dos procesos a la vez no la ejecutan dos veces", async () => {
     const { companyId, slug } = await preparar({ fuera_de_horario: "no_responder" });
     const m = motor([fin("uno"), fin("dos")]);
-    const id = await crearTarea(m.deps, companyId, { agentSlug: slug, title: "Mensaje" });
+    const id = await crearTarea(m.deps, companyId, { origen: await origenDeEvento(db, companyId), agentSlug: slug, title: "Mensaje" });
     await ejecutarTarea(m.deps, companyId, id, MENSAJE);
     const [a, b] = await Promise.all([reanudarAplazadas(m.deps, MIERCOLES_9H, { companyId }), reanudarAplazadas(m.deps, MIERCOLES_9H, { companyId })]);
     assert.equal(a.reanudadas + b.reanudadas, 1);
@@ -81,12 +82,12 @@ describe("reglas de agente con la base real", () => {
     assert.ifError((await db.from("credit_ledger").insert([fila(agentId, 90, "2026-11-02T10:00:00Z"), fila(otro, 500, "2026-11-03T10:00:00Z"), fila(agentId, 500, "2026-10-20T10:00:00Z")])).error);
     const m = motor([fin("hecho")]);
     m.deps.ahora = () => new Date("2026-11-20T10:00:00Z");
-    const id = await crearTarea(m.deps, companyId, { agentSlug: slug, title: "Tarea" });
+    const id = await crearTarea(m.deps, companyId, { origen: await origenDeEvento(db, companyId), agentSlug: slug, title: "Tarea" });
     assert.equal((await ejecutarTarea(m.deps, companyId, id, "Tarea interna.")).estado, "done", "90 de 100: se ejecuta");
 
     assert.ifError((await db.from("credit_ledger").insert(fila(agentId, 10, "2026-11-15T10:00:00Z"))).error);
     for (let i = 0; i < 2; i++) {
-      const t = await crearTarea(m.deps, companyId, { agentSlug: slug, title: "Otra" });
+      const t = await crearTarea(m.deps, companyId, { origen: await origenDeEvento(db, companyId), agentSlug: slug, title: "Otra" });
       const r = await ejecutarTarea(m.deps, companyId, t, "Otra tarea interna.");
       assert.equal(r.estado, "review");
       assert.match(r.motivo!, /tope de 100 créditos/);

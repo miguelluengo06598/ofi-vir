@@ -2,7 +2,7 @@
 
 import { AlertTriangle, BadgeAlert, GraduationCap, ShieldOff } from "lucide-react";
 import { useState } from "react";
-import { aplicarSancionDeCalidad } from "@/app/admin/certificacion/acciones";
+import { aplicarSancionDeCalidad } from "@/app/(admin)/admin/certificacion/acciones";
 
 const OPCIONES = [
   { id: "warning", label: "Aviso a la empresa", Icon: AlertTriangle },

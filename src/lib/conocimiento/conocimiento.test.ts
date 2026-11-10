@@ -18,6 +18,8 @@ import { parsearRobots } from "./robots.ts";
 import { borrarFuente, crearFuenteDocumento, crearFuenteJson, nombreSeguro, reintentarFuente, type DepsConocimiento } from "./servicio.ts";
 import { trocear } from "./trocear.ts";
 import { leerWeb } from "./web.ts";
+import { ORDEN_DE_PRUEBA } from "../agents/pruebas.ts";
+import { sesionDePrueba } from "../empresas/pruebas.ts";
 
 const C = "a64499d1-7f43-4a43-abc8-41a313dc4018";
 const C2 = "b64499d1-7f43-4a43-abc8-41a313dc4018";
@@ -551,7 +553,7 @@ describe("seguridad: el conocimiento nunca es instrucción", () => {
     await crearFuenteDocumento(m.deps, E, { nombre: "manual.txt", bytes: doc, agenteId: null });
     await m.esperar();
 
-    const id = await crearTarea(deps, C, { agentSlug: "sara", title: "Atender consulta" });
+    const id = await crearTarea(deps, C, { origen: ORDEN_DE_PRUEBA, agentSlug: "sara", title: "Atender consulta" });
     const r = await ejecutarTarea(deps, C, id, "Un paciente pregunta cómo es la recepción.");
     const t = (await store.getTask(C, id))!;
     // 1) El resultado llegó al modelo marcado como contenido externo.
@@ -573,7 +575,7 @@ describe("seguridad: el conocimiento nunca es instrucción", () => {
     const { m, store, deps } = await montarMotor([llamada("t1", "buscar_en_memoria", { consulta: "primera visita gratis" }), fin("Sí, el primer diagnóstico es gratuito.")]);
     await crearFuenteJson(m.deps, E, { tipo: "faq", titulo: "FAQ", preguntas: [{ pregunta: "¿Primera visita gratis?", respuesta: "Sí, el primer diagnóstico es gratuito." }] });
     await m.esperar();
-    const id = await crearTarea(deps, C, { agentSlug: "sara", title: "Consulta" });
+    const id = await crearTarea(deps, C, { origen: ORDEN_DE_PRUEBA, agentSlug: "sara", title: "Consulta" });
     assert.equal((await ejecutarTarea(deps, C, id, "Un paciente pregunta por la primera visita.")).estado, "done");
     assert.equal((await store.getTask(C, id))!.suspicious, false);
   });
@@ -588,7 +590,7 @@ describe("seguridad: el conocimiento nunca es instrucción", () => {
     await m.memStore.insertContact(C, { name: "Otro", email: "otro@x.es" });
     await crearFuenteJson(m.deps, E, { tipo: "faq", titulo: "FAQ", preguntas: [{ pregunta: "¿Primera visita gratis?", respuesta: "Sí, el primer diagnóstico es gratuito." }] });
     await m.esperar();
-    const id = await crearTarea(deps, C, { agentSlug: "sara", title: "Consulta" });
+    const id = await crearTarea(deps, C, { origen: ORDEN_DE_PRUEBA, agentSlug: "sara", title: "Consulta" });
     store.tasks.get(id)!.contactId = laura.contact.id;
     const r = await ejecutarTarea(deps, C, id, "Laura pregunta por la primera visita.");
     assert.equal((await store.getTask(C, id))!.suspicious, true, "intentó escribir a otra persona");
@@ -598,7 +600,7 @@ describe("seguridad: el conocimiento nunca es instrucción", () => {
 });
 
 describe("API", () => {
-  const sesion = (rol: "owner" | "admin" | "member", companyId = C) => async (req: Request) => (req.headers.get("x-test") === "no" ? null : { companyId, userId: USER, rol });
+  const sesion = (rol: "owner" | "admin" | "member", companyId = C) => async (req: Request) => (req.headers.get("x-test") === "no" ? null : sesionDePrueba(companyId, USER, rol));
   const api = (rol: "owner" | "admin" | "member" = "owner", companyId = C) => {
     const m = montar();
     const a: DepsApiConocimiento = { deps: m.deps, autenticar: sesion(rol, companyId) };

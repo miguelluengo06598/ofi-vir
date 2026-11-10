@@ -52,7 +52,7 @@ export function MarketplaceView() {
   function confirmHire(departmentId: DepartmentId) {
     if (!hireFor) return;
     hire(hireFor, departmentId);
-    router.push("/"); // La llegada del agente se anima en la tarjeta del departamento.
+    router.push("/oficina"); // La llegada del agente se anima en la tarjeta del departamento.
   }
 
   // Escape cierra primero el diálogo de contratación y después la ficha.

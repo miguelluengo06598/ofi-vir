@@ -59,6 +59,14 @@ export function validarPlantilla(p: PlantillaAgente): string[] {
     for (const t of c.noDebeUsar ?? []) if (!obtenerHerramienta(t)) err(`el caso «${c.id}» cita «${t}», que no existe`);
     for (const t of c.debeUsar ?? []) if (c.noDebeUsar?.includes(t)) err(`el caso «${c.id}» exige y prohíbe «${t}»`);
   }
+  // Rutinas sugeridas: solo sugerencias (la empresa las activa). Ids únicos, con límite mensual y nunca «cada hora».
+  const rutinas = p.rutinasSugeridas ?? [];
+  if (new Set(rutinas.map((r) => r.id)).size !== rutinas.length) err("hay rutinas sugeridas con el mismo id");
+  for (const r of rutinas) {
+    if (!r.instruccion.trim() || !r.nombre.trim()) err(`la rutina sugerida «${r.id}» necesita nombre e instrucción`);
+    if (!Number.isInteger(r.maxEjecucionesMes) || r.maxEjecucionesMes < 1 || r.maxEjecucionesMes > 31) err(`la rutina sugerida «${r.id}» necesita un límite mensual entre 1 y 31`);
+    if (r.frecuencia === "cada_hora") err(`la rutina sugerida «${r.id}» no puede ser cada hora`);
+  }
   return errores;
 }
 

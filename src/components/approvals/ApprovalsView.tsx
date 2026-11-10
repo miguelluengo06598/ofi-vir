@@ -8,6 +8,7 @@ import { useApprovals } from "@/components/ApprovalsProvider";
 import { approvals } from "@/data/approvals";
 import { ApprovalCard } from "./ApprovalCard";
 import { BorradoresDeAgentes } from "./BorradoresDeAgentes";
+import { SeguimientosPropuestos } from "./SeguimientosPropuestos";
 
 export function ApprovalsView() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export function ApprovalsView() {
 
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4">
         <BorradoresDeAgentes />
+        <SeguimientosPropuestos />
         <h2 className="sr-only">Peticiones pendientes</h2>
         <AnimatePresence>
           {pending.map((a, i) => (
@@ -48,7 +50,7 @@ export function ApprovalsView() {
               <p className="max-w-sm text-body text-ink-2">
                 No tienes nada pendiente de aprobar. Tus agentes siguen trabajando y te avisarán cuando necesiten tu visto bueno.
               </p>
-              <PillButton onClick={() => router.push("/")}>Volver a la oficina</PillButton>
+              <PillButton onClick={() => router.push("/oficina")}>Volver a la oficina</PillButton>
             </GlassPanel>
           </div>
         )}

@@ -11,14 +11,15 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { devContext } from "../devContext.ts";
 import { fuenteDeCliente, getPack, getPacks } from "./packs.ts";
 import { listarRutinas, oficinaPuedeEjecutar } from "./rutinas.ts";
 import { CreditosError, type ServicioCreditos } from "./servicio.ts";
 import { calcularIvaCentimos } from "./tarifas.ts";
 
-export type Rol = "owner" | "admin" | "member";
-export type Sesion = { companyId: string; userId: string; rol: Rol };
+import { esGestor, type RolEmpresa } from "../empresas/permisos.ts";
+export { autenticadorSupabase, type Sesion } from "../empresas/sesion.ts";
+import type { Sesion } from "../empresas/sesion.ts";
+export type Rol = RolEmpresa;
 
 export type DepsApi = {
   db: SupabaseClient;
@@ -34,33 +35,6 @@ export type DepsApi = {
 /** Los pagos simulados solo existen con PAGOS_SIMULADOS=true y fuera de producción (en producción, nunca). */
 export function pagosSimuladosActivos(env: Record<string, string | undefined> = process.env): boolean {
   return env.NODE_ENV !== "production" && env.PAGOS_SIMULADOS?.trim().toLowerCase() === "true";
-}
-
-async function sesionDe(db: SupabaseClient, userId: string): Promise<Sesion | null> {
-  const { data } = await db.from("users").select("company_id, role").eq("id", userId).maybeSingle();
-  const u = data as { company_id: string; role: Rol } | null;
-  return u ? { companyId: u.company_id, userId, rol: u.role } : null;
-}
-
-/**
- * Sesión de la petición: `Authorization: Bearer <JWT de Supabase Auth>`. Un token inválido NO cae al modo desarrollo.
- * Solo sin cabecera Authorization y fuera de producción se usa la persona de desarrollo (DEV_COMPANY_ID/DEV_USER_ID),
- * mientras no exista el inicio de sesión en la interfaz.
- */
-export function autenticadorSupabase(db: SupabaseClient, env: Record<string, string | undefined> = process.env) {
-  return async (req: Request): Promise<Sesion | null> => {
-    const cabecera = req.headers.get("authorization");
-    if (cabecera !== null) {
-      const token = /^Bearer (.+)$/.exec(cabecera)?.[1];
-      if (!token) return null;
-      const { data, error } = await db.auth.getUser(token);
-      return error || !data.user ? null : sesionDe(db, data.user.id);
-    }
-    const dev = devContext(env);
-    if (!dev) return null;
-    const s = await sesionDe(db, dev.userId);
-    return s && s.companyId === dev.companyId ? s : null;
-  };
 }
 
 // ── Utilidades de respuesta ──────────────────────────────────────────────────────────────────────
@@ -82,7 +56,7 @@ type Entrada = { sesion: Sesion } | { res: Response };
 async function entrar(req: Request, deps: DepsApi, o: { admin: boolean }): Promise<Entrada> {
   const sesion = await deps.autenticar(req);
   if (!sesion) return { res: fallo(401, "no_autenticado", "Inicia sesión para continuar.") };
-  if (o.admin && sesion.rol !== "owner" && sesion.rol !== "admin") {
+  if (o.admin && !esGestor(sesion.rol)) {
     return { res: fallo(403, "sin_permiso", "Solo los propietarios y administradores de la empresa pueden hacer esto.") };
   }
   return { sesion };

@@ -4,6 +4,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { altaEnEmpresa } from "../ayuda/miembros.ts";
 
 // Sin red hacia Voyage ni Resend: nada de estas pruebas sale de tu máquina.
 process.env.VOYAGE_API_KEY = "";
@@ -35,7 +36,7 @@ export async function createUser(companyId: string, role: "owner" | "admin" | "m
   const password = `Pw-${RUN}-${label}-Aa1!`;
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (error || !data.user) throw new Error(`No se pudo crear el usuario de prueba: ${error?.message}`);
-  const { error: e2 } = await admin.from("users").insert({ id: data.user.id, company_id: companyId, full_name: `Prueba ${label}`, email, role });
+  const { error: e2 } = await altaEnEmpresa(admin, { id: data.user.id, companyId, nombre: `Prueba ${label}`, email, rol: role });
   if (e2) throw new Error(`No se pudo registrar al usuario: ${e2.message}`);
   return { id: data.user.id, email, client: await loginAs(email, password) };
 }

@@ -7,8 +7,8 @@ select plan(14);
 -- Agente de la empresa A (semilla) y una tarea.
 insert into public.agents (id, company_id, department_id, slug, name, role, creator_name)
 values ('aaaaaaaa-0000-4000-8000-0000000000e1', 'a64499d1-7f43-4a43-abc8-41a313dc4018', '3bd58844-d48e-4d17-aa9b-d45d078a606a', 'reglas-1', 'Reglas 1', 'Prueba', 'IDESIE');
-insert into public.tasks (id, company_id, agent_id, title, model)
-values ('bbbbbbbb-0000-4000-8000-0000000000e1', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'aaaaaaaa-0000-4000-8000-0000000000e1', 'Mensaje fuera de horario', 'claude-haiku-5-5');
+insert into public.tasks (id, company_id, agent_id, title, model, origen, ordenado_por)
+values ('bbbbbbbb-0000-4000-8000-0000000000e1', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'aaaaaaaa-0000-4000-8000-0000000000e1', 'Mensaje fuera de horario', 'claude-haiku-5-5', 'orden_usuario', '0c33590a-4c2a-4b32-a388-2008558688f7');
 
 -- 1) Permisos -------------------------------------------------------------------------------------------------------------------
 select ok(not has_function_privilege('authenticated', 'public.tarea_reanudar_aplazada(uuid,uuid,timestamptz)', 'execute'), 'authenticated no reanuda tareas');

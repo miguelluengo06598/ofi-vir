@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { cambiarRevisorDeDesarrollo } from "@/app/admin/certificacion/acciones";
+import { cambiarRevisorDeDesarrollo } from "@/app/(admin)/admin/certificacion/acciones";
 
 /** SOLO DESARROLLO: mientras no hay inicio de sesión, permite ver el panel como otra persona del equipo (para la segunda opinión). */
 export function SelectorRevisorDev({ actual, revisores }: { actual: string; revisores: { userId: string; nombre: string; rol: string }[] }) {

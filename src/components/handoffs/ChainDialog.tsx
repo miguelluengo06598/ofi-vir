@@ -147,6 +147,10 @@ function Content({ chainId }: { chainId: string }) {
               </div>
               <PillButton icon={X} aria-label="Cerrar" autoFocus onClick={closeChain} />
             </div>
+            <p className="text-small text-ink-2">
+              <span className="font-semibold text-white">Empezó por: </span>
+              {chain.origen}
+            </p>
             <p className="flex items-start gap-2 text-small text-ink-2">
               <Target size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
               <span>

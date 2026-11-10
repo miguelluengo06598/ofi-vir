@@ -165,8 +165,8 @@ export const EJECUCIONES_POR_MES: Readonly<Record<FrecuenciaRutina, number>> = O
 export const ejecucionesPorMes = (f: FrecuenciaRutina): number => EJECUCIONES_POR_MES[FrecuenciaRutinaSchema.parse(f)];
 
 /** Coste estimado al mes (en créditos) de una rutina: tarifa del tipo de tarea × ejecuciones al mes. */
-export const costeMensualRutina = (tipo: TipoDeTareaId, frecuencia: FrecuenciaRutina): number =>
-  estimarCreditosRutina(tipo, ejecucionesPorMes(frecuencia));
+export const costeMensualRutina = (tipo: TipoDeTareaId, frecuencia: FrecuenciaRutina, maxEjecucionesMes?: number): number =>
+  estimarCreditosRutina(tipo, Math.min(ejecucionesPorMes(frecuencia), maxEjecucionesMes ?? Number.MAX_SAFE_INTEGER));
 
 // ── Ciclo de vida de la oficina (tareas periódicas) ─────────────────────────────────────────────
 export const CICLO_DE_VIDA = Object.freeze(

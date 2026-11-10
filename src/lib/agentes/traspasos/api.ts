@@ -3,10 +3,13 @@
  * (`Chain` / `Handoff` de `src/data/handoffs.ts`) para alimentar «En directo» y las líneas de luz. La empresa sale siempre
  * de la sesión. Solo lectura. Parámetros: `?limite=` (cadenas, 1-50, por defecto 20).
  */
+import { describirOrigen } from "../../agents/origen.ts";
+import type { TipoOrigen } from "../../agents/store.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Sesion } from "../../creditos/api.ts";
 import { fichaParaMostrar, esTipoDeTraspaso } from "./fichas.ts";
+import { filasDePersonas } from "../../empresas/sesion.ts";
 
 export type DepsTraspasosApi = { db: SupabaseClient; autenticar: (req: Request) => Promise<Sesion | null>; log?: Pick<Console, "error"> };
 
@@ -39,6 +42,22 @@ export async function traspasosHandler(req: Request, deps: DepsTraspasosApi): Pr
       deps.db.from("departments").select("id, slug").eq("company_id", companyId),
     ]);
     if (e2) throw new Error(e2.message);
+    // Por qué empezó cada cadena: el origen de su tarea raíz (la que no es un traspaso).
+    const [{ data: raices }, { data: personas }, { data: rutinas }] = await Promise.all([
+      deps.db.from("tasks").select("chain_id, origen, origen_ref, ordenado_por, rutina_id, source_email_id, started_at").eq("company_id", companyId).in("chain_id", ids).neq("origen", "traspaso").order("started_at"),
+      filasDePersonas(deps.db, companyId),
+      deps.db.from("agent_routines").select("id, nombre").eq("company_id", companyId),
+    ]);
+    const pe = new Map((personas ?? []).map((p) => [p.id as string, (p.full_name as string).split(" ")[0]]));
+    const ru = new Map((rutinas ?? []).map((r) => [r.id as string, r.nombre as string]));
+    const origenDe = new Map<string, string>();
+    for (const t of raices ?? []) {
+      if (origenDe.has(t.chain_id as string)) continue;
+      origenDe.set(t.chain_id as string, describirOrigen(
+        { origen: t.origen as TipoOrigen | null, ref: (t.origen_ref as Record<string, unknown>) ?? {}, ordenadoPor: t.ordenado_por as string | null, rutinaId: t.rutina_id as string | null, sourceEmailId: t.source_email_id as string | null },
+        null, { persona: (id) => pe.get(id), rutina: (id) => ru.get(id) },
+      ));
+    }
     const agente = new Map((ags ?? []).map((a) => [a.id as string, a.slug as string]));
     const dpto = new Map((deps_ ?? []).map((d) => [d.id as string, d.slug as string]));
     const porCadena = new Map<string, FilaTraspaso[]>();
@@ -48,7 +67,7 @@ export async function traspasosHandler(req: Request, deps: DepsTraspasosApi): Pr
       cadenas: (cadenas ?? []).map((c) => {
         const hs = porCadena.get(c.id as string) ?? [];
         return {
-          id: c.id, title: c.title, goal: c.goal, estado: c.estado, motivoCorte: c.motivo_corte,
+          id: c.id, title: c.title, goal: c.goal, origen: origenDe.get(c.id as string) ?? "Origen desconocido", estado: c.estado, motivoCorte: c.motivo_corte,
           costeTotal: hs.reduce((n, h) => n + Number(h.credits), 0),
           handoffs: hs.map((h) => ({
             id: h.id, chainId: h.chain_id, fromAgentId: agente.get(h.from_agent_id) ?? h.from_agent_id, toAgentId: agente.get(h.to_agent_id) ?? h.to_agent_id,

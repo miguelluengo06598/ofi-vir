@@ -41,7 +41,9 @@ export async function crearEmpresaB() {
     admin.from("memory_nodes").insert({ company_id: COMPANY_B, contact_id: contact.id, node_type: "dato", title: "Nodo secreto de B", content: "Dato confidencial de B", embedding: `[${vec.join(",")}]`, created_by_agent_id: agent.id }).select("id").single(),
     "nodo B",
   );
-  const task = await must(admin.from("tasks").insert({ company_id: COMPANY_B, agent_id: agent.id, title: "Tarea secreta de B", model: "claude-haiku-5-5", contact_id: contact.id }).select("id").single(), "tarea B");
+  // Toda tarea tiene origen: un mensaje que llegó de fuera.
+  const evento = await must(admin.from("eventos_externos").insert({ company_id: COMPANY_B, canal: "whatsapp", estado: "aceptado" }).select("id").single(), "evento B");
+  const task = await must(admin.from("tasks").insert({ company_id: COMPANY_B, agent_id: agent.id, title: "Tarea secreta de B", model: "claude-haiku-5-5", contact_id: contact.id, origen: "evento_externo", evento_id: evento.id }).select("id").single(), "tarea B");
   await must(admin.from("task_steps").insert({ company_id: COMPANY_B, task_id: task.id, position: 0, step: 0, kind: "instruccion", content: "Paso confidencial de B" }).select("id").single(), "paso B");
   const approval = await must(
     admin.from("approvals").insert({ company_id: COMPANY_B, agent_id: agent.id, kind: "other", title: "Aprobación de B", payload: {} }).select("id").single(),

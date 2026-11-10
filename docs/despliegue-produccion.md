@@ -49,6 +49,8 @@ Define las variables en el entorno **Production** (y crea valores diferentes par
 | `VOYAGE_API_KEY` | Búsqueda semántica de memoria | Si se habilita esa función |
 | `RESEND_*` | Envío y webhooks de correo | Si se habilita correo |
 | `CONEXION_<ID>_*` | OAuth de HubSpot, Google Calendar o Meta Ads | Por proveedor |
+| `AGENTES_ACTIVOS` | `false` apaga todos los agentes del servidor (interruptor de seguridad); sin definir = encendidos | No |
+| `CONTROL_CALIDAD_AUTOMATICO` | `true` activa el muestreo de calidad y la recertificación periódica con IA (procesos internos de SAMGPLE) | No (desactivado por defecto) |
 
 Genera secretos localmente, por ejemplo `openssl rand -hex 32`, y cárgalos con el panel o la CLI de Vercel; no los muestres en una terminal compartida. Tras cambiar variables, redepliega: las instancias ya creadas no las reciben automáticamente.
 

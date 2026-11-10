@@ -17,6 +17,7 @@ import { CertificacionError, enviarACertificacion, type SolicitudEnviada } from 
 import { MODELOS } from "../../creditos/tarifas.ts";
 import { PERMISOS } from "../herramientas/tipos.ts";
 import { diferenciasEntre, type Diferencia } from "./diferencias.ts";
+import { personasDeEmpresa } from "../../empresas/sesion.ts";
 
 export class CicloError extends Error {
   readonly status: number; readonly codigo: string; readonly extra: Record<string, unknown>;
@@ -177,8 +178,8 @@ export async function listarVersiones(db: SupabaseClient, companyId: string, age
   ]);
   if (vs.error || certs.error || agentes.error) throw new Error("No se pudo leer el historial de versiones.");
   const autores = [...new Set((vs.data ?? []).map((v) => v.created_by as string | null).filter((x): x is string => !!x))];
-  const { data: us } = autores.length ? await db.from("users").select("id, full_name").eq("company_id", companyId).in("id", autores) : { data: [] };
-  const nombreDe = new Map((us ?? []).map((u) => [u.id as string, u.full_name as string]));
+  // Solo nombres de personas de esta empresa.
+  const nombreDe = autores.length ? await personasDeEmpresa(db, companyId) : new Map<string, string>();
   const nombres = Object.fromEntries((agentes.data ?? []).map((a) => [a.id as string, a.name as string]));
   const filas = vs.data ?? [];
   const foto = new Map(filas.map((v) => [v.version as number, v.snapshot as ConfigVersion]));

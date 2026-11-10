@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { admin, COMPANY_A, createUser, loginAs, RUN } from "./entorno.ts";
+import { altaEnEmpresa } from "../ayuda/miembros.ts";
 
 const BASE = process.env.SEC_BASE_URL ?? process.env.APP_URL ?? "http://localhost:3000";
 const alcanzable = await fetch(`${BASE}/api/admin/margenes`, { signal: AbortSignal.timeout(60_000) }).then(() => true, () => false);
@@ -27,9 +28,9 @@ before(async () => {
   if (skip) return;
   const dueno = await createUser(COMPANY_A, "owner", "cert-owner");
   tokenPropietario = (await dueno.client.auth.getSession()).data.session!.access_token;
-  // admin_idesie (panel de márgenes) que NO es revisor.
+  // Administrador de una EMPRESA (sin rol de plataforma): no es del equipo de SAMGPLE.
   const m = await persona("margenes");
-  assert.ifError((await admin.from("users").insert({ id: m.id, company_id: COMPANY_A, full_name: "Prueba márgenes", email: `sec-cert-margenes-${RUN}@test.example`, role: "admin_idesie" })).error);
+  assert.ifError((await altaEnEmpresa(admin, { id: m.id, companyId: COMPANY_A, nombre: "Prueba admin de empresa", email: `sec-cert-margenes-${RUN}@test.example`, rol: "admin" })).error);
   tokenAdminMargenes = m.token;
   const r = await persona("revisor");
   assert.ifError((await admin.from("reviewers").insert({ user_id: r.id, rol: "revisor_samgple", nombre: `Seguridad ${RUN}`, categorias: ["atencion"] })).error);
@@ -47,7 +48,7 @@ describe("panel interno de certificación", { skip }, () => {
     it(`${ruta}: una empresa cliente, un token falso, un admin de márgenes y un revisor dado de baja reciben 404`, async () => {
       assert.equal((await pedir(ruta, tokenPropietario)).status, 404, "propietario de una empresa");
       assert.equal((await pedir(ruta, "no-es-un-jwt")).status, 404, "token falso");
-      assert.equal((await pedir(ruta, tokenAdminMargenes)).status, 404, "admin_idesie que no es revisor");
+      assert.equal((await pedir(ruta, tokenAdminMargenes)).status, 404, "un administrador de empresa no es del equipo de SAMGPLE");
       assert.equal((await pedir(ruta, tokenBaja)).status, 404, "revisor inactivo");
     });
   }

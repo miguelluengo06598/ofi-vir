@@ -1,6 +1,8 @@
 /**
- * Rutinas programadas de los agentes: cada una guarda su tipo de tarea y su frecuencia, y muestra su coste
- * estimado al mes (tarifa × ejecuciones). Solo se ejecutan si la oficina está operativa. Solo servidor.
+ * Rutinas programadas de los agentes: cada una guarda su tipo de tarea, su frecuencia y su límite de ejecuciones al mes, y muestra su
+ * coste estimado al mes (tarifa × ejecuciones, con el límite). Solo servidor.
+ *  - Solo las crea una persona desde la interfaz (nunca un agente ni una plantilla) y nacen DESACTIVADAS (lo impone la base).
+ *  - Solo se lanzan las ACTIVADAS por una persona (queda quién y cuándo), si la oficina está operativa y sin pasar su límite del mes.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { costeMensualRutina, type FrecuenciaRutina, type TipoDeTareaId } from "./tarifas.ts";
@@ -58,7 +60,9 @@ export type Rutina = {
   id: string; companyId: string; agentId: string; nombre: string; instruccion: string;
   tipoTarea: TipoDeTareaId; frecuencia: FrecuenciaRutina; activa: boolean;
   proximaEjecucionEn: Date; ultimaEjecucionEn: Date | null;
-  /** Créditos al mes que costaría (tarifa del tipo × ejecuciones al mes de su frecuencia). */
+  descripcion: string | null; creadoPor: string | null; activadaPor: string | null; activadaEn: Date | null;
+  maxEjecucionesMes: number; ejecucionesMes: number; mesContador: string | null; sugeridaDe: string | null;
+  /** Créditos al mes que costaría (tarifa del tipo × ejecuciones al mes de su frecuencia, como mucho su límite). */
   costeMensualEstimado: number;
   /** Valor tal cual lo devuelve la base (sirve para reclamar la rutina sin perder precisión). */
   _proximaRaw: string;
@@ -67,12 +71,16 @@ export type Rutina = {
 type Fila = {
   id: string; company_id: string; agent_id: string; nombre: string; instruccion: string; tipo_tarea: TipoDeTareaId;
   frecuencia: FrecuenciaRutina; activa: boolean; proxima_ejecucion_en: string; ultima_ejecucion_en: string | null;
+  descripcion: string | null; creado_por: string | null; activada_por: string | null; activada_en: string | null;
+  max_ejecuciones_mes: number; ejecuciones_mes: number; mes_contador: string | null; sugerida_de: string | null;
 };
 const aRutina = (f: Fila): Rutina => ({
   id: f.id, companyId: f.company_id, agentId: f.agent_id, nombre: f.nombre, instruccion: f.instruccion,
   tipoTarea: f.tipo_tarea, frecuencia: f.frecuencia, activa: f.activa,
   proximaEjecucionEn: new Date(f.proxima_ejecucion_en), ultimaEjecucionEn: f.ultima_ejecucion_en ? new Date(f.ultima_ejecucion_en) : null,
-  costeMensualEstimado: costeMensualRutina(f.tipo_tarea, f.frecuencia), _proximaRaw: f.proxima_ejecucion_en,
+  descripcion: f.descripcion, creadoPor: f.creado_por, activadaPor: f.activada_por, activadaEn: f.activada_en ? new Date(f.activada_en) : null,
+  maxEjecucionesMes: f.max_ejecuciones_mes, ejecucionesMes: f.ejecuciones_mes, mesContador: f.mes_contador, sugeridaDe: f.sugerida_de,
+  costeMensualEstimado: costeMensualRutina(f.tipo_tarea, f.frecuencia, f.max_ejecuciones_mes), _proximaRaw: f.proxima_ejecucion_en,
 });
 
 /** Rutinas de una empresa con su coste estimado al mes. */
@@ -87,7 +95,7 @@ export async function listarRutinas(db: SupabaseClient, companyId: string): Prom
 export type Lanzador = (rutina: Rutina) => Promise<void>;
 
 export type ResultadoRutinas = {
-  vencidas: number; lanzadas: number; omitidasPorOficina: number; errores: number;
+  vencidas: number; lanzadas: number; omitidasPorOficina: number; omitidasPorLimite: number; errores: number;
   /** Modo de prueba (sin lanzador): rutinas que se habrían lanzado. No se toca su calendario. */
   pendientesDeLanzar: string[];
 };
@@ -103,9 +111,10 @@ export async function ejecutarRutinasVencidas(o: {
 }): Promise<ResultadoRutinas> {
   const { db, ahora, lanzar } = o;
   const log = o.log ?? console;
-  const r: ResultadoRutinas = { vencidas: 0, lanzadas: 0, omitidasPorOficina: 0, errores: 0, pendientesDeLanzar: [] };
+  const r: ResultadoRutinas = { vencidas: 0, lanzadas: 0, omitidasPorOficina: 0, omitidasPorLimite: 0, errores: 0, pendientesDeLanzar: [] };
 
-  let q = db.from("agent_routines").select("*").eq("activa", true).lte("proxima_ejecucion_en", ahora.toISOString()).order("proxima_ejecucion_en");
+  // Solo las activadas por una persona.
+  let q = db.from("agent_routines").select("*").eq("activa", true).not("activada_por", "is", null).lte("proxima_ejecucion_en", ahora.toISOString()).order("proxima_ejecucion_en");
   if (o.empresaId) q = q.eq("company_id", o.empresaId);
   const { data, error } = await q;
   if (error) throw new Error(`No se pudieron leer las rutinas vencidas: ${error.message}`);
@@ -122,11 +131,17 @@ export async function ejecutarRutinasVencidas(o: {
     const operativa = oficinaPuedeEjecutar(estado.get(x.companyId));
     if (operativa && !lanzar) { r.pendientesDeLanzar.push(x.id); continue; }
     const proxima = proximaDespuesDe(x.frecuencia, x.proximaEjecucionEn, ahora);
-    // Reclamo atómico: solo gana quien la encuentra todavía con la fecha que leyó.
-    const cambios = operativa ? { proxima_ejecucion_en: proxima.toISOString(), ultima_ejecucion_en: ahora.toISOString() } : { proxima_ejecucion_en: proxima.toISOString() };
-    const { data: reclamada, error: e3 } = await db.from("agent_routines").update(cambios).eq("id", x.id).eq("proxima_ejecucion_en", x._proximaRaw).select("id");
+    // Reclamo atómico en la base: solo gana quien la encuentra todavía con la fecha que leyó; cuenta la ejecución del mes.
+    const { data: reclamo, error: e3 } = await db.rpc("rutina_reclamar", {
+      p_id: x.id, p_proxima_leida: x._proximaRaw, p_proxima_nueva: proxima.toISOString(), p_ahora: ahora.toISOString(), p_operativa: operativa,
+    });
     if (e3) { r.errores++; log.error(`[rutinas] ${x.id}: no se pudo reclamar: ${e3.message}`); continue; }
-    if (!reclamada?.length) continue;
+    if (reclamo === "no") continue;
+    if (reclamo === "limite") {
+      r.omitidasPorLimite++;
+      log.info(`[rutinas] ${x.id} («${x.nombre}») no se ejecuta: ha llegado a su límite de ${x.maxEjecucionesMes} ejecuciones este mes.`);
+      continue;
+    }
     if (!operativa) {
       r.omitidasPorOficina++;
       log.info(`[rutinas] ${x.id} («${x.nombre}») no se ejecuta: la oficina está ${estado.get(x.companyId) ?? "desconocida"}.`);

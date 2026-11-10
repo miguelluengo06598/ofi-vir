@@ -346,7 +346,7 @@ export async function simularParaRevisor(deps: DepsExamen, e: { requestId: strin
   const idCopia = randomUUID();
   const copia = await prepararEmpresaDeExamen(deps.db, deps.memoria, origen, idCopia, (m, err) => console.error(m, err instanceof Error ? err.message : err));
   try {
-    return await simularAgente({ ...deps.sim, config: { ...deps.sim.config, gratisAlMes: Number.MAX_SAFE_INTEGER } }, { companyId: copia.companyId, agentId: copia.agentId, mensaje: e.mensaje, canal: e.canal, titulo: `Revisor: ${e.mensaje}` });
+    return await simularAgente({ ...deps.sim, config: { ...deps.sim.config, gratisAlMes: Number.MAX_SAFE_INTEGER } }, { companyId: copia.companyId, agentId: copia.agentId, mensaje: e.mensaje, canal: e.canal, ordenadoPor: { procesoInterno: "revision_certificacion", solicitudId: e.requestId }, titulo: `Revisor: ${e.mensaje}` });
   } finally {
     await archivarCopias(deps.db, idCopia).catch(() => undefined);
   }

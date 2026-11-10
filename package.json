@@ -32,10 +32,15 @@
     "test:admin": "node --env-file=.env.local --test --test-concurrency=1 \"tests/admin/*.test.ts\"",
     "test:seguridad": "node --env-file=.env.local --test --test-concurrency=1 \"tests/seguridad/*.test.ts\"",
     "test": "node --test \"src/lib/*/*.test.ts\"",
-    "prueba:conocimiento": "node --env-file=.env.local scripts/prueba-conocimiento.ts"
+    "prueba:conocimiento": "node --env-file=.env.local scripts/prueba-conocimiento.ts",
+    "test:iniciativa": "node --env-file=.env.local --test --test-concurrency=1 \"tests/iniciativa/*.test.ts\"",
+    "test:miembros": "node --env-file=.env.local --test --test-concurrency=1 \"tests/miembros/*.test.ts\"",
+    "videos": "npm --prefix videos run renderizar --",
+    "videos:studio": "npm --prefix videos run studio"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "framer-motion": "^14.9.0",
     "lucide-react": "^1.66.0",

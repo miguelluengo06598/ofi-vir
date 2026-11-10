@@ -11,6 +11,7 @@ import { SupabaseMemoryStore } from "../../src/lib/memory/supabaseStore.ts";
 import { SupabaseEmailStore } from "../../src/lib/email/supabaseStore.ts";
 import { admin, anonymous, COMPANY_A, COMPANY_B, createUser, must } from "./entorno.ts";
 import { borrarEmpresaB, crearEmpresaB } from "./datos.ts";
+import { ORDEN_DE_PRUEBA } from "../../src/lib/agents/pruebas.ts";
 
 type B = Awaited<ReturnType<typeof crearEmpresaB>>;
 let b: B;
@@ -105,12 +106,15 @@ describe("escritura entre empresas", () => {
     await admin.from("contacts").delete().eq("id", mio.id);
   });
 
-  it("nadie se cambia de empresa ni de rol a sí mismo", async () => {
+  it("nadie se cambia de empresa ni de rol a sí mismo, ni se mete en otra empresa", async () => {
     const c = miembroA.client;
-    await c.from("users").update({ company_id: COMPANY_B }).eq("id", miembroA.id);
-    await c.from("users").update({ role: "owner" }).eq("id", miembroA.id);
-    const { data } = await admin.from("users").select("company_id, role").eq("id", miembroA.id).single();
-    assert.deepEqual(data, { company_id: COMPANY_A, role: "member" });
+    // Las pertenencias solo las escribe el servidor (funciones SQL con comprobación de rol): desde el navegador, nada.
+    await c.from("company_members").update({ rol: "propietario" }).eq("user_id", miembroA.id);
+    await c.from("company_members").update({ company_id: COMPANY_B }).eq("user_id", miembroA.id);
+    const r = await c.from("company_members").insert({ company_id: COMPANY_B, user_id: miembroA.id, rol: "propietario" });
+    assert.ok(r.error, "no puede darse de alta en otra empresa");
+    const { data } = await admin.from("company_members").select("company_id, rol").eq("user_id", miembroA.id);
+    assert.deepEqual(data, [{ company_id: COMPANY_A, rol: "miembro" }]);
   });
 
   it("las funciones internas (borrar contactos, crear borradores, aprobar, buscar) no se pueden llamar desde el navegador", async () => {
@@ -154,7 +158,7 @@ describe("capa de servidor: el motor y los almacenes (clave de servicio) filtran
     await assert.rejects(() => agentes.createHandoff(COMPANY_A, { fromAgentId: b.agent, toDepartmentId: b.dep, kind: "aviso", summary: "x", card: [] }));
     const deps = { store: agentes, memory: memoria, contacts: mem, llm: new ScriptedLlm([]) };
     await assert.rejects(() => ejecutarTarea(deps, COMPANY_A, b.task, "hola"), /no encontrada/i);
-    await assert.rejects(() => crearTarea(deps, COMPANY_A, { agentSlug: `b-agente-${b.agent}`, title: "x" }), /no encontrado/i);
+    await assert.rejects(() => crearTarea(deps, COMPANY_A, { agentSlug: `b-agente-${b.agent}`, title: "x", origen: ORDEN_DE_PRUEBA }), /no encontrado/i);
     assert.equal((await admin.from("task_steps").select("id").eq("task_id", b.task)).data?.length, 1, "los pasos de B no cambiaron");
   });
 });

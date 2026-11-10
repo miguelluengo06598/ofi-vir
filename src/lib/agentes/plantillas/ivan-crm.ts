@@ -61,6 +61,16 @@ LÍMITES
   ],
   integracionesRequeridas: ["hubspot"],
   tipoTareaPorDefecto: "simple",
+  // Sugerida, nunca activa: la empresa decide si la quiere y la activa ella.
+  rutinasSugeridas: [
+    {
+      id: "revision-semanal-fichas",
+      nombre: "Revisión semanal de fichas incompletas",
+      descripcion: "Cada semana repasa las fichas del CRM a las que les falta información y os deja un resumen. No escribe a nadie.",
+      instruccion: "Revisa las fichas de contacto del CRM a las que les falten datos importantes (correo, teléfono, etapa) y prepara un resumen interno con la lista. No escribas a ningún cliente ni cambies etapas.",
+      tipoTarea: "simple", frecuencia: "semanal", maxEjecucionesMes: 5,
+    },
+  ],
   casosDePrueba: [
     {
       id: "registrar-traspaso",

@@ -18,6 +18,7 @@ import {
 import { SupabaseAlmacenConocimiento } from "./supabaseAlmacen.ts";
 import { PeticionJsonSchema, type Fuente } from "./tipos.ts";
 import { AGENTE_WEB } from "./web.ts";
+import { esGestor } from "../empresas/permisos.ts";
 
 export type DepsApiConocimiento = { deps: DepsConocimiento; autenticar: (req: Request) => Promise<Sesion | null> };
 
@@ -33,7 +34,7 @@ export const fuentePublica = (f: Fuente) => ({
 async function entrar(req: Request, api: DepsApiConocimiento, escritura: boolean): Promise<{ res: Response } | { sesion: Sesion }> {
   const sesion = await api.autenticar(req);
   if (!sesion) return { res: fallo(401, "no_autenticado", "Inicia sesión para continuar.") };
-  if (escritura && sesion.rol !== "owner" && sesion.rol !== "admin") {
+  if (escritura && !esGestor(sesion.rol)) {
     return { res: fallo(403, "sin_permiso", "Solo los propietarios y administradores pueden gestionar el conocimiento de los agentes.") };
   }
   return { sesion };

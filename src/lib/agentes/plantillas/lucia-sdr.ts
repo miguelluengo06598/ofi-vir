@@ -67,6 +67,16 @@ LÍMITES
   ],
   integracionesRequeridas: ["google_calendar", "hubspot", "whatsapp"],
   tipoTareaPorDefecto: "estandar",
+  // Sugerida, nunca activa: la empresa decide si la quiere y la activa ella.
+  rutinasSugeridas: [
+    {
+      id: "resumen-semanal-leads",
+      nombre: "Resumen semanal de leads sin respuesta",
+      descripcion: "Los lunes os prepara la lista de leads que no han contestado, con el último contacto. No les escribe: para eso, aprobáis seguimientos.",
+      instruccion: "Prepara un resumen interno de los leads que no han respondido en los últimos 7 días, con la fecha del último contacto y lo que se les ofreció. No escribas a ningún lead: si crees que conviene, propón un seguimiento con proponer_seguimiento.",
+      tipoTarea: "estandar", frecuencia: "semanal", maxEjecucionesMes: 5,
+    },
+  ],
   casosDePrueba: [
     {
       id: "lead-nuevo-formulario",

@@ -3,7 +3,7 @@
 import { Hand, Loader2, Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { soltar, tomar } from "@/app/admin/certificacion/acciones";
+import { soltar, tomar } from "@/app/(admin)/admin/certificacion/acciones";
 import { PillButton } from "@/components/glass";
 
 type Ref = { clase: "agente" | "plantilla"; id: string };

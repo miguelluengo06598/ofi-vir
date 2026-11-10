@@ -15,6 +15,7 @@ import { useApprovals } from "@/components/ApprovalsProvider";
 import { departmentOrder } from "@/data/departments";
 import { buildTasks, type OfficeTask, type TaskStatus } from "@/data/tasks";
 import { fmtNumber } from "@/lib/format";
+import { TareasReales } from "./TareasReales";
 
 const groups: { status: TaskStatus; title: string; badge: AgentStatus | null; empty: string }[] = [
   { status: "running", title: "En curso", badge: "working", empty: "Ningún agente está trabajando ahora mismo." },
@@ -38,6 +39,7 @@ function TaskRow({ task, name }: { task: OfficeTask; name: string }) {
             {dept.label}
           </span>
         </p>
+        {task.porque && <p className="text-tiny text-ink-3">Empezó por: {task.porque}</p>}
       </div>
       <p className="inline-flex items-center gap-1 text-small tabular-nums">
         <Coins size={14} aria-hidden="true" className="text-ink-2" />
@@ -74,6 +76,8 @@ export function TasksView() {
           </PillButton>
         ))}
       </div>
+
+      <TareasReales />
 
       <div className="flex flex-col gap-4">
         {groups.map((g) => {

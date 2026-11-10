@@ -2,7 +2,7 @@
 
 import { Loader2, PlayCircle } from "lucide-react";
 import { useState } from "react";
-import { simular, type Hecho } from "@/app/admin/certificacion/acciones";
+import { simular, type Hecho } from "@/app/(admin)/admin/certificacion/acciones";
 import { PillButton } from "@/components/glass";
 import type { ResultadoSimulacion } from "@/lib/agentes/simulador/servicio";
 

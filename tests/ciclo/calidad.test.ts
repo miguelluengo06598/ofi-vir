@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 import { clienteLocal } from "../ayuda/clienteLocal.ts";
+import { personaDePrueba } from "../ayuda/persona.ts";
 
 const { db } = clienteLocal();
 let companyId = "", departmentId = "", agentId = "";
@@ -17,7 +18,8 @@ after(async () => { if (companyId) await db.from("companies").delete().eq("id", 
 
 describe("alertas de control continuo", () => {
   it("abre una alerta al superar el umbral de valoraciones negativas y no la duplica el mismo día", async () => {
-    const tasks = Array.from({ length: 3 }, () => ({ id: randomUUID(), company_id: companyId, agent_id: agentId, title: "Tarea", model: "claude-haiku-5-5", status: "done", finished_at: new Date().toISOString() }));
+    const persona = await personaDePrueba(db, companyId);
+    const tasks = Array.from({ length: 3 }, () => ({ id: randomUUID(), company_id: companyId, agent_id: agentId, title: "Tarea", model: "claude-haiku-5-5", status: "done", finished_at: new Date().toISOString(), origen: "orden_usuario", ordenado_por: persona }));
     assert.ifError((await db.from("tasks").insert(tasks)).error);
     assert.ifError((await db.from("agent_feedback").insert(tasks.map((t) => ({ company_id: companyId, agent_id: agentId, task_id: t.id, value: -1, reason: "No resolvió la petición" })))).error);
     const now = new Date().toISOString();

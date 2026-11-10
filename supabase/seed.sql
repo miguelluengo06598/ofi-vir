@@ -1,6 +1,9 @@
 -- Datos de ejemplo de la fase 2: la misma empresa y los mismos personajes ficticios que usa la interfaz.
 -- Generado a partir de src/data/*.ts. Se carga con `supabase db reset`.
--- Usuario de desarrollo: marcos@hogarmediterraneo.example · contraseña: oficina-demo-2026 (solo para el entorno local).
+-- Personas de prueba (SOLO local y pruebas; nunca en producción: la semilla no se carga en la nube):
+--   marcos@hogarmediterraneo.example · oficina-demo-2026     → propietario de Hogar Mediterráneo
+--   ana@hogarmediterraneo.example    · oficina-miembro-2026  → miembro de Hogar Mediterráneo (sin permiso de aprobar)
+--   admin@samgple.example            · samgple-admin-2026    → admin_samgple (equipo SAMGPLE). NO es miembro de ninguna empresa.
 
 -- Empresa y persona usuaria ------------------------------------------------------------
 insert into public.companies (id, name) values ('a64499d1-7f43-4a43-abc8-41a313dc4018', 'Hogar Mediterráneo, S.L.');
@@ -8,7 +11,15 @@ insert into auth.users (instance_id, id, aud, role, email, encrypted_password, e
 values ('00000000-0000-0000-0000-000000000000', '0c33590a-4c2a-4b32-a388-2008558688f7', 'authenticated', 'authenticated', 'marcos@hogarmediterraneo.example', extensions.crypt('oficina-demo-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');
 insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
 values (gen_random_uuid(), '0c33590a-4c2a-4b32-a388-2008558688f7', '0c33590a-4c2a-4b32-a388-2008558688f7', 'email', '{"sub":"0c33590a-4c2a-4b32-a388-2008558688f7","email":"marcos@hogarmediterraneo.example","email_verified":true}'::jsonb, now(), now(), now());
-insert into public.users (id, company_id, full_name, email, role) values ('0c33590a-4c2a-4b32-a388-2008558688f7', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'Marcos Gil', 'marcos@hogarmediterraneo.example', 'owner');
+insert into public.users (id, full_name, email) values ('0c33590a-4c2a-4b32-a388-2008558688f7', 'Marcos Gil', 'marcos@hogarmediterraneo.example');
+insert into public.company_members (company_id, user_id, rol) values ('a64499d1-7f43-4a43-abc8-41a313dc4018', '0c33590a-4c2a-4b32-a388-2008558688f7', 'propietario');
+-- Un miembro: usa la oficina, pero no gestiona miembros, créditos ni conexiones.
+insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change, email_change_token_new)
+values ('00000000-0000-0000-0000-000000000000', 'a4a00000-0000-4000-8000-0000000000a2', 'authenticated', 'authenticated', 'ana@hogarmediterraneo.example', extensions.crypt('oficina-miembro-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');
+insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
+values (gen_random_uuid(), 'a4a00000-0000-4000-8000-0000000000a2', 'a4a00000-0000-4000-8000-0000000000a2', 'email', '{"sub":"a4a00000-0000-4000-8000-0000000000a2","email":"ana@hogarmediterraneo.example","email_verified":true}'::jsonb, now(), now(), now());
+insert into public.users (id, full_name, email) values ('a4a00000-0000-4000-8000-0000000000a2', 'Ana Ruiz', 'ana@hogarmediterraneo.example');
+insert into public.company_members (company_id, user_id, rol) values ('a64499d1-7f43-4a43-abc8-41a313dc4018', 'a4a00000-0000-4000-8000-0000000000a2', 'miembro');
 
 -- Departamentos ---------------------------------------------------------------------
 insert into public.departments (id, company_id, slug, name, tipo, orden) values
@@ -157,6 +168,8 @@ Un saludo,
 Lucía Ramos · Ventas', '[]'::jsonb, 'delivered', 'baa8bb3b-4879-4271-a4f1-3c115a2ba0d7', 're_47387bce8b9d4bdaa8f5465b', '<47387bce-8b9d-4bda-a8f5-465b4661c42c@agentes.hogarmediterraneo.example>', null, '{}'::text[], ('2026-10-29 15:45:00'::timestamp at time zone 'Europe/Madrid'));
 
 -- Tareas ----------------------------------------------------------------------------
+-- Toda tarea necesita un origen: las tareas de ejemplo de la oficina las ordenó Marcos (propietario).
+alter table public.tasks alter column origen set default 'orden_usuario', alter column ordenado_por set default '0c33590a-4c2a-4b32-a388-2008558688f7';
 insert into public.tasks (id, company_id, agent_id, title, status, model, input_tokens, output_tokens, creator_fee_credits, started_at, finished_at) values
   ('dde6f39a-9842-47b9-ad32-19911b0383e0', 'a64499d1-7f43-4a43-abc8-41a313dc4018', '0e9902f1-d636-4806-a597-7d1d4bf9e7b4', 'Enviando seguimientos a 14 leads', 'running', 'claude-haiku-5-5', 23306, 6262, 0, ('2026-11-03 09:10:00'::timestamp at time zone 'Europe/Madrid'), null),
   ('552cfbc2-8225-461b-a8fe-8b8c45fcb489', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'f0467970-e1cb-45bf-a6db-7f9bcf2f2efe', 'Puntuando 23 contactos nuevos del formulario web', 'running', 'claude-haiku-5-5', 20818, 5486, 0, ('2026-11-03 09:14:00'::timestamp at time zone 'Europe/Madrid'), null),
@@ -173,6 +186,7 @@ insert into public.tasks (id, company_id, agent_id, title, status, model, input_
   ('7c7343e7-7e65-413b-a541-7738392fdd6d', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'ba4ca42c-4868-4073-ad9f-44604088a4f5', 'Factura del plan trimestral de Reformas Ortega', 'done', 'claude-haiku-5-5', 8200, 1100, 0.9, ('2026-10-31 12:20:00'::timestamp at time zone 'Europe/Madrid'), ('2026-10-31 12:30:00'::timestamp at time zone 'Europe/Madrid')),
   ('c579a8ff-25b3-4c48-a57a-2ca37ba5b772', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'e3aef07e-dd77-4d46-a7ec-d39405bdea41', 'Informe semanal de ventas y gasto', 'done', 'claude-sonnet-5-5', 64000, 12500, 4, ('2026-11-02 08:30:00'::timestamp at time zone 'Europe/Madrid'), ('2026-11-02 09:20:00'::timestamp at time zone 'Europe/Madrid')),
   ('d1792134-e22b-4b75-ac3c-a6d5872dd2ef', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'cd7c9591-feec-41d3-a352-9ef34d41a1f2', 'Clasificar 31 correos del buzón de soporte', 'done', 'claude-haiku-5-5', 31000, 2800, 0.6, ('2026-11-03 08:40:00'::timestamp at time zone 'Europe/Madrid'), ('2026-11-03 09:05:00'::timestamp at time zone 'Europe/Madrid'));
+alter table public.tasks alter column origen drop default, alter column ordenado_por drop default;
 
 -- Traspasos entre departamentos --------------------------------------------------------
 insert into public.handoff_chains (id, company_id, title, goal) values
@@ -324,16 +338,14 @@ Consulta la memoria antes de responder y guarda lo relevante con guardar_recuerd
 select public.anadir_lote('a64499d1-7f43-4a43-abc8-41a313dc4018', 'pack', 'pro', null, null, 'seed-local', 'seed:pro-hogar-mediterraneo');
 
 
--- Panel interno de márgenes (/admin/margenes) ---------------------------------------------------------------------
--- Equipo de IDESIE: persona con rol admin_idesie (local: admin@idesie.example · contraseña idesie-admin-2026).
--- Vive en su propia «empresa» interna, que no tiene datos y no sale en el panel. Poner su id en DEV_ADMIN_USER_ID.
-insert into public.companies (id, name) values ('1de51e00-0000-4000-8000-000000000001', 'IDESIE (equipo interno)');
+-- Equipo SAMGPLE (paneles internos /admin/margenes y /admin/certificacion) ----------------------------------------------
+-- admin@samgple.example · samgple-admin-2026 (solo local). Rol de plataforma admin_samgple (más abajo, en platform_roles):
+-- no es miembro de ninguna empresa, así que no ve datos de ninguna. Poner su id en DEV_ADMIN_USER_ID.
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change, email_change_token_new)
-values ('00000000-0000-0000-0000-000000000000', '1de51e00-0000-4000-8000-0000000000a1', 'authenticated', 'authenticated', 'admin@idesie.example', extensions.crypt('idesie-admin-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');
+values ('00000000-0000-0000-0000-000000000000', '1de51e00-0000-4000-8000-0000000000a1', 'authenticated', 'authenticated', 'admin@samgple.example', extensions.crypt('samgple-admin-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');
 insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
-values (gen_random_uuid(), '1de51e00-0000-4000-8000-0000000000a1', '1de51e00-0000-4000-8000-0000000000a1', 'email', '{"sub":"1de51e00-0000-4000-8000-0000000000a1","email":"admin@idesie.example","email_verified":true}'::jsonb, now(), now(), now());
-insert into public.users (id, company_id, full_name, email, role)
-values ('1de51e00-0000-4000-8000-0000000000a1', '1de51e00-0000-4000-8000-000000000001', 'Equipo IDESIE', 'admin@idesie.example', 'admin_idesie');
+values (gen_random_uuid(), '1de51e00-0000-4000-8000-0000000000a1', '1de51e00-0000-4000-8000-0000000000a1', 'email', '{"sub":"1de51e00-0000-4000-8000-0000000000a1","email":"admin@samgple.example","email_verified":true}'::jsonb, now(), now(), now());
+insert into public.users (id, full_name, email) values ('1de51e00-0000-4000-8000-0000000000a1', 'Admin SAMGPLE', 'admin@samgple.example');
 
 -- Panel interno de certificación (/admin/certificacion) -----------------------------------------------------------
 -- Equipo revisor de prueba (solo local). No son miembros de ninguna empresa: viven en auth.users y en public.reviewers.
@@ -350,11 +362,36 @@ select gen_random_uuid(), u.id, u.id::text, 'email', jsonb_build_object('sub', u
   from auth.users u
  where u.id in ('5a39e000-0000-4000-8000-0000000000b1', '5a39e000-0000-4000-8000-0000000000b2')
    and not exists (select 1 from auth.identities i where i.user_id = u.id);
-insert into public.reviewers (user_id, rol, nombre, categorias)
+insert into public.platform_roles (user_id, rol, roles, nombre, categorias)
 values
-  ('5a39e000-0000-4000-8000-0000000000b1', 'revisor_samgple', 'Elena Marín', '{atencion,ventas,operaciones}'),
-  ('5a39e000-0000-4000-8000-0000000000b2', 'revisor_samgple', 'Diego Soto', '{atencion,ventas,marketing,direccion}'),
-  ('1de51e00-0000-4000-8000-0000000000a1', 'admin_samgple', 'Admin de prueba', '{ventas,atencion,marketing,operaciones,direccion,personalizado}')
+  ('5a39e000-0000-4000-8000-0000000000b1', 'revisor_samgple', '{revisor_samgple}', 'Elena Marín', '{atencion,ventas,operaciones}'),
+  ('5a39e000-0000-4000-8000-0000000000b2', 'revisor_samgple', '{revisor_samgple}', 'Diego Soto', '{atencion,ventas,marketing,direccion}'),
+  ('1de51e00-0000-4000-8000-0000000000a1', 'admin_samgple', '{admin_samgple}', 'Admin de prueba', '{ventas,atencion,marketing,operaciones,direccion,personalizado}')
+on conflict (user_id) do nothing;
+
+-- Una cuenta local por área SAMGPLE (todas configuran TOTP desde /admin/mfa antes de entrar).
+insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change, email_change_token_new)
+values
+  ('00000000-0000-0000-0000-000000000000', '7a39e000-0000-4000-8000-0000000000c1', 'authenticated', 'authenticated', 'comercial@samgple.example', extensions.crypt('samgple-comercial-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '7a39e000-0000-4000-8000-0000000000c2', 'authenticated', 'authenticated', 'implantacion@samgple.example', extensions.crypt('samgple-implantacion-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '7a39e000-0000-4000-8000-0000000000c3', 'authenticated', 'authenticated', 'soporte@samgple.example', extensions.crypt('samgple-soporte-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '7a39e000-0000-4000-8000-0000000000c4', 'authenticated', 'authenticated', 'finanzas@samgple.example', extensions.crypt('samgple-finanzas-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '')
+on conflict (id) do nothing;
+insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
+select gen_random_uuid(), id, id::text, 'email', jsonb_build_object('sub', id::text, 'email', email, 'email_verified', true), now(), now(), now()
+  from auth.users where id in ('7a39e000-0000-4000-8000-0000000000c1','7a39e000-0000-4000-8000-0000000000c2','7a39e000-0000-4000-8000-0000000000c3','7a39e000-0000-4000-8000-0000000000c4')
+  and not exists (select 1 from auth.identities i where i.user_id = auth.users.id);
+insert into public.users (id, full_name, email) values
+  ('7a39e000-0000-4000-8000-0000000000c1', 'Comercial SAMGPLE', 'comercial@samgple.example'),
+  ('7a39e000-0000-4000-8000-0000000000c2', 'Implantación SAMGPLE', 'implantacion@samgple.example'),
+  ('7a39e000-0000-4000-8000-0000000000c3', 'Soporte SAMGPLE', 'soporte@samgple.example'),
+  ('7a39e000-0000-4000-8000-0000000000c4', 'Finanzas SAMGPLE', 'finanzas@samgple.example')
+on conflict (id) do nothing;
+insert into public.platform_roles (user_id, rol, roles, nombre, categorias) values
+  ('7a39e000-0000-4000-8000-0000000000c1', 'comercial_samgple', '{comercial_samgple}', 'Comercial SAMGPLE', '{}'),
+  ('7a39e000-0000-4000-8000-0000000000c2', 'implantacion_samgple', '{implantacion_samgple}', 'Implantación SAMGPLE', '{}'),
+  ('7a39e000-0000-4000-8000-0000000000c3', 'soporte_samgple', '{soporte_samgple}', 'Soporte SAMGPLE', '{}'),
+  ('7a39e000-0000-4000-8000-0000000000c4', 'finanzas_samgple', '{finanzas_samgple}', 'Finanzas SAMGPLE', '{}')
 on conflict (user_id) do nothing;
 
 -- Tres empresas ficticias con 4 meses de compras, consumo, costes de IA, caducidades y alertas.
@@ -465,3 +502,34 @@ begin
     ('recarga_fallida', 'a0000000-0000-4000-8000-000000000003', '{"pack": "business", "motivo": "tarjeta_caducada"}', now() - interval '9 days');
 end
 $seed$;
+
+-- Oficina de SAMGPLE (/admin): solicitudes, demos, implantaciones y soporte de ejemplo (solo local). Idempotente.
+-- Personas y empresas interesadas ficticias (correos .test). Fechas relativas a hoy para que haya cosas atrasadas.
+insert into public.solicitudes_acceso (id, nombre, email, empresa, sector, tamano, mensaje, acepta_comunicaciones, estado, origen, creado_en) values
+  ('5011c170-0000-4000-8000-000000000001', 'Raquel Pons', 'raquel@academiapons.test', 'Academia Pons', 'Academias', '5-20', 'Nos llegan muchas consultas por WhatsApp en septiembre.', true, 'nueva', 'web', now() - interval '3 hours'),
+  ('5011c170-0000-4000-8000-000000000002', 'Óscar Lledó', 'oscar@inmolledo.test', 'Inmobiliaria Lledó', 'Inmobiliarias', '5-20', 'Leads de portales que se quedan sin respuesta el fin de semana.', false, 'nueva', 'web', now() - interval '1 day'),
+  ('5011c170-0000-4000-8000-000000000003', 'Marina Sáez', 'marina@gimnasioforma.test', 'Gimnasio Forma', 'Gimnasios', '21-50', null, true, 'nueva', 'web', now() - interval '2 days'),
+  ('5011c170-0000-4000-8000-000000000004', 'Iker Bengoa', 'iker@reformasbengoa.test', 'Reformas Bengoa', 'Reformas', '5-20', 'Queremos ver cómo responde a presupuestos.', true, 'demo', 'web', now() - interval '6 days'),
+  ('5011c170-0000-4000-8000-000000000005', 'Lidia Ferrer', 'lidia@tiendaferrer.test', 'Tienda Ferrer', 'E-commerce', '1-4', null, false, 'contactada', 'manual', now() - interval '12 days')
+on conflict (id) do nothing;
+insert into public.demos (id, solicitud_id, fecha, estado, responsable) values
+  ('de300000-0000-4000-8000-000000000001', '5011c170-0000-4000-8000-000000000004', now() + interval '2 days', 'pendiente', '1de51e00-0000-4000-8000-0000000000a1'),
+  ('de300000-0000-4000-8000-000000000002', '5011c170-0000-4000-8000-000000000005', now() - interval '1 day', 'pendiente', '1de51e00-0000-4000-8000-0000000000a1')
+on conflict (id) do nothing;
+insert into public.implantaciones (id, company_id, estado, responsable, inicio, objetivo_fin) values
+  ('1a700000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', 'en_curso', '1de51e00-0000-4000-8000-0000000000a1', current_date - 20, current_date + 10),
+  ('1a700000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000003', 'en_curso', '1de51e00-0000-4000-8000-0000000000a1', current_date - 5, current_date + 25)
+on conflict (id) do nothing;
+insert into public.implantacion_tareas (id, implantacion_id, titulo, orden, vence_en, hecha_en) values
+  ('1a7a0000-0000-4000-8000-000000000001', '1a700000-0000-4000-8000-000000000001', 'Conectar el CRM', 1, current_date - 12, now() - interval '13 days'),
+  ('1a7a0000-0000-4000-8000-000000000002', '1a700000-0000-4000-8000-000000000001', 'Configurar a Lucía con el asistente', 2, current_date - 4, null),
+  ('1a7a0000-0000-4000-8000-000000000003', '1a700000-0000-4000-8000-000000000001', 'Enviar a certificación', 3, current_date + 3, null),
+  ('1a7a0000-0000-4000-8000-000000000004', '1a700000-0000-4000-8000-000000000002', 'Reunión de arranque', 1, current_date - 2, null),
+  ('1a7a0000-0000-4000-8000-000000000005', '1a700000-0000-4000-8000-000000000002', 'Cargar el conocimiento (web y PDF)', 2, current_date + 6, null)
+on conflict (id) do nothing;
+insert into public.soporte_consultas (id, company_id, asunto, estado, prioridad, creado_en) values
+  ('50a00000-0000-4000-8000-000000000001', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'No llegan los correos de un cliente', 'abierta', 'alta', now() - interval '5 hours'),
+  ('50a00000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001', 'Duda sobre el tope de gasto por agente', 'en_curso', 'normal', now() - interval '2 days'),
+  ('50a00000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000002', 'La conexión con el CRM caduca cada día', 'escalada', 'urgente', now() - interval '1 day'),
+  ('50a00000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000003', 'Cómo añadir un PDF al conocimiento', 'resuelta', 'baja', now() - interval '8 days')
+on conflict (id) do nothing;
