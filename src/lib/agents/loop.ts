@@ -1,6 +1,10 @@
 import type { MemoryService } from "../memory/service.ts";
 import type { MemoryStore } from "../memory/store.ts";
 import { mensajesParaLeerCorreo, REGLAS_CONTENIDO_EXTERNO } from "../email/untrusted.ts";
+import { instruccionesParaTarea, registrarInstruccionesDeTarea, textoReglasActivas, type FuenteInstrucciones } from "../agentes/instrucciones.ts";
+import type { ServicioReglas } from "../agentes/reglas/servicio.ts";
+import { ejecutarHerramienta as ejecutarHerramientaDelCatalogo, herramientasParaClaude, type ResultadoHerramienta } from "../agentes/herramientas/ejecutor.ts";
+import type { AlmacenHerramientas, ContextoEjecucion, GestorSecretos } from "../agentes/herramientas/tipos.ts";
 import { aprenderDeTarea, MODELO_APRENDIZAJE } from "./aprender.ts";
 import { bloquesExternos, detectarManipulacion } from "./sospechoso.ts";
 import type { LlmBlock, LlmClient, LlmMessage } from "./llm.ts";
@@ -26,10 +30,46 @@ export type EngineDeps = {
   limites?: Partial<Limites>;
   /** Al terminar bien una tarea, un paso con Haiku guarda lo importante en la memoria. Por defecto sí. */
   aprender?: boolean;
+  /**
+   * ¿Puede ejecutar agentes esta oficina? (activa o con saldo bajo; no si está sin saldo, pausada o pendiente de borrado).
+   * Si devuelve false la tarea no se ejecuta: queda en revisión con su motivo. Sin esta función, siempre se ejecuta.
+   */
+  oficinaActiva?: (companyId: string) => Promise<boolean>;
+  /**
+   * ¿Puede trabajar este agente con datos reales? Solo un agente ACTIVO con la certificación vigente (`agente_puede_trabajar` en la base).
+   * Se comprueba al lanzar cada tarea real (nunca en el simulador): si devuelve false la tarea no se ejecuta, queda en revisión y se
+   * avisa a la empresa. Pausar un agente detiene así sus tareas nuevas; las que ya están en curso terminan. Sin esta función
+   * (pruebas unitarias del motor) no se comprueba: `motorDesdeEntorno` la define siempre.
+   */
+  puedeTrabajar?: (companyId: string, agentId: string) => Promise<boolean>;
+  /** Reglas del agente (horario, tope de créditos…) aplicadas al lanzar la tarea. Sin él, no se aplican. */
+  reglas?: ServicioReglas;
+  /** Reloj (inyectable para probar con fechas simuladas). Por defecto, la hora real. */
+  ahora?: () => Date;
+  /**
+   * Modo catálogo: las herramientas del agente son las de su `agent_tools` (catálogo completo: permisos, aprobaciones, integraciones,
+   * traspasos, reglas) y se ejecutan con el ejecutor del catálogo. Sin él, el motor usa sus herramientas básicas (`allowed_tools`).
+   */
+  catalogo?: { almacen: AlmacenHerramientas; secretos: (companyId: string) => GestorSecretos };
+  /**
+   * Modo simulador (requiere `catalogo`): todas las herramientas usan `simular()`, no se crean aprobaciones ni traspasos, no se aprende
+   * nada, y las reglas se evalúan sin avisar a la empresa ni aplazar la tarea. `alHerramienta` recibe cada llamada con su resultado.
+   */
+  /**
+   * Constructor de instrucciones (plataforma + plantilla IDESIE protegida + ficha + reglas + traspasos + correcciones). Con él, el mensaje de
+   * sistema es el montado por `montarInstrucciones`; sin él, el motor usa `agents.instructions` más las reglas. De momento solo lo usa el
+   * simulador: una tarea real exigiría la versión certificada (ver `instruccionesParaTarea`).
+   */
+  instrucciones?: FuenteInstrucciones;
+  simulacion?: {
+    alHerramienta?: (info: { nombre: string; entrada: unknown; resultado: ResultadoHerramienta }) => void;
+    alRegla?: (aviso: string) => void;
+  };
 };
 
 export type ResultadoTarea = {
-  estado: Extract<TaskStatus, "done" | "review" | "failed">;
+  /** `scheduled`: llegó fuera de horario y se procesará al abrir. */
+  estado: Extract<TaskStatus, "done" | "review" | "failed" | "scheduled" | "approval">;
   motivo: string | null;
   pasos: number;
   costeEur: number;
@@ -74,13 +114,25 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
   const task = await store.getTask(companyId, taskId);
   if (!task) throw new Error("Tarea no encontrada.");
   if (task.status !== "running") throw new Error("La tarea ya terminó.");
+  if (!deps.simulacion && deps.oficinaActiva && !(await deps.oficinaActiva(companyId))) {
+    const motivo = "La oficina no está activa (sin saldo, pausada o pendiente de borrado): la tarea no se ha ejecutado.";
+    await store.updateTask(companyId, taskId, { status: "review", reviewReason: motivo, finished: true });
+    return { estado: "review", motivo, pasos: 0, costeEur: 0, texto: "" };
+  }
   const agent = await store.getAgent(companyId, task.agentId);
   if (!agent) throw new Error("Agente no encontrado.");
+  // La certificación se comprueba en el servidor antes de cada tarea real: un agente sin certificar, pausado, caducado o suspendido no trabaja.
+  if (!deps.simulacion && deps.puedeTrabajar && !(await deps.puedeTrabajar(companyId, agent.id))) {
+    const motivo = `${agent.name} no puede trabajar con datos reales: solo un agente activo con la certificación vigente ejecuta tareas. La tarea no se ha ejecutado.`;
+    await store.updateTask(companyId, taskId, { status: "review", reviewReason: motivo, finished: true });
+    return { estado: "review", motivo, pasos: 0, costeEur: 0, texto: "" };
+  }
   const pricing = await store.getPricing(task.model);
 
   let externalContent = false;
   const sospechas: string[] = [];
-  let userText = instruccion?.trim() ?? "";
+  // La instrucción puede venir de quien lanza la tarea o, si nació de un traspaso, de la ficha que guardó el agente origen.
+  let userText = instruccion?.trim() || task.instruccionEntrada?.trim() || "";
   if (task.sourceEmailId) {
     const mail = await store.getSourceEmail(companyId, task.sourceEmailId);
     if (!mail) throw new Error("No se encontró el correo de la tarea.");
@@ -100,8 +152,35 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
     if (!task.sourceEmailId) for (const b of bloquesExternos(userText)) for (const m of detectarManipulacion(b)) if (!sospechas.includes(m)) sospechas.push(m);
   }
 
+  // Reglas del agente al lanzar: tope de créditos del mes y horario (solo para mensajes de personas de fuera).
+  let reglasTexto = "";
+  if (deps.reglas) {
+    const ahora = (deps.ahora ?? (() => new Date()))();
+    if (deps.simulacion) {
+      // Simulador: se muestra lo que pasaría, pero la prueba sigue para poder ver el comportamiento del agente.
+      const d = await deps.reglas.previsualizar(companyId, agent, { ahora, esMensajeExterno: externalContent });
+      if (d.accion === "bloquear") deps.simulacion.alRegla?.(`En real, esta tarea NO se ejecutaría: ${d.motivo}`);
+      else if (d.accion === "aplazar") deps.simulacion.alRegla?.(`En real, este mensaje se aplazaría: ${d.motivo}`);
+      else if (d.fueraDeHorario) deps.simulacion.alRegla?.("Ahora estaría fuera del horario del agente: se aplicaría su regla de fuera de horario.");
+      reglasTexto = `\n\n${textoReglasActivas(d.reglas, ahora)}`;
+    } else {
+    const d = await deps.reglas.alLanzar(companyId, agent, { ahora, esMensajeExterno: externalContent });
+    if (d.accion === "bloquear") {
+      await store.updateTask(companyId, taskId, { status: "review", reviewReason: d.motivo, finished: true });
+      return { estado: "review", motivo: d.motivo, pasos: 0, costeEur: 0, texto: "" };
+    }
+    if (d.accion === "aplazar") {
+      // Se guarda el mensaje (la instrucción, o el correo ya guardado) y se procesa al abrir el horario. No se llama al modelo.
+      await store.aplazarTarea(companyId, taskId, { hasta: d.hasta, instruccion: task.sourceEmailId ? null : userText });
+      return { estado: "scheduled", motivo: d.motivo, pasos: 0, costeEur: 0, texto: "" };
+    }
+    reglasTexto = `\n\n${textoReglasActivas(d.reglas, ahora)}`;
+    }
+  }
+
   if (!(await store.claimTask(companyId, taskId, userText))) throw new Error("La tarea ya está en marcha o terminó.");
   if (sospechas.length > 0) await store.updateTask(companyId, taskId, { suspicious: true });
+  if (task.handoffId) await store.actualizarTraspaso(companyId, task.handoffId, "in_progress");
   let position = 1;
   let usage = USO_VACIO;
   let pasos = 0;
@@ -114,7 +193,7 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
     const motivo = sospechosa ? `Posible intento de manipulación en el contenido externo: ${sospechas.join("; ")}.${motivoPedido ? ` (${motivoPedido})` : ""}` : motivoPedido;
     // Paso de memoria: solo si la tarea terminó bien. Va antes de marcarla como terminada para que la interfaz lo vea.
     let memoria: { inputTokens: number; outputTokens: number; costEur: number } | undefined;
-    if (estado === "done" && deps.aprender !== false) {
+    if (estado === "done" && deps.aprender !== false && !deps.simulacion) {
       const l = await aprenderDeTarea(deps, { companyId, agent, taskId, contactId: ctx.task.contactId, externalContent: ctx.externalContent, finalText: ultimoTexto });
       memoria = { inputTokens: l.usage.inputTokens, outputTokens: l.usage.outputTokens, costEur: l.costeEur };
       const d = l.descartados;
@@ -133,21 +212,24 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
         toolName: MODELO_APRENDIZAJE,
       });
     }
+    const enEspera = estado === "approval";
     await store.addStep(companyId, taskId, position++, {
       step: pasos,
       kind: "fin",
-      content: estado === "done" ? ultimoTexto || "Tarea terminada." : `${estado === "review" ? "Parada para revisión" : "Error"}: ${motivo}${sospechosa && ultimoTexto ? `\n\nResumen del agente: ${ultimoTexto}` : ""}`,
-      isError: estado !== "done",
+      content: estado === "done" ? ultimoTexto || "Tarea terminada." : enEspera ? `En espera de la aprobación de una persona.${ultimoTexto ? `\n\n${ultimoTexto}` : ""}` : `${estado === "review" ? "Parada para revisión" : "Error"}: ${motivo}${sospechosa && ultimoTexto ? `\n\nResumen del agente: ${ultimoTexto}` : ""}`,
+      isError: estado !== "done" && !enEspera,
     });
-    const { costEur } = await store.updateTask(companyId, taskId, { status: estado, usage, steps: pasos, reviewReason: estado === "done" ? null : motivo, finished: true, ...(sospechosa ? { suspicious: true } : {}), ...(memoria ? { memory: memoria } : {}) });
+    // El traspaso que originó la tarea sigue su estado: hecha → completado; fallida → rechazado; en revisión o espera sigue «en curso».
+    if (task.handoffId && (estado === "done" || estado === "failed")) await store.actualizarTraspaso(companyId, task.handoffId, estado === "done" ? "done" : "rejected");
+    const { costEur } = await store.updateTask(companyId, taskId, { status: estado, usage, steps: pasos, reviewReason: estado === "done" || enEspera ? null : motivo, finished: !enEspera, ...(sospechosa ? { suspicious: true } : {}), ...(memoria ? { memory: memoria } : {}) });
     return { estado, motivo, pasos, costeEur: costEur, texto: ultimoTexto };
   };
 
   if (!pricing) return terminar("failed", `El modelo ${task.model} no tiene tarifa configurada.`);
 
   const tools = herramientasDe(agent);
-  const toolDefs = definicionesParaModelo(tools);
-  const ctx: ToolContext = {
+  const toolDefs = deps.catalogo ? await herramientasParaClaude(deps.catalogo.almacen, companyId, agent) : definicionesParaModelo(tools);
+  const base: ToolContext = {
     companyId,
     agent,
     task: { id: taskId, contactId: task.contactId },
@@ -157,7 +239,16 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
     store,
     sospechas,
   };
-  const system = `${agent.instructions.trim() || `Eres ${agent.name}, ${agent.role}.`}\n\n${REGLAS_GENERALES}`;
+  // En modo catálogo el contexto es el del ejecutor (permisos, aprobaciones, integraciones, traspasos y reglas del agente).
+  const ctx: ToolContext | ContextoEjecucion = deps.catalogo
+    ? { ...base, almacen: deps.catalogo.almacen, secretos: deps.catalogo.secretos(companyId), esSimulacion: !!deps.simulacion, ahora: deps.ahora, reglas: deps.reglas?.reglasDelEjecutor() }
+    : base;
+  let montadas: Awaited<ReturnType<typeof instruccionesParaTarea>> | null = null;
+  if (deps.instrucciones) {
+    montadas = await instruccionesParaTarea(deps.instrucciones, companyId, agent.id, {}, { esSimulacion: !!deps.simulacion, ahora: (deps.ahora ?? (() => new Date()))() });
+    await registrarInstruccionesDeTarea(store, companyId, taskId, montadas);
+  }
+  const system = montadas ? montadas.systemTexto : `${agent.instructions.trim() || `Eres ${agent.name}, ${agent.role}.`}\n\n${REGLAS_GENERALES}${reglasTexto}`;
   const messages: LlmMessage[] = [{ role: "user", content: userText }];
 
   try {
@@ -167,7 +258,7 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
 
       let response;
       try {
-        response = await deps.llm.create({ model: task.model, maxTokens: limites.maxTokensSalida, system, tools: toolDefs, messages });
+        response = await deps.llm.create({ model: task.model, maxTokens: limites.maxTokensSalida, system, ...(montadas ? { systemBlocks: montadas.system } : {}), tools: toolDefs, messages });
       } catch (e) {
         // El detalle va a la consola del servidor; en la tarea solo queda un motivo genérico (sin claves ni datos).
         console.error("ejecutarTarea: fallo al llamar al modelo:", e instanceof Error ? e.message : "desconocido");
@@ -200,8 +291,13 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
       const calls = response.content.filter((b): b is LlmBlock & { id: string; name: string } => b.type === "tool_use");
       if (calls.length === 0) return await terminar("review", "El modelo pidió herramientas pero no indicó ninguna.");
       const results: LlmBlock[] = [];
+      let pausada = false;
       for (const call of calls) {
-        const out = await ejecutarHerramienta(ctx, tools, call.name, call.input);
+        const out = deps.catalogo
+          ? await ejecutarHerramientaDelCatalogo(ctx as ContextoEjecucion, call.name, call.input)
+          : await ejecutarHerramienta(ctx, tools, call.name, call.input);
+        if (deps.catalogo && (out as { pausaTarea?: boolean }).pausaTarea) pausada = true;
+        if (deps.simulacion) deps.simulacion.alHerramienta?.({ nombre: call.name, entrada: call.input, resultado: out as ResultadoHerramienta });
         await store.addStep(companyId, taskId, position++, {
           step: pasos,
           kind: "herramienta",
@@ -212,6 +308,8 @@ export async function ejecutarTarea(deps: EngineDeps, companyId: string, taskId:
         });
         results.push({ type: "tool_result", tool_use_id: call.id, content: out.texto, ...(out.error ? { is_error: true } : {}) });
       }
+      // Una herramienta que espera la aprobación de una persona detiene la tarea: queda «en espera» (el ejecutor ya la marcó así).
+      if (pausada && !deps.simulacion) return await terminar("approval", null);
       // Todos los resultados de una misma respuesta van juntos en un único mensaje de usuario.
       messages.push({ role: "user", content: results });
     }

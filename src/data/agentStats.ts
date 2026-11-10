@@ -1,5 +1,3 @@
-import { agentConsumption } from "./wallet";
-
 /** Actividad de la última semana y valoración que la empresa ha dado a cada agente. */
 const stats: Record<string, { tasksWeek: number; rating: number }> = {
   "lucia-ramos": { tasksWeek: 62, rating: 4.8 },
@@ -14,7 +12,7 @@ const stats: Record<string, { tasksWeek: number; rating: number }> = {
   "elena-bravo": { tasksWeek: 9, rating: 4.7 },
 };
 
-export type AgentStats = { tasksWeek: number; rating: number | null; creditsMonth: number };
+export type AgentStats = { tasksWeek: number; rating: number | null };
 
 /** Los agentes recién contratados aún no tienen actividad ni valoración. */
 export function getAgentStats(agentId: string): AgentStats {
@@ -22,6 +20,5 @@ export function getAgentStats(agentId: string): AgentStats {
   return {
     tasksWeek: base?.tasksWeek ?? 0,
     rating: base?.rating ?? null,
-    creditsMonth: agentConsumption.find((c) => c.agent.id === agentId)?.credits ?? 0,
   };
 }

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { aprobarBorradorDeAgente, borradoresDeAgentes, rechazarBorradorDeAgente } from "@/app/actions/agentes";
 import type { PendingDraft } from "@/lib/agents/supabaseStore";
 import { GlassPanel, PillButton } from "@/components/glass";
+import { ValoracionAgente } from "./ValoracionAgente";
 
 /**
  * Correos que han redactado los agentes (motor real) y esperan tu aprobación. Se aprueba el texto exacto que ves:
@@ -15,6 +16,7 @@ export function BorradoresDeAgentes() {
   const [busy, setBusy] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState<string | null>(null);
+  const [recent, setRecent] = useState<PendingDraft | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -40,7 +42,10 @@ export function BorradoresDeAgentes() {
     try {
       const r = accion === "aprobar" ? await aprobarBorradorDeAgente({ approvalId: d.approvalId }) : await rechazarBorradorDeAgente({ approvalId: d.approvalId });
       if (r.estado === "error") setErrors((e) => ({ ...e, [d.approvalId]: r.mensaje }));
-      else setDone(r.estado === "enviado" ? `Correo enviado a ${d.toEmail}.` : "Borrador rechazado.");
+      else {
+        setDone(r.estado === "enviado" ? `Correo enviado a ${d.toEmail}.` : "Borrador rechazado.");
+        setRecent(d);
+      }
       await load();
     } catch {
       setErrors((e) => ({ ...e, [d.approvalId]: "No se pudo contactar con el servidor." }));
@@ -80,6 +85,13 @@ export function BorradoresDeAgentes() {
           </div>
         </GlassPanel>
       ))}
+      {recent && (
+        <GlassPanel className="flex flex-col gap-3 p-5">
+          <p className="text-small font-semibold">Valora la acción de {recent.agentName}</p>
+          <p className="text-small text-ink-2">Tu valoración se incorpora al historial de calidad del agente.</p>
+          <ValoracionAgente approvalId={recent.approvalId} />
+        </GlassPanel>
+      )}
     </section>
   );
 }

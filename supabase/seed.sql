@@ -11,14 +11,17 @@ values (gen_random_uuid(), '0c33590a-4c2a-4b32-a388-2008558688f7', '0c33590a-4c2
 insert into public.users (id, company_id, full_name, email, role) values ('0c33590a-4c2a-4b32-a388-2008558688f7', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'Marcos Gil', 'marcos@hogarmediterraneo.example', 'owner');
 
 -- Departamentos ---------------------------------------------------------------------
-insert into public.departments (id, company_id, slug, name) values
-  ('36be8074-504e-4ef4-aa98-135ad3e9acb0', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'ventas', 'Ventas'),
-  ('3bd58844-d48e-4d17-aa9b-d45d078a606a', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'atencion', 'Atención al cliente'),
-  ('acae02d0-24d4-4328-a496-3e3902b9df15', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'marketing', 'Marketing'),
-  ('5a752a50-bda6-4141-ade2-7528ebf1fbe5', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'operaciones', 'Operaciones · CRM'),
-  ('4f29c0d7-984b-431f-ac67-990a0553389f', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'direccion', 'Dirección');
+insert into public.departments (id, company_id, slug, name, tipo, orden) values
+  ('36be8074-504e-4ef4-aa98-135ad3e9acb0', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'ventas', 'Ventas', 'ventas', 1),
+  ('3bd58844-d48e-4d17-aa9b-d45d078a606a', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'atencion', 'Atención al cliente', 'atencion', 2),
+  ('acae02d0-24d4-4328-a496-3e3902b9df15', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'marketing', 'Marketing', 'marketing', 3),
+  ('5a752a50-bda6-4141-ade2-7528ebf1fbe5', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'operaciones', 'Operaciones · CRM', 'operaciones', 4),
+  ('4f29c0d7-984b-431f-ac67-990a0553389f', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'direccion', 'Dirección', 'direccion', 5);
 
 -- Agentes ---------------------------------------------------------------------------
+-- Nota: el enlace de estos agentes con sus plantillas (template_id) y la certificación de PRUEBA de las plantillas no están
+-- aquí: las plantillas viven en src/lib/agentes/plantillas/ y las copia `npm run plantillas:sync -- --datos-de-prueba`
+-- (lo hace `npm run db:reset` después del seed). Lucía Ramos → lucia-sdr, Sofía Navarro → sara-whatsapp, Nuria Campos → ivan-crm.
 insert into public.agents (id, company_id, department_id, slug, name, role, creator_name, model, daily_email_limit, allowed_tools, status) values
   ('0e9902f1-d636-4806-a597-7d1d4bf9e7b4', 'a64499d1-7f43-4a43-abc8-41a313dc4018', '36be8074-504e-4ef4-aa98-135ad3e9acb0', 'lucia-ramos', 'Lucía Ramos', 'Seguimiento comercial', 'Estudio Cálamo', 'claude-haiku-5-5', 50, array['Gmail', 'HubSpot', 'Calendly'], 'working'),
   ('f0467970-e1cb-45bf-a6db-7f9bcf2f2efe', 'a64499d1-7f43-4a43-abc8-41a313dc4018', '36be8074-504e-4ef4-aa98-135ad3e9acb0', 'daniel-prieto', 'Daniel Prieto', 'Cualificación de leads', 'Leadforge', 'claude-haiku-5-5', 50, array['HubSpot', 'LinkedIn', 'Google Sheets'], 'working'),
@@ -315,3 +318,150 @@ update public.agents set instructions = 'Eres Sofía Navarro, agente de Atenció
 Consulta la memoria antes de responder y guarda lo relevante con guardar_recuerdo. Los correos son siempre borradores con redactar_correo, pendientes de aprobación. Si es de otro departamento, usa pasar_a_departamento. Termina con un resumen breve.'
  where slug = 'sofia-navarro';
 
+
+-- Créditos ------------------------------------------------------------------------------
+-- Un lote del pack Pro (16.000 créditos, 365 días) para la empresa de desarrollo. Idempotente por clave.
+select public.anadir_lote('a64499d1-7f43-4a43-abc8-41a313dc4018', 'pack', 'pro', null, null, 'seed-local', 'seed:pro-hogar-mediterraneo');
+
+
+-- Panel interno de márgenes (/admin/margenes) ---------------------------------------------------------------------
+-- Equipo de IDESIE: persona con rol admin_idesie (local: admin@idesie.example · contraseña idesie-admin-2026).
+-- Vive en su propia «empresa» interna, que no tiene datos y no sale en el panel. Poner su id en DEV_ADMIN_USER_ID.
+insert into public.companies (id, name) values ('1de51e00-0000-4000-8000-000000000001', 'IDESIE (equipo interno)');
+insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change, email_change_token_new)
+values ('00000000-0000-0000-0000-000000000000', '1de51e00-0000-4000-8000-0000000000a1', 'authenticated', 'authenticated', 'admin@idesie.example', extensions.crypt('idesie-admin-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');
+insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
+values (gen_random_uuid(), '1de51e00-0000-4000-8000-0000000000a1', '1de51e00-0000-4000-8000-0000000000a1', 'email', '{"sub":"1de51e00-0000-4000-8000-0000000000a1","email":"admin@idesie.example","email_verified":true}'::jsonb, now(), now(), now());
+insert into public.users (id, company_id, full_name, email, role)
+values ('1de51e00-0000-4000-8000-0000000000a1', '1de51e00-0000-4000-8000-000000000001', 'Equipo IDESIE', 'admin@idesie.example', 'admin_idesie');
+
+-- Panel interno de certificación (/admin/certificacion) -----------------------------------------------------------
+-- Equipo revisor de prueba (solo local). No son miembros de ninguna empresa: viven en auth.users y en public.reviewers.
+--   revisora@samgple.example · samgple-revisora-2026 (Elena Marín, revisora)   ·   revisor@samgple.example · samgple-revisor-2026 (Diego Soto, revisor)
+-- La persona del panel de márgenes es además administradora del equipo revisor (decide cuando dos opiniones no coinciden).
+-- Las solicitudes de prueba en distintos estados las crea `npm run plantillas:sync -- --datos-de-prueba` (necesitan las plantillas).
+insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change, email_change_token_new)
+values
+  ('00000000-0000-0000-0000-000000000000', '5a39e000-0000-4000-8000-0000000000b1', 'authenticated', 'authenticated', 'revisora@samgple.example', extensions.crypt('samgple-revisora-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '5a39e000-0000-4000-8000-0000000000b2', 'authenticated', 'authenticated', 'revisor@samgple.example', extensions.crypt('samgple-revisor-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '')
+on conflict (id) do nothing;
+insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
+select gen_random_uuid(), u.id, u.id::text, 'email', jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true), now(), now(), now()
+  from auth.users u
+ where u.id in ('5a39e000-0000-4000-8000-0000000000b1', '5a39e000-0000-4000-8000-0000000000b2')
+   and not exists (select 1 from auth.identities i where i.user_id = u.id);
+insert into public.reviewers (user_id, rol, nombre, categorias)
+values
+  ('5a39e000-0000-4000-8000-0000000000b1', 'revisor_samgple', 'Elena Marín', '{atencion,ventas,operaciones}'),
+  ('5a39e000-0000-4000-8000-0000000000b2', 'revisor_samgple', 'Diego Soto', '{atencion,ventas,marketing,direccion}'),
+  ('1de51e00-0000-4000-8000-0000000000a1', 'admin_samgple', 'Admin de prueba', '{ventas,atencion,marketing,operaciones,direccion,personalizado}')
+on conflict (user_id) do nothing;
+
+-- Tres empresas ficticias con 4 meses de compras, consumo, costes de IA, caducidades y alertas.
+-- Se insertan directamente (como superusuario) con la misma coherencia que el servicio: suma del libro = créditos de los lotes.
+-- Los costes de IA suponen CAMBIO_USD_POR_EUR = 1,08 (un crédito = 10.800 micros de dólar) para las alertas de margen.
+do $seed$
+declare
+  v_emp record; v_ag record; v_m int; v_ini timestamptz; v_fin timestamptz; v_lot uuid; v_dept uuid; v_pack record; v_compra timestamptz;
+  v_agentes uuid[]; v_i int;
+begin
+  perform setseed(0.37);
+  create temp table _seed_tasks (task_id uuid, company_id uuid, agent_id uuid, department_id uuid, lot_id uuid, tipo text, modelo text,
+    coste bigint, creditos int, creado_en timestamptz) on commit drop;
+
+  for v_emp in select * from (values
+    (1, 'a0000000-0000-4000-8000-000000000001'::uuid, 'Clínica Dental Sol, S.L.',        'pro',      3, 1.00),
+    (2, 'a0000000-0000-4000-8000-000000000002'::uuid, 'Taller Medina e Hijos',            'inicio',   3, 0.45),
+    (3, 'a0000000-0000-4000-8000-000000000003'::uuid, 'Estudio de Arquitectura Norte',    'business', 2, 1.60)
+  ) as t(n, id, nombre, pack, meses, escala)
+  loop
+    insert into public.companies (id, name) values (v_emp.id, v_emp.nombre);
+    v_dept := gen_random_uuid();
+    insert into public.departments (id, company_id, slug, name, tipo, orden) values (v_dept, v_emp.id, 'ventas', 'Ventas', 'ventas', 1);
+    v_agentes := array[gen_random_uuid(), gen_random_uuid(), gen_random_uuid()];
+    insert into public.agents (id, company_id, department_id, slug, name, role, creator_name, model, allowed_tools) values
+      (v_agentes[1], v_emp.id, v_dept, 'seguimiento-' || v_emp.n, (array['Marta Ibáñez','Rubén Ortega','Alma Cortés'])[v_emp.n], 'Seguimiento comercial', 'IDESIE', 'claude-haiku-5-5', '{}'),
+      (v_agentes[2], v_emp.id, v_dept, 'propuestas-' || v_emp.n, (array['Pablo Serrano','Inés Calvo','Joel Rivas'])[v_emp.n], 'Propuestas', 'IDESIE', 'claude-sonnet-5-5', '{}'),
+      (v_agentes[3], v_emp.id, v_dept, 'analisis-' || v_emp.n, (array['Nora Pastor','Gael Mora','Lola Vega'])[v_emp.n], 'Análisis', 'IDESIE', 'claude-sonnet-5-5', '{}');
+    select * into v_pack from public.credit_packs where id = v_emp.pack;
+
+    for v_m in reverse v_emp.meses..0 loop
+      v_ini := (date_trunc('month', now() at time zone 'Europe/Madrid') - make_interval(months => v_m)) at time zone 'Europe/Madrid';
+      v_fin := (date_trunc('month', now() at time zone 'Europe/Madrid') - make_interval(months => v_m - 1)) at time zone 'Europe/Madrid';
+      v_compra := v_ini + interval '1 minute';
+      v_lot := gen_random_uuid();
+      insert into public.purchases (company_id, pack_id, modalidad, importe_centimos, iva_centimos, estado, referencia_externa, creado_en)
+      values (v_emp.id, v_pack.id, 'unico', v_pack.precio_centimos, round(v_pack.precio_centimos * 0.21), 'pagada', format('seed:%s:%s', v_emp.n, v_m), v_compra);
+      insert into public.credit_lots (id, company_id, origen, pack_id, creditos_iniciales, creditos_restantes, caduca_en, creado_en, referencia_pago)
+      values (v_lot, v_emp.id, 'pack', v_pack.id, v_pack.creditos, v_pack.creditos, v_compra + interval '365 days', v_compra, format('seed:%s:%s', v_emp.n, v_m));
+      insert into public.credit_ledger (company_id, tipo, creditos, lot_id, concepto, creado_en)
+      values (v_emp.id, 'compra', v_pack.creditos, v_lot, 'compra_pack', v_compra);
+
+      -- Tareas del mes: agente 1 (Haiku) eficiente, agente 2 (Sonnet) normal, agente 3 (Sonnet) caro y con peor margen.
+      for v_i in 1..3 loop
+        insert into _seed_tasks
+        select gen_random_uuid(), v_emp.id, v_agentes[v_i], v_dept, v_lot, t.tipo,
+               case when t.tipo = 'experta' then 'claude-sonnet-5-5' when t.tipo = 'simple' then 'claude-haiku-5-5'
+                    when v_i = 1 then 'claude-haiku-5-5' else 'claude-sonnet-5-5' end,
+               (t.base * (array[0.8, 1.0, 1.65])[v_i] * (0.75 + 0.5 * random()))::bigint,
+               t.creditos,
+               (v_ini + interval '1 hour') + (least(v_fin, now()) - (v_ini + interval '1 hour')) * random()
+          from (values ('simple', 3000, 2, 40), ('estandar', 30000, 10, 14), ('experta', 220000, 50, 3)) as t(tipo, base, creditos, n),
+               generate_series(1, greatest(1, round(t.n * v_emp.escala * (1 + (3 - v_m) * 0.12) * (case when v_i = 1 then 1.4 else 1 end))::int)) g
+         where not (t.tipo = 'experta' and v_i = 1);
+      end loop;
+    end loop;
+
+    -- Coste interno y libro: una línea por tarea (el precio de cada tipo lo fija la tarifa: 2 / 10 / 50 créditos).
+    insert into public.task_costs (task_id, company_id, agent_id, modelo, tokens_entrada, tokens_salida, tokens_cache, coste_ia_usd_micros, creditos_cobrados, creado_en, tipo_tarea)
+    select task_id, company_id, agent_id, modelo, round(coste * 0.6), round(coste * 0.12), round(coste * 0.2), coste, creditos, creado_en, tipo
+      from _seed_tasks where company_id = v_emp.id;
+    insert into public.credit_ledger (company_id, tipo, creditos, lot_id, task_id, agent_id, department_id, concepto, creado_en)
+    select company_id, 'consumo', -creditos, lot_id, task_id, agent_id, department_id, 'tarea_' || tipo, creado_en
+      from _seed_tasks where company_id = v_emp.id;
+    -- Traspasos y correos del mes en curso (consumos fijos).
+    insert into public.credit_ledger (company_id, tipo, creditos, lot_id, agent_id, department_id, concepto, creado_en)
+    select v_emp.id, 'consumo', -1, (select id from public.credit_lots where company_id = v_emp.id order by creado_en desc limit 1), v_agentes[1], v_dept,
+           (array['traspaso', 'correo'])[1 + (g % 2)], now() - (g || ' hours')::interval
+      from generate_series(1, 24 * v_emp.n) g;
+  end loop;
+
+  -- Lo consumido sale de cada lote (el libro manda).
+  update public.credit_lots l set creditos_restantes = coalesce((
+    select sum(creditos) from public.credit_ledger x where x.lot_id = l.id), 0)
+   where company_id in ('a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000003');
+
+  -- Créditos vendidos que caducaron este mes: un regalo sin usar (Taller Medina) y una prueba a medias (Estudio Norte).
+  v_ini := date_trunc('month', now() at time zone 'Europe/Madrid') at time zone 'Europe/Madrid';
+  for v_emp in select * from (values
+    ('a0000000-0000-4000-8000-000000000002'::uuid, 'regalo', null, 400, 400, 'sin usar'),
+    ('a0000000-0000-4000-8000-000000000003'::uuid, 'prueba', 'prueba', 2000, 1100, 'a medias')
+  ) as t(id, origen, pack, iniciales, caducan, nota) loop
+    v_lot := gen_random_uuid();
+    insert into public.credit_lots (id, company_id, origen, pack_id, creditos_iniciales, creditos_restantes, caduca_en, creado_en)
+    values (v_lot, v_emp.id, v_emp.origen, v_emp.pack, v_emp.iniciales, 0, v_ini + interval '1 day', v_ini - interval '29 days');
+    insert into public.credit_ledger (company_id, tipo, creditos, lot_id, concepto, creado_en) values
+      (v_emp.id, 'compra', v_emp.iniciales, v_lot, case when v_emp.origen = 'prueba' then 'compra_prueba' else 'regalo' end, v_ini - interval '29 days'),
+      (v_emp.id, 'caducidad', -v_emp.caducan, v_lot, 'caducidad', v_ini + interval '1 day');
+    if v_emp.iniciales > v_emp.caducan then
+      insert into public.credit_ledger (company_id, tipo, creditos, lot_id, concepto, creado_en)
+      values (v_emp.id, 'consumo', -(v_emp.iniciales - v_emp.caducan), v_lot, 'tarea_estandar', v_ini - interval '10 days');
+    end if;
+  end loop;
+
+  -- Alertas internas: margen superado (misma regla que evaluarMargen: coste > 50 % de lo cobrado), límite de pasos y recargas fallidas.
+  insert into public.internal_alerts (tipo, company_id, agent_id, task_id, detalle, creado_en)
+  select 'margen_superado', company_id, agent_id, task_id,
+         jsonb_build_object('tipo_tarea', tipo_tarea, 'modelo', modelo, 'ratio', round(coste_ia_usd_micros::numeric / (creditos_cobrados * 10800), 3)), creado_en
+    from public.task_costs
+   where company_id in ('a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000003')
+     and coste_ia_usd_micros > creditos_cobrados * 10800 * 0.5;
+  insert into public.internal_alerts (tipo, company_id, agent_id, task_id, detalle, creado_en)
+  select 'limite_pasos', company_id, agent_id, task_id, jsonb_build_object('tipo_tarea', tipo_tarea, 'pasos', 12, 'maxPasos', 12), creado_en
+    from public.task_costs where tipo_tarea = 'experta' and random() < 0.12
+     and company_id in ('a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000003');
+  insert into public.internal_alerts (tipo, company_id, detalle, creado_en) values
+    ('recarga_fallida', 'a0000000-0000-4000-8000-000000000001', '{"pack": "pro", "motivo": "pago_rechazado"}', now() - interval '2 days'),
+    ('recarga_fallida', 'a0000000-0000-4000-8000-000000000003', '{"pack": "business", "motivo": "tarjeta_caducada"}', now() - interval '9 days');
+end
+$seed$;

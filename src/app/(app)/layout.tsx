@@ -1,3 +1,4 @@
+import { CreditosProvider } from "@/components/creditos/CreditosProvider";
 import { ApprovalsProvider } from "@/components/ApprovalsProvider";
 import { Background } from "@/components/Background";
 import { ContactDialog } from "@/components/emails/ContactDialog";
@@ -9,6 +10,7 @@ import { SimulationProvider } from "@/components/SimulationProvider";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
+    <CreditosProvider>
     <ApprovalsProvider>
       <InboxProvider>
       <SimulationProvider>
@@ -33,5 +35,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </SimulationProvider>
       </InboxProvider>
     </ApprovalsProvider>
+    </CreditosProvider>
   );
 }

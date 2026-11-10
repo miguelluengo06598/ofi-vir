@@ -233,7 +233,7 @@ const senderFalso: EmailSender = { async send(e) { enviados.push(e); return { id
     const { count: ps } = await db.from("task_steps").select("id", { count: "exact", head: true }).in("task_id", tareas);
     ok(ts === 0 && ps === 0, "las tareas y todos sus pasos se borran junto al contacto");
   } else {
-    console.log("\n  Datos conservados: abre Aprobaciones en http://localhost:3000/aprobaciones para ver el borrador pendiente.");
+    console.log(`\n  Datos conservados: abre Aprobaciones en ${process.env.APP_URL?.replace(/\/+$/, "") || "http://localhost:3000"}/aprobaciones para ver el borrador pendiente.`);
   }
   console.log(`\n${checks} comprobaciones correctas.`);
 })().catch((e) => {

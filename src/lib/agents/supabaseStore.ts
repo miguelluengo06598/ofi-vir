@@ -6,7 +6,7 @@ import type {
 } from "./store.ts";
 
 const AGENT_COLS = "id, slug, name, role, department_id, model, instructions, allowed_tools, departments(name)";
-const TASK_COLS = "id, agent_id, title, status, model, contact_id, source_email_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_eur, steps, review_reason, suspicious, memory_input_tokens, memory_output_tokens, extra_cost_eur";
+const TASK_COLS = "id, agent_id, title, status, model, contact_id, source_email_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_eur, steps, review_reason, suspicious, memory_input_tokens, memory_output_tokens, extra_cost_eur, instruccion_entrada, handoff_id";
 const num = (v: unknown) => Number(v ?? 0);
 const toLearned = (r: Record<string, unknown>): LearnedNode => ({
   id: r.id as string, type: r.node_type as string, title: r.title as string, content: r.content as string, confidence: num(r.confidence), createdAt: r.created_at as string,
@@ -68,10 +68,10 @@ export class SupabaseAgentStore implements AgentStore {
     return (data ?? []).map((d) => ({ id: d.id as string, name: d.name as string, slug: d.slug as string }));
   }
 
-  async createTask(companyId: string, t: { agentId: string; title: string; model: string; contactId?: string | null }) {
+  async createTask(companyId: string, t: { agentId: string; title: string; model: string; contactId?: string | null; esSimulacion?: boolean }) {
     const { data, error } = await this.db
       .from("tasks")
-      .insert({ company_id: companyId, agent_id: t.agentId, title: t.title, model: t.model, status: "running", contact_id: t.contactId ?? null })
+      .insert({ company_id: companyId, agent_id: t.agentId, title: t.title, model: t.model, status: "running", contact_id: t.contactId ?? null, es_simulacion: t.esSimulacion ?? false })
       .select("id")
       .single();
     if (error || !data) throw new Error("No se pudo crear la tarea.");
@@ -87,6 +87,7 @@ export class SupabaseAgentStore implements AgentStore {
       suspicious: Boolean(r.suspicious),
       memoryUsage: { inputTokens: num(r.memory_input_tokens), outputTokens: num(r.memory_output_tokens) },
       extraCostEur: num(r.extra_cost_eur),
+      instruccionEntrada: (r.instruccion_entrada as string | null) ?? null, handoffId: (r.handoff_id as string | null) ?? null,
     };
   }
 
@@ -138,6 +139,42 @@ export class SupabaseAgentStore implements AgentStore {
     const { data, error } = await this.db.from("tasks").update(row).eq("company_id", companyId).eq("id", taskId).select("cost_eur").single();
     if (error || !data) throw new Error("No se pudo actualizar la tarea.");
     return { costEur: num(data.cost_eur) };
+  }
+
+  async registrarInstrucciones(companyId: string, taskId: string, r: { hash: string; agentVersion: number; recortes: { parte: string; antes: number; despues: number }[] }) {
+    const { error } = await this.db.from("tasks").update({ instrucciones_hash: r.hash, agent_version: r.agentVersion, instrucciones_recortes: r.recortes }).eq("company_id", companyId).eq("id", taskId);
+    if (error) throw new Error("No se pudo registrar las instrucciones de la tarea.");
+  }
+
+  async actualizarTraspaso(companyId: string, handoffId: string, status: "received" | "in_progress" | "done" | "rejected") {
+    const { error } = await this.db.from("handoffs").update({ status }).eq("company_id", companyId).eq("id", handoffId);
+    if (error) throw new Error("No se pudo actualizar el traspaso.");
+  }
+
+  async listarTareasDeTraspasoPendientes(o: { companyId?: string; limite?: number } = {}) {
+    const { data, error } = await this.db.rpc("tareas_de_traspaso_pendientes", { p_limite: o.limite ?? 50, p_company_id: o.companyId ?? null });
+    if (error) throw new Error("No se pudieron leer las tareas de traspaso.");
+    return ((data ?? []) as { company_id: string; task_id: string }[]).map((r) => ({ companyId: r.company_id, taskId: r.task_id }));
+  }
+
+  async aplazarTarea(companyId: string, taskId: string, a: { hasta: Date; instruccion: string | null }) {
+    const { error } = await this.db.from("tasks").update({ status: "scheduled", aplazada_hasta: a.hasta.toISOString(), instruccion_aplazada: a.instruccion }).eq("company_id", companyId).eq("id", taskId).eq("status", "running");
+    if (error) throw new Error("No se pudo aplazar la tarea.");
+  }
+
+  async listarAplazadasVencidas(ahora: Date, o: { companyId?: string; limite?: number } = {}) {
+    let q = this.db.from("tasks").select("id, company_id").eq("status", "scheduled").lte("aplazada_hasta", ahora.toISOString()).order("aplazada_hasta").limit(o.limite ?? 100);
+    if (o.companyId) q = q.eq("company_id", o.companyId);
+    const { data, error } = await q;
+    if (error) throw new Error("No se pudieron leer las tareas aplazadas.");
+    return (data ?? []).map((r) => ({ companyId: r.company_id as string, taskId: r.id as string }));
+  }
+
+  async reanudarAplazada(companyId: string, taskId: string, ahora: Date) {
+    const { data, error } = await this.db.rpc("tarea_reanudar_aplazada", { p_company_id: companyId, p_task_id: taskId, p_ahora: ahora.toISOString() });
+    if (error) throw new Error("No se pudo reanudar la tarea aplazada.");
+    const fila = Array.isArray(data) ? data[0] : data;
+    return fila ? { instruccion: ((fila as { instruccion: string | null }).instruccion ?? null) } : null;
   }
 
   async claimTask(companyId: string, taskId: string, instruccion: string) {

@@ -17,7 +17,6 @@ import { buildOffice, hiredAgentId, type HiredAgent } from "@/data/departments";
 import type { EmailEdit } from "@/data/emails";
 import { expertFor, initialConsultations, type Consultation } from "@/data/experts";
 import { initialConversations, touchConversation, type Conversation } from "@/data/messages";
-import { initialBalance, initialMonthlyLimitEur } from "@/data/wallet";
 
 export type Decision = { approvalId: string; decision: "approved" | "rejected" };
 
@@ -39,12 +38,6 @@ type ApprovalsContextValue = {
   pendingCount: number;
   /** Estado de la oficina con aprobaciones, contrataciones y consultas aplicadas. */
   office: OfficeState;
-  /** Saldo de créditos. */
-  balance: number;
-  /** Límite de gasto mensual, en euros. */
-  limitEur: number;
-  topUp: (credits: number) => void;
-  setLimit: (eur: number) => void;
   /** Agentes del marketplace contratados. */
   hired: HiredAgent[];
   /** Id del agente recién contratado cuya llegada a la oficina aún se está animando. */
@@ -81,8 +74,6 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
   const [sendErrors, setSendErrors] = useState<Record<string, string>>({});
   const [contactTarget, setContactTarget] = useState<string | null>(null);
   const [hired, setHired] = useState<HiredAgent[]>([]);
-  const [balance, setBalance] = useState(initialBalance);
-  const [limitEur, setLimitEur] = useState(initialMonthlyLimitEur);
   const [arrival, setArrival] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
   const [consultations, setConsultations] = useState<Consultation[]>(initialConsultations);
@@ -142,8 +133,6 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
     setArrival(hiredAgentId(marketId));
   }, []);
   const finishArrival = useCallback(() => setArrival(null), []);
-  const topUp = useCallback((credits: number) => setBalance((b) => b + credits), []);
-  const setLimit = useCallback((eur: number) => setLimitEur(eur), []);
 
   const openConsult = useCallback((agentId: string) => setConsultTarget(agentId), []);
   const closeConsult = useCallback(() => setConsultTarget(null), []);
@@ -158,7 +147,6 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
         ...c,
         { id, agentId, origin: "company", problem, price: expert.price, estimatedHours: expert.avgResponseHours },
       ]);
-      setBalance((b) => b - expert.price);
       const time = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
       setConversations((cs) =>
         touchConversation(cs, agentId, (c) => ({
@@ -191,10 +179,6 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
       closeContact,
       pendingCount: approvals.filter((a) => !resolved.has(a.id)).length,
       office,
-      balance,
-      limitEur,
-      topUp,
-      setLimit,
       hired,
       arrival,
       hire,
@@ -213,7 +197,7 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
       consult,
     }),
     [
-      decisions, resolved, edits, emailEdits, editEmail, contactTarget, openContact, closeContact, office, balance, limitEur, topUp, setLimit, hired, arrival, hire,
+      decisions, resolved, edits, emailEdits, editEmail, contactTarget, openContact, closeContact, office, hired, arrival, hire,
       finishArrival, decide, sending, sendErrors, approveEmail, edit, conversations, consultations, consultTarget, openConsult, closeConsult, consult,
     ],
   );

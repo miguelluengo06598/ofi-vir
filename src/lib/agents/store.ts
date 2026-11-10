@@ -16,7 +16,8 @@ export type AgentInfo = {
   allowedTools: string[];
 };
 
-export type TaskStatus = "running" | "expert" | "approval" | "done" | "failed" | "review";
+/** `scheduled` = aplazada: llegó fuera de horario y se procesará al abrir (reglas del agente). */
+export type TaskStatus = "running" | "expert" | "approval" | "done" | "failed" | "review" | "scheduled";
 
 export type TaskInfo = {
   id: string;
@@ -35,6 +36,10 @@ export type TaskInfo = {
   /** Tokens y coste (€) del paso de memoria al terminar, ya incluidos en `costEur`. */
   memoryUsage: { inputTokens: number; outputTokens: number };
   extraCostEur: number;
+  /** Lo que recibe un agente destino como entrada (la ficha del traspaso). null en el resto de tareas. */
+  instruccionEntrada: string | null;
+  /** Traspaso que originó la tarea (si nació de uno). */
+  handoffId: string | null;
 };
 
 export type StepKind = "instruccion" | "respuesta" | "herramienta" | "memoria" | "fin";
@@ -86,11 +91,13 @@ export interface AgentStore {
   getPricing(model: string): Promise<Pricing | null>;
   listDepartments(companyId: string): Promise<{ id: string; name: string; slug: string }[]>;
 
-  createTask(companyId: string, t: { agentId: string; title: string; model: string; contactId?: string | null }): Promise<string>;
+  createTask(companyId: string, t: { agentId: string; title: string; model: string; contactId?: string | null; esSimulacion?: boolean }): Promise<string>;
   getTask(companyId: string, taskId: string): Promise<TaskInfo | null>;
   getSourceEmail(companyId: string, emailId: string): Promise<SourceEmail | null>;
   /** Vincula la tarea a un contacto (si aún no tiene): al borrar el contacto por RGPD se borra la tarea con sus pasos. */
   setTaskContact(companyId: string, taskId: string, contactId: string): Promise<void>;
+  /** Anota con qué instrucciones y versión del agente se ejecutó la tarea (hash de las instrucciones y partes recortadas). */
+  registrarInstrucciones(companyId: string, taskId: string, r: { hash: string; agentVersion: number; recortes: { parte: string; antes: number; despues: number }[] }): Promise<void>;
   /** Actualiza la tarea y devuelve su coste total en euros, calculado por la base con la tarifa del modelo. */
   updateTask(companyId: string, taskId: string, patch: TaskPatch): Promise<{ costEur: number }>;
   /**
@@ -98,6 +105,18 @@ export interface AgentStore {
    * ejecución lo consigue. false si la tarea ya estaba en marcha o terminada.
    */
   claimTask(companyId: string, taskId: string, instruccion: string): Promise<boolean>;
+
+  /** Aplaza la tarea hasta `hasta` (fuera de horario con «no responder»): guarda la instrucción (null si la tarea nació de un correo, que ya está guardado) para procesarla al abrir. */
+  aplazarTarea(companyId: string, taskId: string, a: { hasta: Date; instruccion: string | null }): Promise<void>;
+  /** Tareas aplazadas cuya hora ya llegó (de todas las empresas, o solo de una). */
+  listarAplazadasVencidas(ahora: Date, o?: { companyId?: string; limite?: number }): Promise<{ companyId: string; taskId: string }[]>;
+  /** Reanuda una aplazada (vuelve a «en marcha»). Atómico: solo un proceso la consigue; null si ya no toca o no existe. Devuelve la instrucción guardada. */
+  reanudarAplazada(companyId: string, taskId: string, ahora: Date): Promise<{ instruccion: string | null } | null>;
+
+  /** Estado de un traspaso según avanza la tarea del agente destino. */
+  actualizarTraspaso(companyId: string, handoffId: string, status: "received" | "in_progress" | "done" | "rejected"): Promise<void>;
+  /** Tareas nacidas de un traspaso que aún no se han ejecutado. */
+  listarTareasDeTraspasoPendientes(o?: { companyId?: string; limite?: number }): Promise<{ companyId: string; taskId: string }[]>;
 
   addStep(companyId: string, taskId: string, position: number, step: NewStep): Promise<void>;
   listSteps(companyId: string, taskId: string): Promise<TaskStep[]>;

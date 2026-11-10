@@ -10,7 +10,7 @@ import { SupabaseEmailStore } from "../../src/lib/email/supabaseStore.ts";
 import { admin, COMPANY_A, createUser, RUN } from "./entorno.ts";
 import { borrarAgente, crearAgente } from "./datos.ts";
 
-const BASE = process.env.SEC_BASE_URL ?? "http://localhost:3000";
+const BASE = process.env.SEC_BASE_URL ?? process.env.APP_URL ?? "http://localhost:3000";
 const alcanzable = await fetch(`${BASE}/api/webhooks/resend`, { method: "GET", signal: AbortSignal.timeout(60_000) }).then(() => true, () => false);
 const skip = alcanzable ? false : `No hay servidor en ${BASE}: arranca \`npm run dev\` para probar los webhooks (SEC_BASE_URL cambia la dirección).`;
 

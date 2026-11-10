@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { normalizeKey, textScore } from "./text.ts";
 import type {
-  EdgeKind, ErasureCounts, MemoryStore, Neighbor, NewContact, NewNode, NodeType, SearchHit,
+  EdgeKind, ErasureCounts, MemoryStore, Neighbor, NewContact, NewKnowledgeNode, NewNode, NodeType, SearchHit, StoredNodeType,
   StoredContact, StoredEdge, StoredEmail, StoredNode,
 } from "./store.ts";
 
@@ -15,7 +15,7 @@ const toContact = (c: Record<string, unknown>): StoredContact => ({
   jobTitle: (c.job_title as string | null) ?? "",
 });
 const toVector = (v: number[]) => `[${v.join(",")}]`;
-const NODE_COLS = "id, company_id, contact_id, node_type, title, content, confidence, external, source_task_id, created_by_agent_id, created_at";
+const NODE_COLS = "id, company_id, contact_id, node_type, title, content, confidence, external, source_task_id, knowledge_id, ambito_agent_id, created_by_agent_id, created_at";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Escapa % _ \ para usar un texto como patrón exacto de ilike. */
 const likeExact = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -49,12 +49,14 @@ export class SupabaseMemoryStore implements MemoryStore {
       id: r.id as string,
       companyId: r.company_id as string,
       contactId: (r.contact_id as string | null) ?? null,
-      type: r.node_type as NodeType,
+      type: r.node_type as StoredNodeType,
       title: r.title as string,
       content: r.content as string,
       confidence: Number(r.confidence ?? 1),
       external: Boolean(r.external),
       sourceTaskId: (r.source_task_id as string | null) ?? null,
+      knowledgeId: (r.knowledge_id as string | null) ?? null,
+      ambitoAgentId: (r.ambito_agent_id as string | null) ?? null,
       agentSlug: r.created_by_agent_id ? (slugs.get(r.created_by_agent_id as string) ?? null) : null,
       createdAt: r.created_at as string,
     };
@@ -88,12 +90,80 @@ export class SupabaseMemoryStore implements MemoryStore {
       match_count: limit,
     });
     if (error) throw new Error("No se pudo buscar en la memoria.");
-    return (data ?? []).map((r: { id: string; title: string; node_type: NodeType; similarity: number }) => ({
+    return (data ?? []).map((r: { id: string; title: string; node_type: StoredNodeType; similarity: number }) => ({
       id: r.id,
       title: r.title,
       type: r.node_type,
       similarity: r.similarity,
     }));
+  }
+
+  async searchKnowledgeByEmbedding(companyId: string, agentId: string, embedding: number[], limit: number): Promise<SearchHit[]> {
+    if (!UUID.test(agentId)) return [];
+    const { data, error } = await this.db.rpc("search_knowledge_nodes", {
+      p_company_id: companyId,
+      p_agent_id: agentId,
+      query_embedding: toVector(embedding),
+      match_count: limit,
+    });
+    if (error) throw new Error("No se pudo buscar en el conocimiento.");
+    return (data ?? []).map((r: { id: string; title: string; node_type: StoredNodeType; similarity: number }) => ({ id: r.id, title: r.title, type: r.node_type, similarity: r.similarity }));
+  }
+
+  async searchKnowledgeByText(companyId: string, agentId: string, terms: string[], limit: number): Promise<SearchHit[]> {
+    if (!UUID.test(agentId)) return [];
+    const safe = terms.filter((t) => /^[a-z0-9]+$/.test(t));
+    if (safe.length === 0) return [];
+    const filter = safe.flatMap((t) => [`title.ilike.%${t}%`, `content.ilike.%${t}%`]).join(",");
+    // Solo fuentes «listas»; el ámbito (oficina o este agente) se filtra aquí y se vuelve a comprobar abajo.
+    const { data: ready, error: e1 } = await this.db.from("agent_knowledge").select("id").eq("company_id", companyId).eq("estado", "listo");
+    if (e1) throw new Error("No se pudo buscar en el conocimiento.");
+    const ids = (ready ?? []).map((k) => k.id as string);
+    if (ids.length === 0) return [];
+    const { data, error } = await this.db
+      .from("memory_nodes")
+      .select("id, title, content, node_type, ambito_agent_id")
+      .eq("company_id", companyId)
+      .eq("node_type", "conocimiento")
+      .in("knowledge_id", ids)
+      .or(`ambito_agent_id.is.null,ambito_agent_id.eq.${agentId}`)
+      .or(filter)
+      .limit(200);
+    if (error) throw new Error("No se pudo buscar en el conocimiento.");
+    return (data ?? [])
+      .map((r) => ({ id: r.id as string, title: r.title as string, type: r.node_type as StoredNodeType, similarity: textScore(safe, r.title as string, r.content as string) }))
+      .filter((h) => h.similarity > 0)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, limit);
+  }
+
+  async insertKnowledgeNodes(companyId: string, nodes: NewKnowledgeNode[]): Promise<number> {
+    if (nodes.length === 0) return 0;
+    const { error } = await this.db.from("memory_nodes").insert(
+      nodes.map((n) => ({
+        company_id: companyId,
+        contact_id: null,
+        node_type: "conocimiento",
+        title: n.title,
+        content: n.content,
+        embedding: toVector(n.embedding),
+        created_by_user_id: n.createdByUserId,
+        knowledge_id: n.knowledgeId,
+        ambito_agent_id: n.ambitoAgentId,
+        fragmento_n: n.fragmentoN,
+        external: true,
+        confidence: 1,
+      })),
+    );
+    // 23503 = la fuente ya no existe (se borró mientras se procesaba).
+    if (error) throw new Error(error.code === "23503" ? "FUENTE_BORRADA" : "No se pudieron guardar los fragmentos.");
+    return nodes.length;
+  }
+
+  async deleteKnowledgeNodes(companyId: string, knowledgeId: string): Promise<number> {
+    const { data, error } = await this.db.from("memory_nodes").delete().eq("company_id", companyId).eq("knowledge_id", knowledgeId).select("id");
+    if (error) throw new Error("No se pudieron borrar los fragmentos.");
+    return (data ?? []).length;
   }
 
   async listContacts(companyId: string): Promise<StoredContact[]> {
@@ -109,6 +179,8 @@ export class SupabaseMemoryStore implements MemoryStore {
         .from("memory_nodes")
         .select(NODE_COLS)
         .eq("company_id", companyId)
+        // El conocimiento (miles de fragmentos de webs y documentos) no es parte del grafo de la oficina.
+        .neq("node_type", "conocimiento")
         .limit(LIMIT),
     ]);
     if (error) throw new Error("No se pudieron leer los nodos de memoria.");
@@ -200,10 +272,10 @@ export class SupabaseMemoryStore implements MemoryStore {
     const safe = terms.filter((t) => /^[a-z0-9]+$/.test(t));
     if (safe.length === 0) return [];
     const filter = safe.flatMap((t) => [`title.ilike.%${t}%`, `content.ilike.%${t}%`]).join(",");
-    const { data, error } = await this.db.from("memory_nodes").select("id, title, content, node_type").eq("company_id", companyId).or(filter).limit(200);
+    const { data, error } = await this.db.from("memory_nodes").select("id, title, content, node_type").eq("company_id", companyId).neq("node_type", "conocimiento").or(filter).limit(200);
     if (error) throw new Error("No se pudo buscar en la memoria.");
     return (data ?? [])
-      .map((r) => ({ id: r.id as string, title: r.title as string, type: r.node_type as NodeType, similarity: textScore(safe, r.title as string, r.content as string) }))
+      .map((r) => ({ id: r.id as string, title: r.title as string, type: r.node_type as StoredNodeType, similarity: textScore(safe, r.title as string, r.content as string) }))
       .filter((h) => h.similarity > 0)
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);

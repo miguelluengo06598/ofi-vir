@@ -6,6 +6,9 @@ import { aprendizajeDeTarea, lanzarTareaDePrueba, verTarea, type VistaTarea } fr
 import type { LearnedNode } from "@/lib/agents/store";
 import { Aprendido } from "./Aprendido";
 import { PillButton } from "@/components/glass";
+import { ConfirmarGasto } from "@/components/creditos/ConfirmarGasto";
+import { useCreditos } from "@/components/creditos/CreditosProvider";
+import { creditosParaTarea } from "@/lib/creditos/tarifas";
 
 const eur = (n: number) => n.toLocaleString("es-ES", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 const tokens = (n: number) => n.toLocaleString("es-ES");
@@ -34,6 +37,8 @@ function etiqueta(kind: string, tool: string | null) {
  */
 export function TareaDePrueba({ agentSlug, agentName }: { agentSlug: string; agentName: string }) {
   const [launching, setLaunching] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
+  const saldo = useCreditos().resumen?.saldo.disponible ?? null;
   const [message, setMessage] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [view, setView] = useState<VistaTarea>(null);
@@ -91,13 +96,23 @@ export function TareaDePrueba({ agentSlug, agentName }: { agentSlug: string; age
 
   return (
     <div className="flex flex-col gap-3">
-      <PillButton icon={launching || running ? Loader2 : FlaskConical} disabled={launching || running} onClick={launch} className="w-full justify-center">
+      <PillButton icon={launching || running ? Loader2 : FlaskConical} disabled={launching || running} onClick={() => setConfirmando(true)} className="w-full justify-center">
         {running ? "El agente está trabajando…" : "Lanzar tarea de prueba"}
       </PillButton>
       <p className="text-tiny text-ink-3">
         Le pasa un lead ficticio y gasta tokens reales de tu clave de Anthropic (también el paso final con Haiku que guarda lo aprendido). Límite por tarea: {limits?.maxPasos ?? 8} pasos y{" "}
         {(limits?.maxCosteEur ?? 0.2).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €.
       </p>
+      <ConfirmarGasto
+        abierto={confirmando}
+        titulo="Lanzar tarea de prueba"
+        creditos={creditosParaTarea("estandar")}
+        saldo={saldo}
+        nota="Tarifa de una tarea estándar. Mientras el motor no esté conectado a los créditos, esta tarea de prueba todavía no los descuenta."
+        etiquetaConfirmar="Lanzar tarea"
+        onCancelar={() => setConfirmando(false)}
+        onConfirmar={() => { setConfirmando(false); void launch(); }}
+      />
       {message && (
         <p role="status" className="text-small text-ink-2">
           {message}

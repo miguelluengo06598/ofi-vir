@@ -7,6 +7,7 @@ import { currentUser, isActive, topNav } from "@/data/navigation";
 import { Avatar } from "./Avatar";
 import { GlassPanel } from "./GlassPanel";
 import { PillButton } from "./PillButton";
+import { SaldoPill } from "@/components/creditos/SaldoPill";
 import { SceneMenu } from "./SceneMenu";
 
 export function TopBar() {
@@ -48,6 +49,7 @@ export function TopBar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <SaldoPill />
           {/* En móvil Mensajes ya está en el Dock. */}
           <span className="hidden sm:block">
             <PillButton icon={MessageSquare} aria-label="Mensajes" onClick={() => router.push("/mensajes")} />

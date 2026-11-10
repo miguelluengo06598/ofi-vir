@@ -1,5 +1,5 @@
-import { WalletView } from "@/components/wallet/WalletView";
+import { CreditosView } from "@/components/creditos/CreditosView";
 
 export default function Page() {
-  return <WalletView />;
+  return <CreditosView />;
 }

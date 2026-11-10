@@ -1,6 +1,7 @@
 import { Avatar, GlassCard, StatusBadge } from "@/components/glass";
 import { Rating } from "@/components/marketplace/parts";
 import type { OfficeAgent } from "@/data/departments";
+import { useConsumoDeAgente } from "@/components/creditos/useConsumoDeAgente";
 import { getAgentStats } from "@/data/agentStats";
 import { fmtNumber } from "@/lib/format";
 
@@ -8,6 +9,7 @@ type Props = { agent: OfficeAgent; delay: number; onOpen: () => void };
 
 export function AgentCard({ agent, delay, onOpen }: Props) {
   const stats = getAgentStats(agent.id);
+  const creditsMonth = useConsumoDeAgente(agent.name);
   return (
     <GlassCard
       department={agent.departmentId}
@@ -42,7 +44,7 @@ export function AgentCard({ agent, delay, onOpen }: Props) {
           <dt className="text-tiny text-ink-2">Valoración</dt>
         </div>
         <div>
-          <dd className="text-body font-semibold">{fmtNumber(stats.creditsMonth)}</dd>
+          <dd className="text-body font-semibold">{creditsMonth === null ? "—" : fmtNumber(creditsMonth)}</dd>
           <dt className="text-tiny text-ink-2">Créditos este mes</dt>
         </div>
       </dl>

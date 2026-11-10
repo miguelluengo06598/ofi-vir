@@ -7,6 +7,7 @@ import { useApprovals } from "@/components/ApprovalsProvider";
 import type { OfficeAgent } from "@/data/departments";
 import type { Approval } from "@/data/approvals";
 import { EmailDraft } from "@/components/emails/EmailDraft";
+import { RecordarCorreccion } from "@/components/agents/RecordarCorreccion";
 
 export function ApprovalCard({ approval, agent, delay }: { approval: Approval; agent: OfficeAgent; delay: number }) {
   const { edits, emailEdits, decide, edit, editEmail, sending, sendErrors, approveEmail } = useApprovals();
@@ -140,6 +141,18 @@ export function ApprovalCard({ approval, agent, delay }: { approval: Approval; a
           <p className="text-small whitespace-pre-line">{body}</p>
         )}
       </div>
+      )}
+
+      {/* Si la persona ha cambiado lo que redactó el agente, puede pedirle que lo recuerde para la próxima. */}
+      {edited && !editing && (
+        <RecordarCorreccion
+          key={body}
+          agentSlug={agent.id}
+          agentName={agent.name.split(" ")[0]}
+          contexto={`${approval.title}. ${approval.detail}`}
+          original={email ? email.body : preview.body}
+          corregida={body}
+        />
       )}
     </GlassCard>
   );

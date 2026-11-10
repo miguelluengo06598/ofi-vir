@@ -4,12 +4,22 @@ export type LlmTool = { name: string; description: string; input_schema: Record<
 export type LlmBlock = { type: string; [key: string]: unknown };
 export type LlmMessage = { role: "user" | "assistant"; content: string | LlmBlock[] };
 
+/** Bloque del mensaje de sistema. `cache_control` marca un punto de caché: se cachea todo el prefijo hasta ese bloque. */
+export type LlmSystemBlock = { type: "text"; text: string; cache_control?: { type: "ephemeral"; ttl?: "5m" | "1h" } };
+
 export type LlmRequest = {
   model: string;
   maxTokens: number;
   /** Instrucciones fijas del agente (se cachean: salen más baratas a partir de la segunda llamada). */
   system: string;
+  /**
+   * Mismo mensaje de sistema, en bloques con puntos de caché (`cache_control`). Si está presente, el cliente real envía
+   * estos bloques en vez de `system`; `system` conserva el texto plano (registro, pruebas, modelos guionizados).
+   */
+  systemBlocks?: LlmSystemBlock[];
   tools: LlmTool[];
+  /** Obliga al modelo a llamar a una herramienta concreta (salida estructurada). */
+  toolChoice?: { type: "tool"; name: string };
   messages: LlmMessage[];
 };
 

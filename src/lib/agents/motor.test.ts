@@ -39,6 +39,20 @@ const run = async (s: ReturnType<typeof setup>, instruccion = "Ha llegado un lea
 };
 
 describe("motor de agentes", () => {
+  it("una oficina no activa (pausada, sin saldo, pendiente de borrado) no ejecuta agentes: no llama al modelo", async () => {
+    const s = setup([fin("no debería llegar")], { oficinaActiva: async () => false });
+    const { id, r } = await run(s);
+    assert.equal(r.estado, "review");
+    assert.match(r.motivo ?? "", /oficina no está activa/);
+    assert.equal(s.llm.requests.length, 0, "ninguna llamada al modelo");
+    assert.equal((await s.store.getTask(C, id))!.status, "review");
+  });
+
+  it("una oficina activa ejecuta con normalidad", async () => {
+    const s = setup([fin("hecho")], { oficinaActiva: async () => true });
+    assert.equal((await run(s)).r.estado, "done");
+  });
+
   it("flujo completo: busca en memoria, guarda, redacta borrador (sin enviar) y termina", async () => {
     const s = setup([
       llamada("t1", "buscar_en_memoria", { consulta: "Laura Clínica Sol" }),

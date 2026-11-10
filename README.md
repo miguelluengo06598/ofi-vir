@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Oficina Virtual IA
 
-## Getting Started
+Plataforma web donde una empresa tiene su **oficina virtual** con **agentes de IA** organizados por departamentos (Ventas, Atención al cliente, Marketing, Operaciones · CRM, Dirección). Los agentes trabajan con la API de Claude, tienen memoria propia (Supabase + pgvector), envían y reciben correo con Resend y se pagan con créditos.
 
-First, run the development server:
+El contexto completo (arquitectura, modelo de créditos, certificación de agentes, reglas de seguridad y estilo visual) está en **[CLAUDE.md](CLAUDE.md)**. El modelo de negocio, en [`docs/`](docs/).
+
+## Stack
+
+Next.js (App Router) · React · TypeScript · Tailwind CSS · Framer Motion · Supabase (PostgreSQL, Auth, Storage, Vault, pgvector) · Claude API · Voyage (embeddings) · Resend.
+
+## Requisitos
+
+- Node.js 22 o superior (los scripts usan `node --env-file` y ejecutan TypeScript directamente).
+- Docker en marcha y la [CLI de Supabase](https://supabase.com/docs/guides/local-development).
+- Opcional: claves de Anthropic, Voyage y Resend para probar agentes, memoria semántica y correo de verdad.
+
+## Arrancar en local
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci                              # instala dependencias
+supabase start                      # Supabase en Docker (API en http://127.0.0.1:55421)
+cp .env.example .env.local          # y rellena los valores (ver abajo)
+npm run db:reset                    # migraciones + semilla + plantillas de agentes certificadas de prueba
+npm run dev                         # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Para `.env.local`, `supabase status -o env` da la URL y las claves de Supabase local. Cada variable está explicada en [`.env.example`](.env.example) (obligatoria u opcional, servidor o navegador y de dónde sacarla). **Nunca subas `.env.local` ni pongas un secreto en una variable `NEXT_PUBLIC_`.**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Usuario de la semilla (solo local): `marcos@hogarmediterraneo.example`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+| Script | Qué hace |
+|---|---|
+| `npm run dev` / `build` / `start` | Servidor de desarrollo, compilación de producción y servidor de producción. |
+| `npm run lint` | ESLint. |
+| `npm test` | Pruebas unitarias (`src/lib/*/*.test.ts`). **No necesitan base de datos.** |
+| `npm run test:db` | Pruebas SQL (pgTAP) de `supabase/tests/`. Necesita Supabase local. |
+| `npm run test:creditos`, `test:traspasos`, `test:simulador`, `test:certificacion`, `test:reglas`, `test:conexiones`, `test:admin`, `test:panel`, `test:ciclo` | Pruebas de integración contra **Supabase local** (leen `.env.local`; se niegan a correr contra otra base). |
+| `npm run test:seguridad` | Ataques reales contra la base local y la app: necesita Supabase local **y** `npm run dev` en marcha. |
+| `npm run db:reset` | `supabase db reset` + sincroniza plantillas con datos de prueba (solo base local). |
+| `npm run plantillas:sync` | Copia las plantillas de agentes de `src/lib/agentes/plantillas/` a la base. |
+| `npm run cron -- <tarea\|todas> [--ahora=ISO]` | Ejecuta a mano las tareas periódicas (créditos, rutinas, traspasos…). |
+| `npm run prueba:*` | Demostraciones de punta a punta contra la base local (`lucia`, `asistente`, `conocimiento`, `conexiones`, `traspasos`, `simulador`, `certificacion`). |
+| `npm run certificacion:cambio-modelo -- --modelo=<id>` | Repite el examen técnico de los agentes activos con otro modelo. |
+| `npm run dev:all` | Arranca Supabase y la app juntos. |
 
-To learn more about Next.js, take a look at the following resources:
+## Despliegue
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Guía paso a paso: [`docs/despliegue-produccion.md`](docs/despliegue-produccion.md). Resumen: Vercel (app y crons de `vercel.json`) + un proyecto de Supabase en la nube con las migraciones de `supabase/migrations/` (`supabase db push`). La semilla (`supabase/seed.sql`) es **solo para local**: no la cargues en la nube. En Vercel define las variables de `.env.example` marcadas como obligatorias y **ninguna** de las marcadas «SOLO LOCAL».

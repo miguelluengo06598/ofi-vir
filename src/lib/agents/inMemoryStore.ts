@@ -12,6 +12,7 @@ export class InMemoryAgentStore implements AgentStore {
   pricing = new Map<string, Pricing>();
   tasks = new Map<string, TaskInfo & { companyId: string }>();
   steps = new Map<string, TaskStep[]>();
+  instrucciones = new Map<string, { hash: string; agentVersion: number; recortes: { parte: string; antes: number; despues: number }[] }>();
   emails = new Map<string, SourceEmail>();
   drafts: { companyId: string; agentId: string; contactId: string; subject: string; body: string; approvalId: string }[] = [];
   handoffs: { companyId: string; fromAgentId: string; toAgentId: string; toDepartmentId: string; kind: HandoffKind; summary: string; card: { label: string; value: string }[] }[] = [];
@@ -21,11 +22,11 @@ export class InMemoryAgentStore implements AgentStore {
   async getPricing(model: string) { return this.pricing.get(model) ?? null; }
   async listDepartments() { return this.departments; }
 
-  async createTask(companyId: string, t: { agentId: string; title: string; model: string; contactId?: string | null }) {
+  async createTask(companyId: string, t: { agentId: string; title: string; model: string; contactId?: string | null; esSimulacion?: boolean }) {
     const id = randomUUID();
     this.tasks.set(id, {
       companyId, id, agentId: t.agentId, title: t.title, status: "running", model: t.model, contactId: t.contactId ?? null, sourceEmailId: null,
-      usage: USO_VACIO, costEur: 0, steps: 0, reviewReason: null, suspicious: false, memoryUsage: { inputTokens: 0, outputTokens: 0 }, extraCostEur: 0,
+      usage: USO_VACIO, costEur: 0, steps: 0, reviewReason: null, suspicious: false, memoryUsage: { inputTokens: 0, outputTokens: 0 }, extraCostEur: 0, instruccionEntrada: null, handoffId: null,
     });
     return id;
   }
@@ -37,6 +38,10 @@ export class InMemoryAgentStore implements AgentStore {
   async setTaskContact(companyId: string, taskId: string, contactId: string) {
     const t = this.own(companyId, taskId);
     if (t && !t.contactId) t.contactId = contactId;
+  }
+  async registrarInstrucciones(companyId: string, taskId: string, r: { hash: string; agentVersion: number; recortes: { parte: string; antes: number; despues: number }[] }) {
+    if (!this.own(companyId, taskId)) throw new Error("Tarea no encontrada");
+    this.instrucciones.set(taskId, r);
   }
   async getSourceEmail(_c: string, emailId: string) { return this.emails.get(emailId) ?? null; }
 
@@ -55,6 +60,33 @@ export class InMemoryAgentStore implements AgentStore {
     const p = this.pricing.get(t.model);
     t.costEur = Math.round(((p ? costeEur(t.usage, p) : 0) + t.extraCostEur) * 1e6) / 1e6;
     return { costEur: t.costEur };
+  }
+
+  traspasos = new Map<string, string>();
+  async actualizarTraspaso(_c: string, handoffId: string, status: string) { this.traspasos.set(handoffId, status); }
+  async listarTareasDeTraspasoPendientes(o: { companyId?: string; limite?: number } = {}) {
+    return [...this.tasks.values()]
+      .filter((t) => t.handoffId && t.status === "running" && (!o.companyId || t.companyId === o.companyId) && !(this.steps.get(t.id) ?? []).some((s) => s.position === 0))
+      .slice(0, o.limite ?? 50).map((t) => ({ companyId: t.companyId, taskId: t.id }));
+  }
+  aplazadas = new Map<string, { hasta: Date; instruccion: string | null }>();
+  async aplazarTarea(companyId: string, taskId: string, a: { hasta: Date; instruccion: string | null }) {
+    const t = this.own(companyId, taskId);
+    if (!t) throw new Error("Tarea no encontrada");
+    t.status = "scheduled";
+    this.aplazadas.set(taskId, a);
+  }
+  async listarAplazadasVencidas(ahora: Date, o: { companyId?: string; limite?: number } = {}) {
+    return [...this.tasks.values()]
+      .filter((t) => t.status === "scheduled" && (!o.companyId || t.companyId === o.companyId) && (this.aplazadas.get(t.id)?.hasta.getTime() ?? Infinity) <= ahora.getTime())
+      .slice(0, o.limite ?? 100).map((t) => ({ companyId: t.companyId, taskId: t.id }));
+  }
+  async reanudarAplazada(companyId: string, taskId: string, ahora: Date) {
+    const t = this.own(companyId, taskId), a = this.aplazadas.get(taskId);
+    if (!t || !a || t.status !== "scheduled" || a.hasta.getTime() > ahora.getTime()) return null;
+    t.status = "running";
+    this.aplazadas.delete(taskId);
+    return { instruccion: a.instruccion };
   }
 
   async claimTask(companyId: string, taskId: string, instruccion: string) {

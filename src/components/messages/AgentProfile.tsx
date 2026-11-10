@@ -1,8 +1,13 @@
 "use client";
 
 import { Coins, FileImage, FileSpreadsheet, FileText, LifeBuoy, Mail } from "lucide-react";
+import { CicloDelAgente } from "@/components/agents/CicloDelAgente";
+import { CorreccionesAgente } from "@/components/agents/CorreccionesAgente";
 import { RecuerdosRecientes } from "@/components/agents/RecuerdosRecientes";
+import { SimuladorAgente } from "@/components/agents/SimuladorAgente";
 import { TareaDePrueba } from "@/components/agents/TareaDePrueba";
+import { HistorialCalidad } from "@/components/agents/HistorialCalidad";
+import { useConsumoDeAgente } from "@/components/creditos/useConsumoDeAgente";
 import { EmailQuota } from "@/components/emails/EmailQuota";
 import { contactDirectory, contactsOfAgent } from "@/data/emails";
 import { useApprovals } from "@/components/ApprovalsProvider";
@@ -10,6 +15,9 @@ import { Avatar, PillButton, StatusBadge, departmentMeta } from "@/components/gl
 import type { OfficeAgent } from "@/data/departments";
 import { expertFor } from "@/data/experts";
 import { getAgentProfile, type AgentFile } from "@/data/messages";
+import { TIPOS_DE_TAREA, TIPOS_DE_TAREA_IDS } from "@/lib/creditos/tarifas";
+import { NOMBRE_TIPO_TAREA } from "@/lib/creditos/tipos";
+import { fmtNumber } from "@/lib/format";
 
 const fileIcon = { doc: FileText, sheet: FileSpreadsheet, image: FileImage } as const satisfies Record<
   AgentFile["kind"],
@@ -27,6 +35,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function AgentProfile({ agent }: { agent: OfficeAgent }) {
   const profile = getAgentProfile(agent.id);
+  const consumoMes = useConsumoDeAgente(agent.name);
   const { openConsult, openContact } = useApprovals();
   const contacts = contactsOfAgent(agent.id);
   const expert = expertFor(agent.creator);
@@ -97,6 +106,18 @@ export function AgentProfile({ agent }: { agent: OfficeAgent }) {
         )}
       </Section>
 
+      <Section title="Certificación">
+        <CicloDelAgente agentSlug={agent.id} />
+      </Section>
+
+      <Section title="Historial de calidad">
+        <HistorialCalidad agentSlug={agent.id} />
+      </Section>
+
+      <Section title="Simulador">
+        <SimuladorAgente agentSlug={agent.id} />
+      </Section>
+
       <Section title="Tarea de prueba">
         <TareaDePrueba agentSlug={agent.id} agentName={agent.name} />
       </Section>
@@ -105,10 +126,22 @@ export function AgentProfile({ agent }: { agent: OfficeAgent }) {
         <RecuerdosRecientes agentSlug={agent.id} agentName={agent.name} />
       </Section>
 
-      <Section title="Coste medio por tarea">
-        <p className="flex items-center gap-2 text-small">
-          <Coins size={16} aria-hidden="true" />
-          {profile.avgCostPerTask.toLocaleString("es-ES", { minimumFractionDigits: 1 })} créditos
+      <Section title="Reglas aprendidas de tus correcciones">
+        <CorreccionesAgente agentSlug={agent.id} agentName={agent.name} />
+      </Section>
+
+      <Section title="Créditos">
+        <ul aria-label="Créditos por tipo de tarea" className="flex flex-col gap-1 text-small">
+          {TIPOS_DE_TAREA_IDS.map((t) => (
+            <li key={t} className="flex items-center justify-between gap-2">
+              <span>Tarea {NOMBRE_TIPO_TAREA[t].toLowerCase()}</span>
+              <span className="font-semibold">{TIPOS_DE_TAREA[t].creditos} créditos</span>
+            </li>
+          ))}
+        </ul>
+        <p className="flex items-center gap-2 border-t border-glass-border pt-2 text-small">
+          <Coins size={16} aria-hidden="true" className="shrink-0" />
+          <span>Este mes: <strong>{consumoMes === null ? "—" : `${fmtNumber(consumoMes)} créditos`}</strong></span>
         </p>
       </Section>
 

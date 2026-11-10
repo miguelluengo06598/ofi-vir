@@ -1,3 +1,4 @@
+import { certificarAgenteDePrueba } from "../../src/lib/certificacion/datosDePrueba.ts";
 import { FakeEmbedder } from "../../src/lib/memory/fakeEmbedder.ts";
 import { admin, COMPANY_A, COMPANY_B, RUN, must } from "./entorno.ts";
 
@@ -7,13 +8,16 @@ const TOOLS = ["buscar_en_memoria", "ver_historial_del_contacto", "guardar_recue
 
 /** Agente de prueba de la empresa A (límite diario configurable). */
 export async function crearAgente(slug: string, limite: number, dept = VENTAS) {
-  return must(
+  const agente = await must(
     admin.from("agents").insert({
       company_id: COMPANY_A, department_id: dept, slug: `${slug}-${RUN}`, name: `Agente ${slug}`, role: "Pruebas", creator_name: "Pruebas",
       model: "claude-haiku-5-5", daily_email_limit: limite, allowed_tools: TOOLS, instructions: `Eres ${slug}.`, status: "working",
     }).select("id, slug, name").single(),
     "crear agente",
   );
+  // El motor real solo ejecuta agentes activos y certificados: estos reciben una certificación de PRUEBA (solo base local).
+  await certificarAgenteDePrueba(admin, COMPANY_A, agente.id as string);
+  return agente;
 }
 export const DEPT_VENTAS = VENTAS;
 export const DEPT_ATENCION = ATENCION;
@@ -59,5 +63,7 @@ export async function borrarAgente(agentId: string) {
   await admin.from("email_threads").delete().eq("agent_id", agentId);
   await admin.from("tasks").delete().eq("agent_id", agentId);
   await admin.from("memory_nodes").delete().eq("created_by_agent_id", agentId);
+  await admin.from("certifications").delete().eq("agent_id", agentId);
+  await admin.from("certification_requests").delete().eq("agent_id", agentId);
   await admin.from("agents").delete().eq("id", agentId);
 }

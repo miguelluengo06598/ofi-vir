@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { LifeBuoy, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { useApprovals } from "@/components/ApprovalsProvider";
+import { useCreditos } from "@/components/creditos/CreditosProvider";
 import { Avatar, MotionGlassPanel, PillButton } from "@/components/glass";
 import { expertFor } from "@/data/experts";
 import { fmtNumber } from "@/lib/format";
@@ -12,7 +13,9 @@ import { useFocusTrap } from "@/lib/useFocusTrap";
 const MIN_PROBLEM = 15;
 
 function Form({ agentId }: { agentId: string }) {
-  const { office, balance, consult, closeConsult } = useApprovals();
+  const { office, consult, closeConsult } = useApprovals();
+  // Saldo REAL (créditos). El precio de la consulta al experto sigue siendo un dato simulado.
+  const balance = useCreditos().resumen?.saldo.disponible ?? null;
   const agent = office.summaries.flatMap((s) => s.agents).find((a) => a.id === agentId)!;
   const expert = expertFor(agent.creator)!;
 
@@ -22,7 +25,7 @@ function Form({ agentId }: { agentId: string }) {
   const id = useId();
   useFocusTrap(dialog);
 
-  const enoughBalance = balance >= expert.price;
+  const enoughBalance = balance === null || balance >= expert.price;
   const valid = problem.trim().length >= MIN_PROBLEM && consent && enoughBalance;
   const first = agent.name.split(" ")[0];
 
@@ -110,7 +113,7 @@ function Form({ agentId }: { agentId: string }) {
                 <dt className="text-tiny text-ink-2">Respuesta estimada</dt>
               </div>
               <div>
-                <dd className="text-body font-semibold">{fmtNumber(balance)}</dd>
+                <dd className="text-body font-semibold">{balance === null ? "—" : fmtNumber(balance)}</dd>
                 <dt className="text-tiny text-ink-2">Tu saldo (créditos)</dt>
               </div>
             </dl>

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { normalizeKey, textScore } from "./text.ts";
 import type {
-  EdgeKind, ErasureCounts, MemoryStore, Neighbor, NewContact, NewNode, NodeType, SearchHit,
+  EdgeKind, ErasureCounts, MemoryStore, Neighbor, NewContact, NewKnowledgeNode, NewNode, NodeType, SearchHit,
   StoredContact, StoredEdge, StoredEmail, StoredNode,
 } from "./store.ts";
 
@@ -41,9 +41,49 @@ export class InMemoryStore implements MemoryStore {
     this.emails.push({ ...e, id: randomUUID(), companyId, contactId });
   }
 
+  /** Fuentes de conocimiento que ya no están «listas» (en tests): sus fragmentos no se buscan. */
+  fuentesNoListas = new Set<string>();
+
+  private visibleParaAgente(n: Row, companyId: string, agentId: string) {
+    return n.companyId === companyId && n.type === "conocimiento" && !this.fuentesNoListas.has(n.knowledgeId ?? "") && (n.ambitoAgentId === null || n.ambitoAgentId === agentId);
+  }
+  async searchKnowledgeByEmbedding(companyId: string, agentId: string, q: number[], limit: number): Promise<SearchHit[]> {
+    return this.nodes
+      .filter((n) => this.visibleParaAgente(n, companyId, agentId) && n.embedding !== null)
+      .map((n) => ({ id: n.id, title: n.title, type: n.type, similarity: cosine(n.embedding!, q) }))
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, limit);
+  }
+  async searchKnowledgeByText(companyId: string, agentId: string, terms: string[], limit: number): Promise<SearchHit[]> {
+    return this.nodes
+      .filter((n) => this.visibleParaAgente(n, companyId, agentId))
+      .map((n) => ({ id: n.id, title: n.title, type: n.type, similarity: textScore(terms, n.title, n.content) }))
+      .filter((h) => h.similarity > 0)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, limit);
+  }
+  /** Fuentes que existen (en tests, para reproducir la clave foránea). Si es null, cualquier fuente vale. */
+  fuentesExistentes: Set<string> | null = null;
+  async insertKnowledgeNodes(companyId: string, nodes: NewKnowledgeNode[]): Promise<number> {
+    if (this.fuentesExistentes && nodes.some((n) => !this.fuentesExistentes!.has(n.knowledgeId))) throw new Error("FUENTE_BORRADA");
+    for (const n of nodes) {
+      this.nodes.push({
+        id: randomUUID(), companyId, contactId: null, type: "conocimiento", title: n.title, content: n.content, agentSlug: null,
+        confidence: 1, external: true, sourceTaskId: null, knowledgeId: n.knowledgeId, ambitoAgentId: n.ambitoAgentId,
+        createdAt: new Date(Date.now() + this.seq).toISOString(), embedding: n.embedding,
+      });
+    }
+    return nodes.length;
+  }
+  async deleteKnowledgeNodes(companyId: string, knowledgeId: string): Promise<number> {
+    const antes = this.nodes.length;
+    this.nodes = this.nodes.filter((n) => !(n.companyId === companyId && n.knowledgeId === knowledgeId));
+    return antes - this.nodes.length;
+  }
+
   async searchByEmbedding(companyId: string, q: number[], limit: number): Promise<SearchHit[]> {
     return this.nodes
-      .filter((n) => n.companyId === companyId && n.embedding !== null)
+      .filter((n) => n.companyId === companyId && n.type !== "conocimiento" && n.embedding !== null)
       .map((n) => ({ id: n.id, title: n.title, type: n.type, similarity: cosine(n.embedding!, q) }))
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
@@ -53,7 +93,7 @@ export class InMemoryStore implements MemoryStore {
     return this.contacts.filter((c) => c.companyId === companyId);
   }
   async listNodes(companyId: string) {
-    return this.nodes.filter((n) => n.companyId === companyId).map(strip);
+    return this.nodes.filter((n) => n.companyId === companyId && n.type !== "conocimiento").map(strip);
   }
   async listEdges(companyId: string) {
     return this.edges.filter((e) => e.companyId === companyId);
@@ -102,7 +142,7 @@ export class InMemoryStore implements MemoryStore {
 
   async searchByText(companyId: string, terms: string[], limit: number): Promise<SearchHit[]> {
     return this.nodes
-      .filter((n) => n.companyId === companyId)
+      .filter((n) => n.companyId === companyId && n.type !== "conocimiento")
       .map((n) => ({ id: n.id, title: n.title, type: n.type, similarity: textScore(terms, n.title, n.content) }))
       .filter((h) => h.similarity > 0)
       .sort((a, b) => b.similarity - a.similarity)

@@ -41,3 +41,40 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Informes generados por scripts (p. ej. examen por cambio de modelo)
+/informes/
+
+# Supabase CLI (también en supabase/.gitignore; aquí por si se borra aquel)
+supabase/.temp/
+supabase/.branches/
+supabase/.env.keys
+
+# Variables de entorno: cubiertas por `.env*` arriba (.env, .env.local, .env.*.local)
+
+# Logs
+logs/
+*.log
+
+# Editores y sistema
+.idea/
+.vscode/*
+!.vscode/extensions.json
+Thumbs.db
+
+# Pruebas y cobertura (cualquier carpeta coverage)
+coverage/
+.nyc_output/
+
+# Datos reales, volcados y copias de seguridad: nunca al repositorio
+*.dump
+*.backup
+*.bak
+*.sql.gz
+*.sqlite
+*.sqlite3
+/backups/
+/copias/
+/exports/
+/datos-reales/
+supabase/backups/

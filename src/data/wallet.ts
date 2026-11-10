@@ -1,36 +1,4 @@
-import { agents } from "./agents";
-import { departmentOrder } from "./departments";
-import type { DepartmentId } from "@/components/glass";
-
-/** 1 € = 100 créditos. */
-export const CREDITS_PER_EUR = 100;
-export const initialBalance = 12480;
-export const initialMonthlyLimitEur = 150;
-export const topUpAmounts = [20, 50, 100] as const;
-
-const todayCredits = agents.reduce((n, a) => n + a.creditsToday, 0);
-
-/** Consumo diario de los últimos 30 días (el último es hoy). Serie fija para que el servidor y el cliente coincidan. */
-export const dailyConsumption: number[] = Array.from({ length: 30 }, (_, i) => {
-  if (i === 29) return todayCredits;
-  const weekend = i % 7 === 5 || i % 7 === 6;
-  return Math.round(340 + 70 * Math.sin(i * 0.9) + (i % 5) * 9 - (weekend ? 130 : 0));
-});
-
-export const monthSpent = dailyConsumption.reduce((n, v) => n + v, 0);
-
-/** Reparto del consumo de 30 días proporcional al gasto de hoy de cada agente. */
-export const agentConsumption = agents
-  .map((a) => ({ agent: a, credits: Math.round((monthSpent * a.creditsToday) / todayCredits) }))
-  .sort((x, y) => y.credits - x.credits);
-
-export const departmentConsumption: { id: DepartmentId; credits: number }[] = departmentOrder
-  .map((id) => ({
-    id,
-    credits: agentConsumption.filter((c) => c.agent.departmentId === id).reduce((n, c) => n + c.credits, 0),
-  }))
-  .sort((x, y) => y.credits - x.credits);
-
+/** Registro SIMULADO de tareas recientes: solo lo usa la lista de tareas de ejemplo (`data/tasks.ts`). El saldo y el consumo reales viven en /api/creditos. */
 export type Movement = {
   id: string;
   agentId: string;

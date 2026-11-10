@@ -7,7 +7,8 @@ import type { StoredContact, StoredEdge, StoredNode } from "./store.ts";
  * (la vista aún solo sabe dibujar nodos de agente dentro de un racimo).
  */
 export function toMemoryData(g: { contacts: StoredContact[]; nodes: StoredNode[]; edges: StoredEdge[] }): MemoryData {
-  const kept = g.nodes.filter((n) => n.contactId !== null && n.agentSlug !== null);
+  // El conocimiento (fragmentos de webs y documentos) no es parte del grafo de contactos.
+  const kept = g.nodes.flatMap((n) => (n.contactId !== null && n.agentSlug !== null && n.type !== "conocimiento" ? [{ ...n, type: n.type }] : []));
   const keptIds = new Set(kept.map((n) => n.id));
 
   const lastBy = new Map<string, string>();
