@@ -92,7 +92,7 @@ export function creditosEstimadosDe(tipo: TipoDeTareaId, llamadas: HerramientaSi
 }
 
 /** Una simulación. Lanza `SimuladorError` (404 agente, 402 sin saldo pasada la cuota). */
-/** Quién pide la simulación: una persona (su id) o un proceso interno de SAMGPLE (examen o revisión de certificación). */
+/** Quién pide la simulación: una persona (su id) o un proceso interno de MyOfia (examen o revisión de certificación). */
 export type QuienSimula = string | { procesoInterno: string; solicitudId?: string | null };
 const origenDeSimulacion = (q: QuienSimula): OrigenNuevo =>
   typeof q === "string" ? { tipo: "orden_usuario", ordenadoPor: q, via: "simulador" } : { tipo: "orden_usuario", ordenadoPor: null, procesoInterno: q.procesoInterno, solicitudId: q.solicitudId ?? null };

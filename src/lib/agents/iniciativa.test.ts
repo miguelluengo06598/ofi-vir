@@ -172,7 +172,7 @@ describe("interruptores: AGENTES_ACTIVOS, parada de emergencia y oficina pausada
   it("la parada de emergencia detiene una tarea EN CURSO antes de su siguiente llamada al modelo", async () => {
     const s = setup();
     const guion = new ScriptedLlm([llamada("t1", "buscar_en_memoria", { consulta: "lead" }), fin("no debería llegar")]);
-    // Al responder la primera vez, SAMGPLE activa la parada.
+    // Al responder la primera vez, MyOfia activa la parada.
     const llm: LlmClient = { create: async (req) => { const r = await guion.create(req); s.store.control.paradaEmergencia = true; return r; } };
     const id = await nueva(s, EVENTO);
     const r = await ejecutarTarea({ ...s.deps, llm }, C, id, "Atiende el lead");

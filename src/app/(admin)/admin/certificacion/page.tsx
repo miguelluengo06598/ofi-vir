@@ -17,7 +17,7 @@ function Fila({ f, accion }: { f: FilaCola; accion: React.ReactNode }) {
   return (
     <tr>
       <td><Link href={rutaDe(f)} className="font-semibold underline-offset-4 hover:underline focus-visible:underline">{f.nombre}</Link><span className="block text-tiny text-ink-3">versión {f.version}</span></td>
-      <td className="text-ink-2">{f.empresa ?? "Plantilla de SAMGPLE"}</td>
+      <td className="text-ink-2">{f.empresa ?? "Plantilla de MyOfia"}</td>
       <td>{NOMBRE_CATEGORIA[f.departamento] ?? f.departamento}</td>
       <td>{NOMBRE_TIPO[f.tipo] ?? f.tipo}</td>
       <td>{NOMBRE_VIA[f.via] ?? f.via}</td>
@@ -50,7 +50,7 @@ async function Cola({ searchParams }: { searchParams: PageProps<"/admin/certific
     <>
       <header>
         <h1 className="text-h1">Certificación de agentes</h1>
-        <p className="text-body text-ink-2">Panel interno de SAMGPLE. Aquí se ve la configuración enviada y el examen (hecho con datos ficticios); nunca correos, contactos ni memoria de las empresas.</p>
+        <p className="text-body text-ink-2">Panel interno de MyOfia. Aquí se ve la configuración enviada y el examen (hecho con datos ficticios); nunca correos, contactos ni memoria de las empresas.</p>
       </header>
 
       {cola.mias.length > 0 && (
@@ -86,7 +86,7 @@ async function Cola({ searchParams }: { searchParams: PageProps<"/admin/certific
           <label className="flex flex-col gap-1 text-tiny text-ink-2">Empresa
             <select name="empresa" defaultValue={filtros.empresa ?? ""} className={selectCls}>
               <option value="" className="text-black">Todas</option>
-              <option value="plantillas" className="text-black">Plantillas de SAMGPLE</option>
+              <option value="plantillas" className="text-black">Plantillas de MyOfia</option>
               {cola.empresas.map((e) => <option key={e.id} value={e.id} className="text-black">{e.nombre}</option>)}
             </select>
           </label>

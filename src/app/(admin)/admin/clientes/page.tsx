@@ -105,7 +105,7 @@ async function Listado({ searchParams }: { searchParams: PageProps<"/admin/clien
               <td>{c.sector ?? <span className="text-ink-3">—</span>}</td>
               <td>
                 <Etiqueta tono={esOperativa(c.estado) ? (c.oficinaPausada ? "aviso" : c.estado === "en_implantacion" ? "acento" : "bien") : "mal"}>{NOMBRE_ESTADO_EMPRESA[c.estado] ?? c.estado}</Etiqueta>
-                {esOperativa(c.estado) && c.oficinaPausada && <span className="mt-1 block text-tiny text-ink-3">{c.pausadaPorSamgple ? "Pausada por SAMGPLE" : "Agentes pausados"}</span>}
+                {esOperativa(c.estado) && c.oficinaPausada && <span className="mt-1 block text-tiny text-ink-3">{c.pausadaPorSamgple ? "Pausada por MyOfia" : "Agentes pausados"}</span>}
               </td>
               <td>{c.propietario ? <><span className="block">{c.propietario.nombre}</span><span className="block text-tiny text-ink-3">{c.propietario.email}</span></> : <span className="text-ink-3">Sin propietario</span>}</td>
               <td className="whitespace-nowrap">{fecha(c.creadaEn)}</td>

@@ -237,7 +237,7 @@ export async function procesarExamenesPendientes(deps: DepsExamen, opciones: { l
   const { data, error } = await deps.db.rpc("certificacion_pendientes_examen", { p_limite: opciones.limite ?? 20 });
   if (error) throw new Error(`No se pudieron leer los exámenes pendientes: ${error.message}`);
   let filas = (data ?? []) as { company_id: string; request_id: string }[];
-  // Recertificaciones automáticas (proceso interno de SAMGPLE): fuera si CONTROL_CALIDAD_AUTOMATICO no está activado.
+  // Recertificaciones automáticas (proceso interno de MyOfia): fuera si CONTROL_CALIDAD_AUTOMATICO no está activado.
   let omitidos = 0;
   if (opciones.excluirTipos?.length && filas.length) {
     const { data: tipos, error: e2 } = await deps.db.from("certification_requests").select("id, tipo").in("id", filas.map((f) => f.request_id));

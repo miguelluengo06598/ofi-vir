@@ -1,5 +1,5 @@
 /**
- * Acciones de SAMGPLE sobre un cliente. Cada una: 1) vuelve a comprobar el rol de plataforma (`puedeHacer`), 2) valida con zod
+ * Acciones de MyOfia sobre un cliente. Cada una: 1) vuelve a comprobar el rol de plataforma (`puedeHacer`), 2) valida con zod
  * estricto (motivo obligatorio), 3) hace el cambio con una función SQL atómica cuando toca dinero, estado o propiedad, y
  * 4) lo anota en `admin_audit_log` (antes/después y motivo). Solo servidor; las acciones de servidor son envoltorios finos.
  */
@@ -59,7 +59,7 @@ export async function guardarFicha(ctx: Contexto, input: unknown) {
   await empresaViva(ctx.db, v.companyId);
   if (v.responsable) {
     const { data } = await ctx.db.from("platform_roles").select("user_id").eq("user_id", v.responsable).eq("activo", true).maybeSingle();
-    if (!data) throw new ClienteError("El responsable debe ser una persona activa de SAMGPLE.");
+    if (!data) throw new ClienteError("El responsable debe ser una persona activa de MyOfia.");
   }
   const { data: antes } = await ctx.db.from("cliente_ficha").select("responsable, servicios").eq("company_id", v.companyId).maybeSingle();
   const despues = { responsable: v.responsable, servicios: [...new Set(v.servicios)] };
@@ -152,7 +152,7 @@ export async function pedirCambioPropietario(ctx: Contexto, input: unknown): Pro
   }
   await ctx.db.from("notifications").insert({
     company_id: v.companyId, tipo: "cambio_propietario", titulo: "Confirma el cambio de propietario",
-    cuerpo: "SAMGPLE ha pedido transferir la propiedad de la empresa. El propietario actual debe confirmarlo o rechazarlo en Miembros (caduca en 7 días).",
+    cuerpo: "MyOfia ha pedido transferir la propiedad de la empresa. El propietario actual debe confirmarlo o rechazarlo en Miembros (caduca en 7 días).",
     metadatos: { cambio_id: cambio.id },
   });
   return { estado: "pendiente", cambioId: cambio.id };
@@ -161,7 +161,7 @@ export async function pedirCambioPropietario(ctx: Contexto, input: unknown): Pro
 const ResolverSchema = z.object({ cambioId: Uuid, aceptar: z.boolean(), motivo: Motivo }).strict();
 /** Confirmación (o rechazo) de un admin_samgple desde el panel. */
 export async function resolverCambioPropietario(ctx: Contexto, input: unknown): Promise<string> {
-  if (!ctx.sesion.roles.includes("admin_samgple")) throw new ClienteError("Solo admin_samgple confirma un cambio de propietario desde SAMGPLE.");
+  if (!ctx.sesion.roles.includes("admin_samgple")) throw new ClienteError("Solo admin_samgple confirma un cambio de propietario desde MyOfia.");
   const v = validar(ResolverSchema, input);
   const { data: c } = await ctx.db.from("cambios_propietario").select("company_id, propietario_actual, nuevo_propietario").eq("id", v.cambioId).maybeSingle();
   if (!c) throw new ClienteError("Ese cambio no existe.");
@@ -259,7 +259,7 @@ export async function borrarEmpresa(ctx: Contexto, input: unknown): Promise<{ fi
       if (e) archivosPendientes += rutas.slice(i, i + 100).length;
     }
   }
-  // Cuentas que se quedan sin ninguna empresa ni rol de SAMGPLE: se borran (perfil incluido, por cascada).
+  // Cuentas que se quedan sin ninguna empresa ni rol de MyOfia: se borran (perfil incluido, por cascada).
   let cuentasBorradas = 0;
   const cuentasPendientes: string[] = [];
   const { data: huerfanas } = r.miembros.length ? await ctx.db.rpc("admin_personas_huerfanas", { p_user_ids: r.miembros }) : { data: [] };

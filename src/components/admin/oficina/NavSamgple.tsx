@@ -11,11 +11,11 @@ const ENLACES: { href: string; label: string; roles: readonly RolPlataforma[] }[
   { href: "/admin/margenes", label: "Márgenes", roles: ["admin_samgple", "finanzas_samgple"] },
 ];
 
-/** Accesos de la oficina de SAMGPLE: solo los que el rol de la persona puede abrir. */
+/** Accesos de la oficina de MyOfia: solo los que el rol de la persona puede abrir. */
 export function NavSamgple({ roles, actual }: { roles: readonly RolPlataforma[]; actual: string }) {
   const puede = (r: readonly RolPlataforma[]) => roles.includes("admin_samgple") || r.some((x) => roles.includes(x));
   return (
-    <nav aria-label="Oficina de SAMGPLE">
+    <nav aria-label="Oficina de MyOfia">
       <ul className="flex flex-wrap gap-1.5">
         {ENLACES.filter((e) => puede(e.roles)).map((e) => (
           <li key={e.href}>

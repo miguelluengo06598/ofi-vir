@@ -20,7 +20,7 @@ export async function altaEnEmpresa(db: SupabaseClient, p: { id: string; company
   return db.from("company_members").insert({ company_id: p.companyId, user_id: p.id, rol, puede_aprobar: p.puedeAprobar ?? false });
 }
 
-/** Rol de plataforma de SAMGPLE (no da acceso a ninguna empresa). */
+/** Rol de plataforma de MyOfia (no da acceso a ninguna empresa). */
 export async function rolDePlataforma(db: SupabaseClient, p: { id: string; nombre: string; email: string; rol: "admin_samgple" | "revisor_samgple"; activo?: boolean }) {
   const u = await db.from("users").upsert({ id: p.id, full_name: p.nombre, email: p.email }, { onConflict: "id" });
   if (u.error) return u;

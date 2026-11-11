@@ -1,7 +1,7 @@
 import { paradaGetHandler, paradaPostHandler } from "@/lib/admin/parada";
 import { dbAdminDesdeEntorno } from "@/lib/admin/entorno";
 
-/** Parada de emergencia global de SAMGPLE (solo admin_samgple; el resto recibe 404). */
+/** Parada de emergencia global de MyOfia (solo admin_samgple; el resto recibe 404). */
 export async function GET(req: Request) {
   const db = dbAdminDesdeEntorno();
   if (!db) return Response.json({ error: "no_encontrado" }, { status: 404 });

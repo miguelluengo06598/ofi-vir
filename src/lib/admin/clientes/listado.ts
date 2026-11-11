@@ -1,5 +1,5 @@
 /**
- * Listado de clientes de SAMGPLE: una fila por empresa con metadatos y agregados (función SQL admin_clientes_listado, solo
+ * Listado de clientes de MyOfia: una fila por empresa con metadatos y agregados (función SQL admin_clientes_listado, solo
  * service_role), su salud y los filtros. Nunca lee contenido de las empresas. Solo servidor.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -30,7 +30,7 @@ export async function obtenerClientes(db: SupabaseClient, ahora = new Date(), so
       agentesActivos: n(r.agentes_activos), agentesSuspendidos: n(r.agentes_suspendidos), consumoMes: n(r.consumo_mes), saldo: n(r.saldo),
       ultimaActividad: (r.ultima_actividad as string | null) ?? null, estadoOficina: (r.estado_oficina as string | null) ?? null,
       oficinaPausada: r.oficina_pausada === true, pausadaPorSamgple: r.pausada_por_samgple === true, enImplantacion: r.en_implantacion === true,
-      responsable: r.responsable_id ? { id: r.responsable_id as string, nombre: (r.responsable_nombre as string | null) ?? "Equipo SAMGPLE" } : null,
+      responsable: r.responsable_id ? { id: r.responsable_id as string, nombre: (r.responsable_nombre as string | null) ?? "Equipo MyOfia" } : null,
       valoracionesNegativas: n(r.valoraciones_negativas), valoracionesTotal: n(r.valoraciones_total), recargasFallidas: n(r.recargas_fallidas),
     };
     return { ...base, salud: calcularSalud({ estadoEmpresa: base.estado, estadoOficina: base.estadoOficina, ultimaActividad: base.ultimaActividad, saldo: base.saldo, valoracionesNegativas: base.valoracionesNegativas, valoracionesTotal: base.valoracionesTotal, agentesSuspendidos: base.agentesSuspendidos, recargasFallidas: base.recargasFallidas }, ahora) };
@@ -76,9 +76,9 @@ export function filtrarClientes(clientes: Cliente[], f: Filtros): Cliente[] {
 export const contarPorColor = (clientes: Cliente[]): Record<Color, number> =>
   clientes.reduce((a, c) => ({ ...a, [c.salud.color]: a[c.salud.color] + 1 }), { verde: 0, ambar: 0, rojo: 0 } as Record<Color, number>);
 
-/** Personas de SAMGPLE que pueden ser responsables de un cliente (para el filtro y la ficha). */
+/** Personas de MyOfia que pueden ser responsables de un cliente (para el filtro y la ficha). */
 export async function equipoSamgple(db: SupabaseClient): Promise<{ id: string; nombre: string }[]> {
   const { data, error } = await db.from("platform_roles").select("user_id, nombre").eq("activo", true).order("nombre");
-  if (error) throw new Error("No se pudo leer el equipo de SAMGPLE.");
-  return (data ?? []).map((p) => ({ id: p.user_id as string, nombre: (p.nombre as string | null) ?? "Equipo SAMGPLE" }));
+  if (error) throw new Error("No se pudo leer el equipo de MyOfia.");
+  return (data ?? []).map((p) => ({ id: p.user_id as string, nombre: (p.nombre as string | null) ?? "Equipo MyOfia" }));
 }

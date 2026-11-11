@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Acciones de implantación del panel de SAMGPLE. Envoltorios finos: exigen un rol de plataforma con MFA y delegan en
+ * Acciones de implantación del panel de MyOfia. Envoltorios finos: exigen un rol de plataforma con MFA y delegan en
  * src/lib/admin/implantacion/servicio.ts (permiso concreto, validación, función SQL atómica y auditoría).
  */
 import { revalidatePath } from "next/cache";

@@ -1,5 +1,5 @@
 /**
- * Panorama de la oficina de SAMGPLE. SOLO SERVIDOR. Llama a las funciones SQL de agregados
+ * Panorama de la oficina de MyOfia. SOLO SERVIDOR. Llama a las funciones SQL de agregados
  * (admin_panorama, admin_series, admin_en_directo, admin_alertas: migración 20261112000100) y filtra lo que puede ver cada rol.
  * Nada de contenido de las empresas: solo cifras, nombres de empresa y de agente, y metadatos de los sucesos.
  */

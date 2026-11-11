@@ -1,5 +1,5 @@
 /**
- * Puerta única del panel interno de SAMGPLE. Los roles son acumulables y todo acceso requiere
+ * Puerta única del panel interno de MyOfia. Los roles son acumulables y todo acceso requiere
  * una sesión Supabase elevada a AAL2 por una app de autenticación.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -44,7 +44,7 @@ export async function sesionPlataforma(headers: Pick<Headers, "get">, db: Supaba
   const roles = [...new Set([data.rol as string, ...((data.roles as string[] | null) ?? [])])].filter((rol): rol is RolPlataforma => validos.has(rol));
   if (roles.length === 0) return null;
   const token = tokenDeCabecera(headers) ?? tokenDeCookie(headers);
-  return { userId: persona.id, roles, nombre: (data.nombre as string | null) ?? "Equipo SAMGPLE", categorias: (data.categorias as string[] | null) ?? [], mfaVerificada: payloadJwt(token).aal === "aal2" };
+  return { userId: persona.id, roles, nombre: (data.nombre as string | null) ?? "Equipo MyOfia", categorias: (data.categorias as string[] | null) ?? [], mfaVerificada: payloadJwt(token).aal === "aal2" };
 }
 
 /** Exige al menos uno de los roles indicados y una MFA verificada en esta sesión. */

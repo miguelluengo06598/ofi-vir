@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 const SERVICIOS: { icono: LucideIcon; titulo: string; texto: string }[] = [
   { icono: Wrench, titulo: "Implantación", texto: "Conectamos tus herramientas y dejamos funcionando tu primera cadena contigo." },
-  { icono: Bot, titulo: "Agentes a medida", texto: "Diseñamos agentes para procesos propios de tu negocio, certificados por SAMGPLE." },
+  { icono: Bot, titulo: "Agentes a medida", texto: "Diseñamos agentes para procesos propios de tu negocio, certificados por MyOfia." },
   { icono: GraduationCap, titulo: "Horas de experto", texto: "Una persona de nuestro equipo revisa tus agentes y te ayuda a sacarles partido." },
 ];
 

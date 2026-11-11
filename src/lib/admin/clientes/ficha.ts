@@ -30,7 +30,7 @@ export async function resumenCliente(db: SupabaseClient, companyId: string): Pro
   const nombres = await nombresSamgple(db, (n.data ?? []).map((x) => x.autor_id as string));
   return {
     servicios: (f.data?.servicios as string[] | undefined) ?? [], fichaActualizadaEn: (f.data?.actualizado_en as string | null) ?? null,
-    notas: (n.data ?? []).map((x) => ({ id: x.id as string, autor: nombres.get(x.autor_id as string) ?? "Equipo SAMGPLE", texto: x.texto as string, creadoEn: x.creado_en as string })),
+    notas: (n.data ?? []).map((x) => ({ id: x.id as string, autor: nombres.get(x.autor_id as string) ?? "Equipo MyOfia", texto: x.texto as string, creadoEn: x.creado_en as string })),
   };
 }
 
@@ -38,7 +38,7 @@ async function nombresSamgple(db: SupabaseClient, ids: string[]): Promise<Map<st
   const unicos = [...new Set(ids.filter(Boolean))];
   if (unicos.length === 0) return new Map();
   const { data } = await db.from("platform_roles").select("user_id, nombre").in("user_id", unicos);
-  return new Map((data ?? []).map((p) => [p.user_id as string, (p.nombre as string | null) ?? "Equipo SAMGPLE"]));
+  return new Map((data ?? []).map((p) => [p.user_id as string, (p.nombre as string | null) ?? "Equipo MyOfia"]));
 }
 
 // ── Datos fiscales ──────────────────────────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ export async function miembrosCliente(db: SupabaseClient, companyId: string, aho
     })),
     cambios: (c.data ?? []).map((x) => ({
       id: x.id, actual: perfil.get(x.propietario_actual)?.nombre ?? "—", nuevo: perfil.get(x.nuevo_propietario)?.nombre ?? "—", motivo: x.motivo,
-      estado: x.estado === "pendiente" && new Date(x.caduca_en) < ahora ? "caducado" : x.estado, solicitadoPor: samgple.get(x.solicitado_por) ?? "Equipo SAMGPLE",
+      estado: x.estado === "pendiente" && new Date(x.caduca_en) < ahora ? "caducado" : x.estado, solicitadoPor: samgple.get(x.solicitado_por) ?? "Equipo MyOfia",
       creadoEn: x.creado_en, caducaEn: x.caduca_en, resueltoVia: x.resuelto_via,
     })),
   };
@@ -128,7 +128,7 @@ export async function creditosCliente(db: SupabaseClient, companyId: string, aho
   };
 }
 
-// ── Implantación y soporte (tablas de la oficina de SAMGPLE: implantaciones y soporte_consultas) ─────
+// ── Implantación y soporte (tablas de la oficina de MyOfia: implantaciones y soporte_consultas) ─────
 export type ImplantacionFicha = { estado: string; responsable: string | null; inicio: string; objetivoFin: string | null; tareas: { id: string; titulo: string; venceEn: string | null; hechaEn: string | null }[] } | null;
 export async function implantacionCliente(db: SupabaseClient, companyId: string): Promise<ImplantacionFicha> {
   const { data, error } = await db.from("implantaciones").select("id, estado, responsable, inicio, objetivo_fin, implantacion_tareas(id, titulo, orden, vence_en, hecha_en)").eq("company_id", companyId).maybeSingle();
@@ -136,7 +136,7 @@ export async function implantacionCliente(db: SupabaseClient, companyId: string)
   if (!data) return null;
   const nombres = await nombresSamgple(db, [data.responsable as string]);
   const tareas = ((data.implantacion_tareas ?? []) as { id: string; titulo: string; orden: number; vence_en: string | null; hecha_en: string | null }[]).sort((a, b) => a.orden - b.orden);
-  return { estado: data.estado, responsable: data.responsable ? nombres.get(data.responsable) ?? "Equipo SAMGPLE" : null, inicio: data.inicio, objetivoFin: data.objetivo_fin, tareas: tareas.map((t) => ({ id: t.id, titulo: t.titulo, venceEn: t.vence_en, hechaEn: t.hecha_en })) };
+  return { estado: data.estado, responsable: data.responsable ? nombres.get(data.responsable) ?? "Equipo MyOfia" : null, inicio: data.inicio, objetivoFin: data.objetivo_fin, tareas: tareas.map((t) => ({ id: t.id, titulo: t.titulo, venceEn: t.vence_en, hechaEn: t.hecha_en })) };
 }
 
 export type ConsultaSoporte = { id: string; asunto: string; estado: string; prioridad: string; asignadaA: string | null; creadoEn: string; resueltaEn: string | null };
@@ -148,12 +148,12 @@ export async function soporteCliente(db: SupabaseClient, companyId: string): Pro
   if (c.error || e.error) throw err("el soporte");
   const nombres = await nombresSamgple(db, [...(c.data ?? []).map((x) => x.asignada_a as string), ...(e.data ?? []).map((x) => x.solicitada_por as string)]);
   return {
-    consultas: (c.data ?? []).map((x) => ({ id: x.id, asunto: x.asunto, estado: x.estado, prioridad: x.prioridad, asignadaA: x.asignada_a ? nombres.get(x.asignada_a) ?? "Equipo SAMGPLE" : null, creadoEn: x.creado_en, resueltaEn: x.resuelta_en })),
-    exportaciones: (e.data ?? []).map((x) => ({ id: x.id, estado: x.estado, tamano: x.tamano_bytes, creadoEn: x.creado_en, caducaEn: x.caduca_en, descargadaEn: x.descargada_en, solicitadaPor: nombres.get(x.solicitada_por) ?? "Equipo SAMGPLE", motivo: x.motivo })),
+    consultas: (c.data ?? []).map((x) => ({ id: x.id, asunto: x.asunto, estado: x.estado, prioridad: x.prioridad, asignadaA: x.asignada_a ? nombres.get(x.asignada_a) ?? "Equipo MyOfia" : null, creadoEn: x.creado_en, resueltaEn: x.resuelta_en })),
+    exportaciones: (e.data ?? []).map((x) => ({ id: x.id, estado: x.estado, tamano: x.tamano_bytes, creadoEn: x.creado_en, caducaEn: x.caduca_en, descargadaEn: x.descargada_en, solicitadaPor: nombres.get(x.solicitada_por) ?? "Equipo MyOfia", motivo: x.motivo })),
   };
 }
 
-// ── Actividad: registro de auditoría de SAMGPLE sobre esta empresa ───────────────────────────────
+// ── Actividad: registro de auditoría de MyOfia sobre esta empresa ───────────────────────────────
 export type EventoAuditoria = { id: string; actor: string; creadoEn: string; accion: string; motivo: string | null; ip: string | null; antes: unknown; despues: unknown };
 export async function actividadCliente(db: SupabaseClient, companyId: string): Promise<EventoAuditoria[]> {
   const { data, error } = await db.from("admin_audit_log").select("id, actor_id, creado_en, accion, motivo, ip, antes, despues").eq("company_id", companyId).order("creado_en", { ascending: false }).limit(200);

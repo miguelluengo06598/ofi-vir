@@ -9,7 +9,7 @@
  *  renovar-conexiones (cada 15 min) renueva los tokens de las aplicaciones conectadas que caducan pronto.
  *  procesar-pendientes (cada 5 min) la cola: ejecuta las tareas que ya existen con su origen (eventos, traspasos, rutinas, seguimientos).
  *                    Ningún cron lanza a un agente para que «revise» o «busque trabajo»: solo ejecuta tareas con un motivo concreto.
- *  control-calidad    (cada hora) proceso interno de SAMGPLE (muestreo con Haiku). Solo con CONTROL_CALIDAD_AUTOMATICO=true.
+ *  control-calidad    (cada hora) proceso interno de MyOfia (muestreo con Haiku). Solo con CONTROL_CALIDAD_AUTOMATICO=true.
  *  examenes-certificacion (cada 5 min) ejecuta los exámenes técnicos de certificación pendientes (en segundo plano).
  *  recertificacion   (diaria)  30 días antes de que caduque una certificación crea la solicitud «periódica» y avisa; caducada, pausa al agente.
  *  abrir-aplazadas   (cada 15 min) procesa los mensajes que llegaron fuera de horario (regla «no responder») cuando abre el horario.
@@ -45,7 +45,7 @@ export type DepsTareas = {
   /** Cómo se ejecutan los exámenes de certificación pendientes. Sin él, `examenes-certificacion` solo informa. */
   procesarExamenes?: (empresaId?: string, opciones?: { excluirTipos?: string[] }) => Promise<{ procesados: number; errores: string[]; omitidos?: number }>;
   /**
-   * Procesos internos automáticos de SAMGPLE con IA (muestreo de calidad y exámenes de recertificación periódica). Nunca los hacen los
+   * Procesos internos automáticos de MyOfia con IA (muestreo de calidad y exámenes de recertificación periódica). Nunca los hacen los
    * agentes de la empresa. Solo con CONTROL_CALIDAD_AUTOMATICO=true; en pruebas y por defecto, desactivados.
    */
   controlCalidadAutomatico?: boolean;

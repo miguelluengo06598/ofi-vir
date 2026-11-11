@@ -133,7 +133,7 @@ export async function darDeAlta(
     try {
       await correoBienvenida(config, {
         para: dest.email, empresa: d.empresa.nombre, nombre: dest.propietario ? d.propietario.nombre : null, enlace: dest.enlace, propietario: dest.propietario,
-        responsable: { nombre: (resp?.nombre as string | null) ?? "tu responsable de SAMGPLE", email: (respEmail?.email as string | null) ?? null },
+        responsable: { nombre: (resp?.nombre as string | null) ?? "tu responsable de MyOfia", email: (respEmail?.email as string | null) ?? null },
         pasos: tareasCliente,
       });
       correos.push({ email: dest.email, propietario: dest.propietario, enviado: true, enlace: enlaceVisible });

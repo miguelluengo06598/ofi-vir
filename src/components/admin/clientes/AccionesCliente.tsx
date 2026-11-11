@@ -105,13 +105,13 @@ export function AccionesCliente({ companyId, nombre, estado, pausada, pausadaPor
       </Dialogo>
 
       <Dialogo abierto={abierto === "reactivar"} onCerrar={cerrar} titulo={`Reactivar ${nombre}`} etiquetaConfirmar="Reactivar"
-        explicacion={<p>Quita la suspensión o la pausa de SAMGPLE y, si la oficina estaba pausada por inactividad o pendiente de borrado, la recupera y cancela el borrado. Se avisa a la empresa.</p>}
+        explicacion={<p>Quita la suspensión o la pausa de MyOfia y, si la oficina estaba pausada por inactividad o pendiente de borrado, la recupera y cancela el borrado. Se avisa a la empresa.</p>}
         onConfirmar={(motivo) => cambiarEstado({ companyId, accion: "reactivar", motivo })} />
 
       <Dialogo abierto={abierto === "exportar"} onCerrar={cerrar} titulo="Exportar los datos de la empresa" etiquetaConfirmar="Generar exportación"
         explicacion={<>
           <p>Se genera en segundo plano un archivo JSON con sus datos (derecho de portabilidad). Al terminar, la empresa recibe un aviso y <strong>solo su propietario o un administrador</strong> puede descargarlo durante 7 días.</p>
-          <p>SAMGPLE ve el estado y el tamaño en la pestaña Soporte, nunca el contenido.</p>
+          <p>MyOfia ve el estado y el tamaño en la pestaña Soporte, nunca el contenido.</p>
         </>}
         onConfirmar={(motivo) => exportar({ companyId, motivo })} />
 

@@ -39,7 +39,7 @@ export const pasos = [
 
 export type AgenteEjemplo = { nombre: string; rol: string; hace: string };
 
-/** Agentes de ejemplo por departamento (plantillas de SAMGPLE, publicadas o en preparación). */
+/** Agentes de ejemplo por departamento (plantillas de MyOfia, publicadas o en preparación). */
 export const departamentosPublicos: { id: DepartmentId; resumen: string; agentes: AgenteEjemplo[] }[] = [
   {
     id: "ventas",
@@ -98,7 +98,7 @@ export const garantias = [
     texto: "Un mensaje, un lead, una orden tuya o una rutina que tú activaste. Nunca por su cuenta.",
   },
   {
-    titulo: "Cada agente está certificado por SAMGPLE",
+    titulo: "Cada agente está certificado por MyOfia",
     texto: "Antes de tocar datos reales pasa un examen técnico y una revisión de una persona.",
   },
   {
@@ -120,14 +120,14 @@ export const preguntasFrecuentes = [
   },
   {
     p: "¿Qué pasa con mis datos?",
-    r: "Cada empresa tiene sus datos aislados: nadie de otra empresa puede verlos, y una cuenta de SAMGPLE no da acceso a ellos. La base de datos y los archivos se alojan en la UE. Puedes borrar todo lo que sabemos de un contacto cuando lo pida.",
+    r: "Cada empresa tiene sus datos aislados: nadie de otra empresa puede verlos, y una cuenta de MyOfia no da acceso a ellos. La base de datos y los archivos se alojan en la UE. Puedes borrar todo lo que sabemos de un contacto cuando lo pida.",
   },
   {
     p: "¿Cuánto cuesta?",
     r: "Pagas con créditos, solo por lo que hacen tus agentes. 1 crédito es 1 céntimo. No hay cuotas: los departamentos y los agentes son gratis. Puedes empezar con el pack Prueba.",
   },
   {
-    p: "¿Qué es la certificación de SAMGPLE?",
+    p: "¿Qué es la certificación de MyOfia?",
     r: "Es la revisión que pasa cada agente antes de trabajar con datos reales: un examen técnico automático con datos ficticios y la revisión de una persona de nuestro equipo. Se repite cuando cambias algo importante y cada seis meses.",
   },
   {

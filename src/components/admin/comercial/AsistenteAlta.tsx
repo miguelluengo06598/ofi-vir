@@ -265,7 +265,7 @@ export function AsistenteAlta({ inicial, packs, plantillas, equipo, yo }: { inic
 
         {paso === 6 && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Campo etiqueta="Responsable de SAMGPLE" ayuda="Aparece en el correo de bienvenida.">
+            <Campo etiqueta="Responsable de MyOfia" ayuda="Aparece en el correo de bienvenida.">
               <select className={campo} value={responsable} onChange={(e) => setResponsable(e.target.value)}>
                 {equipo.map((p) => <option key={p.userId} value={p.userId} className="text-black">{p.nombre}</option>)}
               </select>

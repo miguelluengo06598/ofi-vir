@@ -61,7 +61,7 @@ export function PuestaEnMarcha() {
             <h1 id="pm-t" className="flex items-center gap-2 text-h1"><Rocket size={24} aria-hidden="true" />Puesta en marcha</h1>
             <p className="mt-1 text-small text-ink-2">
               {impl.estado === "completada" ? `Tu oficina está en marcha${impl.completadaEn ? ` desde el ${dia(impl.completadaEn)}` : ""}.` : "Lo que falta para que tus agentes trabajen con clientes reales."}
-              {impl.responsable ? ` Tu responsable en SAMGPLE es ${impl.responsable}.` : ""}
+              {impl.responsable ? ` Tu responsable en MyOfia es ${impl.responsable}.` : ""}
               {impl.objetivoFin && impl.estado !== "completada" ? ` Objetivo: ${dia(impl.objetivoFin)}.` : ""}
             </p>
           </div>
@@ -70,7 +70,7 @@ export function PuestaEnMarcha() {
         <div className="h-2 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-valuenow={impl.progreso} aria-valuemin={0} aria-valuemax={100} aria-label="Progreso de la puesta en marcha">
           <div className="h-full origin-left rounded-full bg-status-working" style={{ transform: `scaleX(${impl.progreso / 100})` }} />
         </div>
-        {impl.samgple.pendientes > 0 && <p className="text-small text-ink-2">SAMGPLE tiene {impl.samgple.pendientes} pasos en marcha{impl.samgple.proxima ? `; el siguiente: «${impl.samgple.proxima}»` : ""}.</p>}
+        {impl.samgple.pendientes > 0 && <p className="text-small text-ink-2">MyOfia tiene {impl.samgple.pendientes} pasos en marcha{impl.samgple.proxima ? `; el siguiente: «${impl.samgple.proxima}»` : ""}.</p>}
         {aviso && <p role="status" className="text-small">{aviso}</p>}
       </GlassPanel>
 
@@ -130,7 +130,7 @@ function FormularioFiscales({ alGuardar }: { alGuardar: () => void }) {
   return (
     <GlassPanel as="section" id="datos-fiscales" aria-labelledby="pm-fiscales" className="flex flex-col gap-3 p-5 sm:p-6">
       <h2 id="pm-fiscales" className="text-h2">Datos fiscales</h2>
-      <p className="text-small text-ink-2">Los usamos para las facturas de servicios de SAMGPLE.</p>
+      <p className="text-small text-ink-2">Los usamos para las facturas de servicios de MyOfia.</p>
       <form className="flex flex-col gap-3" onSubmit={async (e) => {
         e.preventDefault(); setEnviando(true); setEstado(null);
         const r = await llamar("/api/empresas/datos-fiscales", "POST", { ...f, provincia: f.provincia || undefined });

@@ -28,7 +28,7 @@ export const pasosCadena = [
 export const controlInicio = [
   { titulo: "Nada sensible sale sin tu aprobación", texto: "Un correo a un cliente, un gasto o una publicación esperan a que tú digas que sí." },
   { titulo: "Solo trabajan cuando llega algo o tú se lo pides", texto: "Un mensaje, un lead, una orden tuya o una rutina que activaste. Nunca por su cuenta." },
-  { titulo: "Cada agente, certificado por SAMGPLE", texto: "Examen técnico con datos ficticios y revisión de una persona antes de tocar datos reales." },
+  { titulo: "Cada agente, certificado por MyOfia", texto: "Examen técnico con datos ficticios y revisión de una persona antes de tocar datos reales." },
   { titulo: "Tus datos, aislados y en la UE", texto: "Cada empresa solo ve lo suyo. Tu base de datos y tus archivos se alojan en la UE." },
 ] as const;
 

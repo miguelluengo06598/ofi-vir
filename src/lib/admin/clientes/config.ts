@@ -1,5 +1,5 @@
 /**
- * Configuración de la ficha de clientes de SAMGPLE (/admin/clientes). Sin dependencias de servidor: la importan también los
+ * Configuración de la ficha de clientes de MyOfia (/admin/clientes). Sin dependencias de servidor: la importan también los
  * componentes para mostrar u ocultar botones (la decisión real la vuelve a tomar el servidor en cada acción).
  */
 import type { RolPlataforma } from "../acceso.ts";

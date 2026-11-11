@@ -39,7 +39,7 @@ async function Pantalla({ searchParams }: { searchParams: Promise<Q> }) {
         ) : (
           <form method="post" action="/api/demo-oauth/autorizar" className="flex flex-col gap-4">
             <p>
-              <strong>SAMGPLE</strong> quiere acceder a tu cuenta de demostración con este permiso:
+              <strong>MyOfia</strong> quiere acceder a tu cuenta de demostración con este permiso:
             </p>
             <ul className="list-disc pl-6 text-sm">
               {(q.scope ?? "cuenta.leer").split(" ").map((s) => <li key={s}><code>{s}</code> · ver el nombre de tu cuenta</li>)}

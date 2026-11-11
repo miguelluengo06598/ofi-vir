@@ -88,8 +88,8 @@ export function CabeceraPublica() {
         >
           <Link href="/" className="flex shrink-0 items-center gap-2 rounded-pill text-small font-semibold whitespace-nowrap sm:text-body">
             {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático de la marca */}
-            <img src="/marca-samgple.svg" alt="" aria-hidden="true" width={28} height={28} className="size-7" />
-            SAMGPLE
+            <img src="/marca.svg" alt="" aria-hidden="true" width={28} height={28} className="size-7" />
+            MyOfia
           </Link>
 
           <nav aria-label="Principal" className="mx-auto hidden xl:block">

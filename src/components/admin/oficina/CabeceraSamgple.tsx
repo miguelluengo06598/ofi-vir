@@ -17,15 +17,15 @@ const NOMBRE_ROL: Record<RolPlataforma, string> = {
   finanzas_samgple: "Finanzas",
 };
 
-/** Distintivo «SAMGPLE · Administración» y saludo con los roles de la persona. */
+/** Distintivo «MyOfia · Administración» y saludo con los roles de la persona. */
 export function CabeceraSamgple({ nombre, roles }: { nombre: string; roles: RolPlataforma[] }) {
   return (
     <GlassPanel className="flex flex-wrap items-center justify-between gap-3 rounded-pill! px-4 py-2.5" style={{ boxShadow: `inset 0 0 0 1px ${ACENTO_ADMIN}55, var(--glass-shadow)` }}>
       <p className="flex items-center gap-2.5">
         <span className="inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-small font-semibold text-black" style={{ background: ACENTO_ADMIN }}>
-          <ShieldCheck size={15} aria-hidden="true" /> SAMGPLE · Administración
+          <ShieldCheck size={15} aria-hidden="true" /> MyOfia · Administración
         </span>
-        <span className="hidden text-small text-ink-2 sm:inline">La oficina de SAMGPLE</span>
+        <span className="hidden text-small text-ink-2 sm:inline">La oficina de MyOfia</span>
       </p>
       <p className="text-small text-ink-2">
         <span className="text-white">{nombre}</span> · {roles.map((r) => NOMBRE_ROL[r]).join(", ")}

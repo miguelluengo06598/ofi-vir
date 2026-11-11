@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Lo que SAMGPLE deja preparado para la empresa:
- *  - CambioPropietarioPendiente (Miembros): el propietario actual confirma o rechaza el cambio que pidió SAMGPLE.
+ * Lo que MyOfia deja preparado para la empresa:
+ *  - CambioPropietarioPendiente (Miembros): el propietario actual confirma o rechaza el cambio que pidió MyOfia.
  *  - ExportacionesEmpresa (Cuenta): descargar la exportación de datos (propietario o administrador).
  * Si la persona no tiene permiso, el servidor responde 403 y aquí no se muestra nada.
  */
@@ -34,7 +34,7 @@ export function CambioPropietarioPendiente() {
       <h2 id="cambio-propietario" className="text-h2">Cambio de propietario pendiente</h2>
       {cambio && (
         <>
-          <p className="text-body">SAMGPLE ha pedido transferir la propiedad de <strong>{cambio.actual}</strong> a <strong>{cambio.nuevo}</strong>. Motivo: {cambio.motivo}</p>
+          <p className="text-body">MyOfia ha pedido transferir la propiedad de <strong>{cambio.actual}</strong> a <strong>{cambio.nuevo}</strong>. Motivo: {cambio.motivo}</p>
           <p className="text-small text-ink-2">{cambio.puedoDecidir ? `Solo tú, como propietario actual, puedes confirmarlo. Caduca el ${dia(cambio.caducaEn)}.` : "Solo el propietario actual puede confirmarlo o rechazarlo."}</p>
           {cambio.puedoDecidir && (
             <div className="flex flex-wrap gap-2">
@@ -59,7 +59,7 @@ export function ExportacionesEmpresa() {
   return (
     <GlassPanel as="section" aria-labelledby="exportaciones" className="mx-auto mt-4 flex w-full max-w-2xl flex-col gap-3 p-6">
       <h2 id="exportaciones" className="text-h2">Exportaciones de datos</h2>
-      <p className="text-small text-ink-2">Archivos con los datos de tu empresa que ha preparado SAMGPLE a petición vuestra. Cada uno se puede descargar durante 7 días.</p>
+      <p className="text-small text-ink-2">Archivos con los datos de tu empresa que ha preparado MyOfia a petición vuestra. Cada uno se puede descargar durante 7 días.</p>
       <ul className="flex flex-col gap-2">
         {lista.map((e) => (
           <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 rounded-card bg-white/6 p-3 text-small">

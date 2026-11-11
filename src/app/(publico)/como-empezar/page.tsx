@@ -4,7 +4,7 @@ import { Bloque, PaginaSeccion } from "@/components/publico/plantilla/PaginaSecc
 
 export const metadata: Metadata = {
   title: "Cómo empezar",
-  description: "Tu primer agente, funcionando en días, no en meses. Lo configuramos contigo, lo pruebas y SAMGPLE lo certifica antes de activarlo.",
+  description: "Tu primer agente, funcionando en días, no en meses. Lo configuramos contigo, lo pruebas y MyOfia lo certifica antes de activarlo.",
 };
 
 export default function ComoEmpezar() {

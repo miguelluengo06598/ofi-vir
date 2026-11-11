@@ -19,7 +19,7 @@ before(async () => {
   const email = `sec-adm-idesie-${RUN}@test.example`, password = `Pw-${RUN}-idesie-Aa1!`;
   const { data } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   idAdmin = data.user!.id;
-  assert.ifError((await rolDePlataforma(admin, { id: idAdmin, nombre: "Prueba SAMGPLE", email, rol: "admin_samgple" })).error);
+  assert.ifError((await rolDePlataforma(admin, { id: idAdmin, nombre: "Prueba MyOfia", email, rol: "admin_samgple" })).error);
   tokenAdmin = (await (await loginAs(email, password)).auth.getSession()).data.session!.access_token;
 });
 after(async () => { if (idAdmin) await admin.auth.admin.deleteUser(idAdmin); });

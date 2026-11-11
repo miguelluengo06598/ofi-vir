@@ -44,7 +44,7 @@ const PASOS = [
     texto: "Escríbele como si fueras un cliente. El simulador te enseña qué respondería, qué usaría y qué te pediría aprobar; no manda ni guarda nada.",
   },
   {
-    titulo: "SAMGPLE lo certifica",
+    titulo: "MyOfia lo certifica",
     texto: "Antes de tocar datos reales, el agente pasa casos ficticios y una revisión de nuestro equipo. Solo entonces queda listo para activarse.",
   },
   {

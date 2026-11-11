@@ -11,12 +11,12 @@ import { dbAdminDesdeEntorno } from "@/lib/admin/entorno";
 import { alertasAtencion, indicadoresPanorama, seriesPanorama, sucesosEnDirecto } from "@/lib/admin/oficina/panorama";
 import { cargarEnDirecto } from "./oficina-acciones";
 
-export const metadata: Metadata = { title: "Oficina de SAMGPLE", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Oficina de MyOfia", robots: { index: false, follow: false } };
 // Datos por persona y en vivo: no se prerenderiza.
 export const instant = false;
 
 /**
- * Pantalla principal de la oficina de SAMGPLE: Panorama, alertas que requieren atención y En directo.
+ * Pantalla principal de la oficina de MyOfia: Panorama, alertas que requieren atención y En directo.
  * Todo sale de funciones SQL de agregados y se filtra por el rol de la persona en el servidor.
  */
 export default async function OficinaSamgple() {

@@ -45,7 +45,7 @@ async function Listado({ searchParams }: { searchParams: PageProps<"/admin/impla
 
       <GlassPanel as="section" aria-label="Filtrar" className="p-4 sm:p-5">
         <form method="get" className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-tiny text-ink-3">Responsable de SAMGPLE
+          <label className="flex flex-col gap-1 text-tiny text-ink-3">Responsable de MyOfia
             <select name="responsable" defaultValue={responsable} className={control}>
               <option value="" className="text-black">Cualquiera</option>
               <option value="ninguno" className="text-black">Sin responsable</option>
@@ -79,7 +79,7 @@ async function Listado({ searchParams }: { searchParams: PageProps<"/admin/impla
                     <div className={`h-full origin-left rounded-full ${f.atrasadas > 0 ? "bg-status-waiting" : "bg-status-working"}`} style={{ transform: `scaleX(${f.progreso / 100})` }} />
                   </div>
                 </div>
-                {f.atrasadas > 0 && <p className="text-small font-semibold text-status-error">Atrasadas: {f.atrasadasSamgple} de SAMGPLE y {f.atrasadasCliente} del cliente.</p>}
+                {f.atrasadas > 0 && <p className="text-small font-semibold text-status-error">Atrasadas: {f.atrasadasSamgple} de MyOfia y {f.atrasadasCliente} del cliente.</p>}
                 {f.proxima && <p className="text-small text-ink-2">Siguiente: {f.proxima}{f.proximaVence ? <span className={f.proximaVence < new Date().toISOString().slice(0, 10) ? " font-semibold text-status-error" : ""}> · {dia(f.proximaVence)}</span> : null}</p>}
               </GlassPanel>
             </li>

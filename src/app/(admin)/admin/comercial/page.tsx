@@ -9,7 +9,7 @@ import { ROLES_COMERCIAL } from "@/lib/admin/comercial/config";
 import { listarSolicitudes } from "@/lib/admin/comercial/servicio";
 import { dbAdminDesdeEntorno } from "@/lib/admin/entorno";
 
-export const metadata: Metadata = { title: "Comercial · SAMGPLE", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Comercial · MyOfia", robots: { index: false, follow: false } };
 export const instant = false;
 
 export default async function Comercial() {

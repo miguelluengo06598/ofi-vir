@@ -57,5 +57,5 @@ export function depsDesdeEntorno(ahora: Date, env: Record<string, string | undef
   };
 }
 
-/** Muestreo de calidad y recertificaciones automáticas (procesos internos de SAMGPLE): solo con CONTROL_CALIDAD_AUTOMATICO=true. */
+/** Muestreo de calidad y recertificaciones automáticas (procesos internos de MyOfia): solo con CONTROL_CALIDAD_AUTOMATICO=true. */
 export const controlCalidadAutomatico = (env: Record<string, string | undefined> = process.env) => env.CONTROL_CALIDAD_AUTOMATICO?.trim().toLowerCase() === "true";

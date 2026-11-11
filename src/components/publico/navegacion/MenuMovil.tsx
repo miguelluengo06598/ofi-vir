@@ -59,8 +59,8 @@ export function MenuMovil({ ruta, alCerrar }: { ruta: string; alCerrar: () => vo
         <div className="flex items-center justify-between">
           <Link href="/" onClick={alCerrar} className="flex items-center gap-2 font-semibold">
             {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático de la marca */}
-            <img src="/marca-samgple.svg" alt="" aria-hidden="true" width={32} height={32} className="size-8" />
-            SAMGPLE
+            <img src="/marca.svg" alt="" aria-hidden="true" width={32} height={32} className="size-8" />
+            MyOfia
           </Link>
           <button ref={cerrar} type="button" onClick={alCerrar} aria-label="Cerrar menú" className="flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20">
             <X size={20} aria-hidden="true" />

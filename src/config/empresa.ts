@@ -4,11 +4,11 @@
  * hasta que se sustituya. No inventar ningún dato: si no se sabe, se deja el marcador.
  */
 
-export const NOMBRE_PRODUCTO = "SAMGPLE";
-export const NOMBRE_COMERCIAL = "SAMGPLE";
+export const NOMBRE_PRODUCTO = "MyOfia";
+export const NOMBRE_COMERCIAL = "MyOfia";
 
 export const EMPRESA = {
-  razonSocial: "[RAZÓN SOCIAL DE SAMGPLE]",
+  razonSocial: "[RAZÓN SOCIAL DE MyOfia]",
   nif: "[NIF]",
   domicilio: "[DOMICILIO]",
   emailContacto: "[EMAIL DE CONTACTO]",

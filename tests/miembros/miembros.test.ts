@@ -59,7 +59,7 @@ before(async () => {
   await alta(miembroA, A, "miembro");
   await alta(propietariaA, A, "propietario");
   await alta(adminA, A, "admin");
-  assert.ifError((await rolDePlataforma(db, { id: samgple.id, nombre: "SAMGPLE", email: samgple.email, rol: "admin_samgple" })).error);
+  assert.ifError((await rolDePlataforma(db, { id: samgple.id, nombre: "MyOfia", email: samgple.email, rol: "admin_samgple" })).error);
   await alta(doble, A, "miembro");
   await alta(doble, B, "miembro");
 });

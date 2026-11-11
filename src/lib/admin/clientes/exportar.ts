@@ -1,7 +1,7 @@
 /**
- * Exportación de los datos de una empresa (derecho de portabilidad). SAMGPLE la lanza a petición del cliente; se genera en
+ * Exportación de los datos de una empresa (derecho de portabilidad). MyOfia la lanza a petición del cliente; se genera en
  * segundo plano y el archivo (JSON) queda en el bucket privado `exportaciones`. SOLO lo descarga un propietario o administrador
- * de la empresa (GET /api/empresas/exportaciones/[id]): SAMGPLE ve el estado y el tamaño, nunca el contenido.
+ * de la empresa (GET /api/empresas/exportaciones/[id]): MyOfia ve el estado y el tamaño, nunca el contenido.
  * Columnas elegidas a mano: lo que la empresa y sus agentes generaron con ella. Fuera quedan los costes internos de la
  * plataforma, los vectores, las instrucciones base protegidas de IDESIE y los secretos de conexión. Solo servidor.
  */
@@ -68,7 +68,7 @@ export async function construirExportacion(db: SupabaseClient, companyId: string
   for (const [tabla, columnas] of Object.entries(TABLAS_EXPORTACION)) datos[tabla] = await todasLasFilas(db, tabla, columnas, companyId);
   return {
     formato: "oficina-virtual-exportacion", version: 1, generada_en: ahora.toISOString(),
-    nota: "Datos de tu empresa en SAMGPLE. Fechas en UTC (ISO 8601). Los créditos son enteros (1 crédito = 1 céntimo); el dinero va en céntimos.",
+    nota: "Datos de tu empresa en MyOfia. Fechas en UTC (ISO 8601). Los créditos son enteros (1 crédito = 1 céntimo); el dinero va en céntimos.",
     empresa, datos_fiscales: fiscales ?? null,
     miembros: (miembros ?? []).map((m) => ({ ...m, nombre: perfil.get(m.user_id)?.full_name ?? null, email: perfil.get(m.user_id)?.email ?? null })),
     datos,

@@ -26,7 +26,7 @@ npm run dev                         # http://localhost:3000
 
 Para `.env.local`, `supabase status -o env` da la URL y las claves de Supabase local. Cada variable está explicada en [`.env.example`](.env.example) (obligatoria u opcional, servidor o navegador y de dónde sacarla). **Nunca subas `.env.local` ni pongas un secreto en una variable `NEXT_PUBLIC_`.**
 
-Personas de la semilla (solo local): `marcos@hogarmediterraneo.example` (propietario), `ana@hogarmediterraneo.example` (miembro) y `admin@samgple.example` (equipo SAMGPLE, sin acceso a empresas). Contraseñas en `supabase/seed.sql`.
+Personas de la semilla (solo local): `marcos@hogarmediterraneo.example` (propietario), `ana@hogarmediterraneo.example` (miembro) y `admin@samgple.example` (equipo MyOfia, sin acceso a empresas). Contraseñas en `supabase/seed.sql`.
 
 ## Scripts
 

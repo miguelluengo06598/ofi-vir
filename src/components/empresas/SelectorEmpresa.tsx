@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 type Empresa = { id: string; nombre: string; nombreRol: string };
 
 /**
- * Empresa activa (solo si la persona pertenece a más de una, p. ej. alguien de SAMGPLE que ayuda a varios clientes).
+ * Empresa activa (solo si la persona pertenece a más de una, p. ej. alguien de MyOfia que ayuda a varios clientes).
  * Al cambiar, el servidor comprueba que es miembro activo y guarda la cookie; después se recarga la página con los datos de esa empresa.
  */
 export function SelectorEmpresa() {

@@ -26,7 +26,7 @@ export function ParadaEmergencia({ inicial }: { inicial: Estado }) {
         {estado.activa ? "Parada de emergencia ACTIVA: ningún agente trabaja" : "Los agentes funcionan con normalidad"}
       </p>
       {estado.activa && <p className="text-small text-ink-2">Motivo: {estado.motivo ?? "—"} · {estado.cambiadoPor ?? "—"}{estado.cambiadoEn ? `, ${new Date(estado.cambiadoEn).toLocaleString("es-ES")}` : ""}</p>}
-      {!estado.puedeCambiar ? <p className="text-small text-ink-3">Solo un administrador de SAMGPLE puede activarla o desactivarla.</p> : estado.activa ? (
+      {!estado.puedeCambiar ? <p className="text-small text-ink-3">Solo un administrador de MyOfia puede activarla o desactivarla.</p> : estado.activa ? (
         <div><PillButton icon={Play} onClick={() => void cambiar(false)}>Desactivar la parada</PillButton></div>
       ) : (
         <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); if (motivo.trim().length >= 3) void cambiar(true); }}>

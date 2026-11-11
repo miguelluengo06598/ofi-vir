@@ -57,7 +57,7 @@ async function Ficha({ params, searchParams }: { params: PageProps<"/admin/clien
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-h1">{c.nombre}</h1>
           <Etiqueta tono={esOperativa(c.estado) ? (c.oficinaPausada ? "aviso" : c.estado === "en_implantacion" ? "acento" : "bien") : "mal"}>{NOMBRE_ESTADO_EMPRESA[c.estado] ?? c.estado}{motivo ? ` · ${motivo.toLowerCase()}` : ""}</Etiqueta>
-          {esOperativa(c.estado) && c.oficinaPausada && <Etiqueta tono="aviso">{c.pausadaPorSamgple ? "Pausada por SAMGPLE" : "Agentes pausados por la empresa"}</Etiqueta>}
+          {esOperativa(c.estado) && c.oficinaPausada && <Etiqueta tono="aviso">{c.pausadaPorSamgple ? "Pausada por MyOfia" : "Agentes pausados por la empresa"}</Etiqueta>}
           <IndicadorSalud salud={c.salud} id={`cab-${c.id}`} />
         </div>
         <AccionesCliente companyId={c.id} nombre={c.nombre} estado={c.estado} pausada={c.oficinaPausada} pausadaPorSamgple={c.pausadaPorSamgple} estadoOficina={c.estadoOficina} saldo={c.saldo}
@@ -100,11 +100,11 @@ async function Contenido({ pestana, db, sesion, c, ahora }: { pestana: Pestana; 
           <Seccion id="salud" titulo="Salud" nota="Actividad reciente, saldo, valoraciones negativas (30 días), agentes suspendidos y recargas fallidas (30 días). Manda la peor señal.">
             <IndicadorSalud salud={c.salud} id={`det-${c.id}`} detalle />
           </Seccion>
-          <Seccion id="ficha" titulo="Responsable y servicios" nota={r.fichaActualizadaEn ? `Actualizado el ${momento(r.fichaActualizadaEn)}` : "Solo la ve SAMGPLE."}>
+          <Seccion id="ficha" titulo="Responsable y servicios" nota={r.fichaActualizadaEn ? `Actualizado el ${momento(r.fichaActualizadaEn)}` : "Solo la ve MyOfia."}>
             <FichaInterna companyId={c.id} responsable={c.responsable?.id ?? null} servicios={r.servicios} equipo={equipo} editable={viva && puedeHacer(sesion.roles, "editarFicha")} />
             {r.servicios.length > 0 && <p className="text-tiny text-ink-3">Contratados: {r.servicios.map((s) => SERVICIOS.find((x) => x.id === s)?.nombre ?? s).join(", ")}</p>}
           </Seccion>
-          <Seccion id="notas" titulo="Notas internas" nota="Solo SAMGPLE. Nunca las ve la empresa.">
+          <Seccion id="notas" titulo="Notas internas" nota="Solo MyOfia. Nunca las ve la empresa.">
             {viva && puedeHacer(sesion.roles, "anotar") && <NuevaNota companyId={c.id} />}
             {r.notas.length === 0 ? <p className="text-small text-ink-2">Sin notas todavía.</p> : (
               <ul className="flex flex-col gap-3">
@@ -210,7 +210,7 @@ async function Contenido({ pestana, db, sesion, c, ahora }: { pestana: Pestana; 
                 <Dato t="Tope mensual">{k.ajustes.tope === null ? "Sin tope" : `${fmtNumber(k.ajustes.tope)} créditos`}</Dato>
                 <Dato t="Recarga automática">{k.ajustes.recargaActiva ? `Sí: pack ${k.ajustes.recargaPack ?? "—"} por debajo de ${fmtNumber(k.ajustes.recargaUmbral ?? 0)}` : "No"}</Dato>
                 <Dato t="Bono mensual">{k.ajustes.bonoPack ? `Pack ${k.ajustes.bonoPack}` : "No"}</Dato>
-                {k.ajustes.pausadaPorSamgple && <Dato t="Pausa de SAMGPLE">{MOTIVOS_SUSPENSION.find((m) => m.id === k.ajustes.motivoPausa)?.nombre ?? "Sí"}</Dato>}
+                {k.ajustes.pausadaPorSamgple && <Dato t="Pausa de MyOfia">{MOTIVOS_SUSPENSION.find((m) => m.id === k.ajustes.motivoPausa)?.nombre ?? "Sí"}</Dato>}
               </dl>
             </Seccion>
             <Seccion id="consumo" titulo={`Consumo del mes · ${fmtNumber(k.consumo.total)} créditos`}>
@@ -284,7 +284,7 @@ async function Contenido({ pestana, db, sesion, c, ahora }: { pestana: Pestana; 
             </Tabla>
           </Seccion>
           <Seccion id="accesos" titulo="Accesos asistidos">
-            <p className="text-small text-ink-2">El acceso asistido (entrar en la oficina de la empresa con su autorización) todavía no existe en la plataforma: no hay accesos que mostrar. SAMGPLE no puede ver los datos de la empresa sin él.</p>
+            <p className="text-small text-ink-2">El acceso asistido (entrar en la oficina de la empresa con su autorización) todavía no existe en la plataforma: no hay accesos que mostrar. MyOfia no puede ver los datos de la empresa sin él.</p>
           </Seccion>
           <Seccion id="exportaciones" titulo="Exportaciones de datos" nota="El archivo solo lo descarga la empresa (propietario o administrador). Aquí solo se ve el estado.">
             <Tabla caption="Exportaciones de datos" vacio={s.exportaciones.length === 0} textoVacio="Sin exportaciones." cols={[{ t: "Pedida" }, { t: "Por" }, { t: "Estado" }, { t: "Tamaño", der: true }, { t: "Caduca" }, { t: "Descargada" }, { t: "Motivo" }]}>
@@ -300,7 +300,7 @@ async function Contenido({ pestana, db, sesion, c, ahora }: { pestana: Pestana; 
     case "actividad": {
       const a = await ficha.actividadCliente(db, c.id);
       return (
-        <Seccion id="actividad" titulo="Actividad" nota="Registro de auditoría de SAMGPLE sobre esta empresa: solo inserción, nunca se edita ni se borra.">
+        <Seccion id="actividad" titulo="Actividad" nota="Registro de auditoría de MyOfia sobre esta empresa: solo inserción, nunca se edita ni se borra.">
           {a.length === 0 ? <p className="text-small text-ink-2">Sin acciones registradas.</p> : (
             <ul className="flex flex-col gap-2">
               {a.map((e) => (

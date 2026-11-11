@@ -4,7 +4,7 @@
  *
  * Comprueba, en este orden:
  *  1. AGENTES_ACTIVOS (variable de entorno): con `false` no se ejecuta ningún agente, diga lo que diga la base.
- *  2. Parada de emergencia global de SAMGPLE: detiene también las tareas en curso en su siguiente paso.
+ *  2. Parada de emergencia global de MyOfia: detiene también las tareas en curso en su siguiente paso.
  *  3. Oficina pausada por la empresa: no empieza ninguna tarea nueva (las que ya están en marcha terminan).
  *  4. Origen válido: toda tarea tiene un origen con su referencia (evento, traspaso, orden, rutina o seguimiento aprobado).
  *  5. Cadena válida: un traspaso tiene tarea padre y su cadena llega a una raíz válida (evento, orden, rutina o seguimiento).
@@ -69,7 +69,7 @@ export function validarCadena(cadena: EslabonCadena[]): Bloqueo | null {
 export async function puedeEjecutarse(deps: DepsPuerta, companyId: string, task: TaskInfo, fase: FaseEjecucion): Promise<DecisionPuerta> {
   if (!agentesActivosPorEntorno(deps.env)) return bloqueo("agentes_desactivados", "Los agentes están desactivados en este servidor (AGENTES_ACTIVOS=false).", true);
   const control = await deps.store.controlDeEjecucion(companyId);
-  if (control.paradaEmergencia) return bloqueo("parada_emergencia", `Parada de emergencia de SAMGPLE activa${control.motivoParada ? `: ${control.motivoParada}` : ""}.`, true);
+  if (control.paradaEmergencia) return bloqueo("parada_emergencia", `Parada de emergencia de MyOfia activa${control.motivoParada ? `: ${control.motivoParada}` : ""}.`, true);
   if (fase === "inicio" && !deps.esSimulacion && control.oficinaPausada) return bloqueo("oficina_pausada", "La oficina está pausada por la empresa: no empieza ninguna tarea nueva.", true);
 
   const o = validarOrigen(task);

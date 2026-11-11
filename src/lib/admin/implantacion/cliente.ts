@@ -32,7 +32,7 @@ export async function puestaGetHandler(req: Request, deps: DepsPuesta): Promise<
       implantacion: {
         estado: impl.estado, objetivoFin: impl.objetivoFin, completadaEn: impl.completadaEn, responsable: impl.responsable?.nombre ?? null,
         total: visibles.length, hechas, progreso: visibles.length ? Math.round((hechas / visibles.length) * 100) : 0,
-        // Lo de SAMGPLE se resume (cuántas quedan y la próxima), sin detalles internos de su equipo.
+        // Lo de MyOfia se resume (cuántas quedan y la próxima), sin detalles internos de su equipo.
         samgple: { pendientes: visibles.filter((t) => t.para === "samgple" && t.estado !== "hecha").length, proxima: visibles.find((t) => t.para === "samgple" && t.estado !== "hecha")?.titulo ?? null },
       },
       tareas: visibles.filter((t) => t.para === "cliente").map((t) => ({

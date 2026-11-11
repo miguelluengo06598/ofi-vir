@@ -108,7 +108,7 @@ const SancionCalidad = z.object({
   reason: z.string().trim().min(1).max(2000), dueAt: z.string().datetime().optional(),
 }).strict();
 
-/** Medidas escalonadas: siempre las aplica un revisor desde SAMGPLE; el único automatismo es el incidente grave de seguridad. */
+/** Medidas escalonadas: siempre las aplica un revisor desde MyOfia; el único automatismo es el incidente grave de seguridad. */
 export async function aplicarSancionDeCalidad(input: z.input<typeof SancionCalidad>): Promise<Hecho> {
   const v = SancionCalidad.safeParse(input);
   const c = await entrar();

@@ -32,7 +32,7 @@ async function Revision({ params }: { params: PageProps<"/admin/certificacion/pl
     <>
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-small text-ink-2"><Link href="/admin/certificacion" className="underline-offset-4 hover:underline">Cola de revisión</Link> / Plantillas de SAMGPLE</p>
+          <p className="text-small text-ink-2"><Link href="/admin/certificacion" className="underline-offset-4 hover:underline">Cola de revisión</Link> / Plantillas de MyOfia</p>
           <h1 className="text-h1">Plantilla {p.nombre} <span className="text-ink-2">· versión {d.version}</span></h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-small">
             <Etiqueta tono={d.estado === "aprobada" ? "bien" : d.estado === "rechazada" ? "mal" : esSegunda ? "aviso" : "acento"}>{NOMBRE_ESTADO[d.estado] ?? d.estado}</Etiqueta>

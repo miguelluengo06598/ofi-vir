@@ -1,5 +1,5 @@
 /**
- * Clientes en el panel de SAMGPLE contra la base LOCAL: listado y salud, permisos por rol, créditos (regalo y ajuste),
+ * Clientes en el panel de MyOfia contra la base LOCAL: listado y salud, permisos por rol, créditos (regalo y ajuste),
  * pausa/suspensión/reactivación, ficha, datos fiscales, invitaciones, cambio de propietario, exportación y borrado.
  * Las acciones se llaman al servicio con una sesión de plataforma ya verificada (la MFA y el 404 del proxy se prueban en
  * tests/seguridad/admin.test.ts). Ejecutar: npm run test:admin
@@ -35,7 +35,7 @@ async function persona(etiqueta: string) {
 async function samgple(etiqueta: string, roles: RolPlataforma[]): Promise<s.Contexto> {
   const p = await persona(etiqueta);
   assert.ifError((await db.from("users").upsert({ id: p.id, full_name: etiqueta, email: p.email })).error);
-  assert.ifError((await db.from("platform_roles").insert({ user_id: p.id, rol: roles[0], roles, nombre: `SAMGPLE ${etiqueta}`, categorias: ["ventas"] })).error);
+  assert.ifError((await db.from("platform_roles").insert({ user_id: p.id, rol: roles[0], roles, nombre: `MyOfia ${etiqueta}`, categorias: ["ventas"] })).error);
   const sesion: SesionPlataforma = { userId: p.id, roles, nombre: etiqueta, categorias: [], mfaVerificada: true };
   return { db, sesion, ip: "127.0.0.1" };
 }
@@ -162,7 +162,7 @@ describe("pausar, suspender y reactivar", () => {
 describe("ficha, notas y datos fiscales", () => {
   it("guarda responsable y servicios; las notas son de solo inserción", async () => {
     await s.guardarFicha(comercial, { companyId: C, responsable: comercial.sesion.userId, servicios: ["implantacion", "formacion"] });
-    await assert.rejects(s.guardarFicha(comercial, { companyId: C, responsable: duena.id, servicios: [] }), /persona activa de SAMGPLE/);
+    await assert.rejects(s.guardarFicha(comercial, { companyId: C, responsable: duena.id, servicios: [] }), /persona activa de MyOfia/);
     const lista = await obtenerClientes(db);
     assert.equal(lista.find((x) => x.id === C)?.responsable?.id, comercial.sesion.userId);
     await s.anotar(comercial, { companyId: C, texto: "Llamar al propietario el lunes." });
@@ -223,7 +223,7 @@ describe("miembros", () => {
 
 describe("exportación", () => {
   let expId = "";
-  it("se genera en segundo plano y SAMGPLE no recibe el contenido", async (t) => {
+  it("se genera en segundo plano y MyOfia no recibe el contenido", async (t) => {
     if (!STORAGE) return t.skip("Storage local no disponible");
     await assert.rejects(s.pedirExportacion(comercial, { companyId: C, motivo }), /rol no permite/);
     expId = await s.pedirExportacion(soporte, { companyId: C, motivo });

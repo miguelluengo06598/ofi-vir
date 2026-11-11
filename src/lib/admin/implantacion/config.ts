@@ -1,6 +1,6 @@
 /**
  * Implantación (puesta en marcha): catálogos y validación de plantillas. Sin dependencias de servidor: lo usan también la
- * interfaz de SAMGPLE y la del cliente. Los mismos catálogos están como restricciones en la base
+ * interfaz de MyOfia y la del cliente. Los mismos catálogos están como restricciones en la base
  * (20261114000000_implantacion.sql): si se añade uno, hay que añadirlo en los dos sitios.
  */
 import { z } from "zod";

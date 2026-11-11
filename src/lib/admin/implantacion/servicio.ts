@@ -1,5 +1,5 @@
 /**
- * Implantación desde SAMGPLE (SOLO SERVIDOR): listado de las implantaciones en curso, tareas de una empresa, plantillas y cambios
+ * Implantación desde MyOfia (SOLO SERVIDOR): listado de las implantaciones en curso, tareas de una empresa, plantillas y cambios
  * a mano. Todo cambio pasa por funciones SQL atómicas que vuelven a comprobar las reglas (dependencias, quién puede marcar qué)
  * y queda en admin_audit_log. Solo metadatos: nada de contenido de la empresa.
  */
@@ -18,7 +18,7 @@ function deSql(e: { code?: string; message?: string }, porDefecto: string) {
   if (/DEPENDENCIAS_PENDIENTES|SE_COMPRUEBA_SOLA|DEPENDENCIA_INVALIDA|IMPLANTACION_COMPLETADA|SIN_TAREAS/.test(m) && legible) return new ImplantacionError(legible.charAt(0).toUpperCase() + legible.slice(1) + ".");
   if (/CLAVE_REPETIDA/.test(m)) return new ImplantacionError("Hay claves de tarea repetidas.");
   if (/PLANTILLA_NO_DISPONIBLE/.test(m)) return new ImplantacionError("Esa plantilla no existe o no está activa.");
-  if (/RESPONSABLE_NO_VALIDO/.test(m)) return new ImplantacionError("El responsable debe ser una persona activa de SAMGPLE.");
+  if (/RESPONSABLE_NO_VALIDO/.test(m)) return new ImplantacionError("El responsable debe ser una persona activa de MyOfia.");
   if (e.code === "23505") return new ImplantacionError("Ya existe una plantilla con ese nombre.");
   if (e.code === "42501") return new ImplantacionError("Tu rol no permite esta acción.");
   if (e.code === "P0002") return new ImplantacionError("No existe.");
@@ -44,7 +44,7 @@ export async function listarImplantaciones(db: SupabaseClient, ahora = new Date(
     const total = n(r.total), hechas = n(r.hechas);
     return {
       implantacionId: r.implantacion_id as string, companyId: r.company_id as string, empresa: r.empresa as string, estadoEmpresa: r.estado_empresa as string,
-      responsable: r.responsable_id ? { id: r.responsable_id as string, nombre: (r.responsable as string | null) ?? "Equipo SAMGPLE" } : null,
+      responsable: r.responsable_id ? { id: r.responsable_id as string, nombre: (r.responsable as string | null) ?? "Equipo MyOfia" } : null,
       inicio: r.inicio as string, objetivoFin: (r.objetivo_fin as string | null) ?? null, alta: r.alta as string,
       diasDesdeAlta: Math.max(0, Math.floor((ahora.getTime() - new Date(r.alta as string).getTime()) / 86_400_000)),
       total, hechas, obligatorias: n(r.obligatorias), obligatoriasHechas: n(r.obligatorias_hechas), progreso: total ? Math.round((hechas / total) * 100) : 0,
@@ -75,26 +75,26 @@ export async function implantacionDeEmpresa(db: SupabaseClient, companyId: strin
   if (e2) throw new Error("No se pudieron leer las tareas.");
   const ids = [...new Set([i.responsable as string, ...(filas ?? []).map((t) => t.responsable as string)].filter(Boolean))];
   const { data: personas } = ids.length ? await db.from("platform_roles").select("user_id, nombre").in("user_id", ids) : { data: [] };
-  const nombre = new Map((personas ?? []).map((p) => [p.user_id as string, (p.nombre as string | null) ?? "Equipo SAMGPLE"]));
+  const nombre = new Map((personas ?? []).map((p) => [p.user_id as string, (p.nombre as string | null) ?? "Equipo MyOfia"]));
   const porId = new Map((filas ?? []).map((t) => [t.id as string, t]));
   const hoy = ahora.toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
   return {
     id: i.id, estado: i.estado, inicio: i.inicio, objetivoFin: i.objetivo_fin, completadaEn: i.completada_en, plantillaId: i.plantilla_id,
-    responsable: i.responsable ? { id: i.responsable, nombre: nombre.get(i.responsable) ?? "Equipo SAMGPLE" } : null,
+    responsable: i.responsable ? { id: i.responsable, nombre: nombre.get(i.responsable) ?? "Equipo MyOfia" } : null,
     tareas: (filas ?? []).map((t) => {
       const deps = ((t.depende_de as string[] | null) ?? []).map((id) => porId.get(id)).filter(Boolean).map((d) => ({ id: d!.id as string, titulo: d!.titulo as string, hecha: d!.estado === "hecha" || d!.estado === "descartada" }));
       const abierta = t.estado === "pendiente" || t.estado === "en_curso";
       return {
         id: t.id, titulo: t.titulo, para: t.para, estado: t.estado, obligatoria: t.obligatoria, venceEn: t.vence_en, hechaEn: t.hecha_en, marcadaAuto: t.marcada_auto,
         comprobacion: t.comprobacion, accion: t.accion, ayuda: t.ayuda, agentId: t.agent_id, proveedor: t.proveedor, orden: t.orden,
-        responsable: t.responsable ? { id: t.responsable, nombre: nombre.get(t.responsable) ?? "Equipo SAMGPLE" } : null,
+        responsable: t.responsable ? { id: t.responsable, nombre: nombre.get(t.responsable) ?? "Equipo MyOfia" } : null,
         dependeDe: deps, bloqueada: abierta && deps.some((d) => !d.hecha), atrasada: abierta && !!t.vence_en && t.vence_en < hoy,
       };
     }),
   };
 }
 
-// ── Cambios a mano (SAMGPLE) ────────────────────────────────────────────────────────────────────
+// ── Cambios a mano (MyOfia) ────────────────────────────────────────────────────────────────────
 const TareaCambioSchema = z.object({
   companyId: z.uuid(),
   tareaId: z.uuid(),

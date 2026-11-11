@@ -30,7 +30,7 @@ export function FichaInterna({ companyId, responsable, servicios, equipo, editab
   const { enviando, enviar, aviso } = useEnvio();
   return (
     <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); enviar(() => guardarFicha({ companyId, responsable: resp || null, servicios: [...serv] as ServicioId[] }), "Ficha guardada."); }}>
-      <label className={etiqueta}>Responsable de SAMGPLE
+      <label className={etiqueta}>Responsable de MyOfia
         <select className={campo} value={resp} onChange={(e) => setResp(e.target.value)} disabled={!editable}>
           <option value="" className="text-black">Sin responsable</option>
           {equipo.map((p) => <option key={p.id} value={p.id} className="text-black">{p.nombre}</option>)}
@@ -56,7 +56,7 @@ export function NuevaNota({ companyId }: { companyId: string }) {
   const { enviando, enviar, aviso } = useEnvio();
   return (
     <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); enviar(() => anotar({ companyId, texto }), "Nota añadida.", () => setTexto("")); }}>
-      <label className={etiqueta}>Nueva nota interna (solo la ve SAMGPLE; no se puede editar ni borrar)
+      <label className={etiqueta}>Nueva nota interna (solo la ve MyOfia; no se puede editar ni borrar)
         <textarea className={`${campo} min-h-20`} value={texto} onChange={(e) => setTexto(e.target.value)} maxLength={4000} />
       </label>
       <div className="flex items-center gap-3"><PillButton type="submit" disabled={enviando || !texto.trim()}>{enviando ? "Guardando…" : "Añadir nota"}</PillButton>{aviso}</div>

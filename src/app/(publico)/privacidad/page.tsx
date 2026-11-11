@@ -203,7 +203,7 @@ const APARTADOS: Apartado[] = [
   },
   {
     id: "encargado",
-    titulo: "SAMGPLE como encargado del tratamiento de los datos de los clientes de cada empresa",
+    titulo: "MyOfia como encargado del tratamiento de los datos de los clientes de cada empresa",
     cuerpo: (
       <>
         <p>

@@ -1,8 +1,8 @@
 /**
- * Lo que la EMPRESA hace con lo que SAMGPLE le prepara (SOLO SERVIDOR; las rutas de Next son envoltorios finos):
+ * Lo que la EMPRESA hace con lo que MyOfia le prepara (SOLO SERVIDOR; las rutas de Next son envoltorios finos):
  *  - GET  /api/empresas/exportaciones              sus exportaciones de datos (propietario o admin).
  *  - GET  /api/empresas/exportaciones/[id]         descarga: redirige a un enlace firmado de 5 min (propietario o admin).
- *  - GET  /api/empresas/propietario/cambios        cambio de propietario pendiente pedido por SAMGPLE (propietario o admin).
+ *  - GET  /api/empresas/propietario/cambios        cambio de propietario pendiente pedido por MyOfia (propietario o admin).
  *  - POST /api/empresas/propietario/cambios/[id]   { decision: 'confirmar' | 'rechazar' } (solo el propietario actual).
  * La empresa sale de la sesión, nunca de la URL ni del cuerpo.
  */
@@ -40,7 +40,7 @@ export async function exportacionDescargaHandler(req: Request, deps: DepsEmpresa
     const r = await enlaceDeDescarga(deps.db, s.companyId, id);
     if ("url" in r) return new Response(null, { status: 302, headers: { location: r.url, "cache-control": "no-store" } });
     if (r.error === "no_encontrada") return fallo(404, "no_encontrado", "Esa exportación no existe.");
-    if (r.error === "caducada") return fallo(410, "caducada", "La exportación caducó. Pide otra a SAMGPLE.");
+    if (r.error === "caducada") return fallo(410, "caducada", "La exportación caducó. Pide otra a MyOfia.");
     return fallo(409, "no_lista", "La exportación todavía se está preparando.");
   } catch {
     return fallo(500, "error_interno", "No se pudo preparar la descarga.");
@@ -77,6 +77,6 @@ export async function cambioPropietarioPostHandler(req: Request, deps: DepsEmpre
     return fallo(500, "error_interno", "No se pudo completar la operación.");
   }
   // Quién y cómo lo resolvió queda en cambios_propietario (resuelto_por, resuelto_via). No va a admin_audit_log: ese registro es
-  // de acciones de SAMGPLE y su actor no se puede borrar, lo que impediría borrar después la cuenta de esta persona.
+  // de acciones de MyOfia y su actor no se puede borrar, lo que impediría borrar después la cuenta de esta persona.
   return json({ estado: data, nuevoPropietario: c.nuevo_propietario });
 }

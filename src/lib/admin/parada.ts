@@ -1,5 +1,5 @@
 /**
- * Parada de emergencia global (SOLO SERVIDOR). La activa o desactiva un `admin_samgple` del equipo de SAMGPLE: detiene al momento
+ * Parada de emergencia global (SOLO SERVIDOR). La activa o desactiva un `admin_samgple` del equipo de MyOfia: detiene al momento
  * todos los agentes de todas las empresas (las tareas en curso se paran antes de su siguiente llamada al modelo; las de la cola
  * esperan). La lee la puerta de ejecución (`puedeEjecutarse`) antes de cada llamada a Claude. Cualquier otra persona recibe 404.
  */

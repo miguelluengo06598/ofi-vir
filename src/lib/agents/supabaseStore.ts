@@ -182,7 +182,7 @@ export class SupabaseAgentStore implements AgentStore {
     ]);
     // Si no se puede leer, se para: la puerta nunca abre por un error.
     if (g.error || e.error || c.error) throw new Error("No se pudo comprobar si los agentes pueden trabajar.");
-    // Una empresa suspendida o borrada por SAMGPLE (o que no existe) cuenta como oficina pausada: no empieza nada.
+    // Una empresa suspendida o borrada por MyOfia (o que no existe) cuenta como oficina pausada: no empieza nada.
     // En implantación es operativa: sus agentes certificados y activos trabajan igual que en una empresa activa.
     const empresaActiva = c.data?.estado === "activa" || c.data?.estado === "en_implantacion";
     return { paradaEmergencia: g.data?.parada_emergencia === true, motivoParada: (g.data?.motivo as string | null) ?? null, oficinaPausada: e.data?.agentes_pausados === true || !empresaActiva };

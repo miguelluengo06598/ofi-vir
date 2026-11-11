@@ -11,7 +11,7 @@ import { equipoSamgple, fichaSolicitud } from "@/lib/admin/comercial/servicio";
 import { dbAdminDesdeEntorno } from "@/lib/admin/entorno";
 import { getPacks } from "@/lib/creditos/packs";
 
-export const metadata: Metadata = { title: "Alta de cliente · SAMGPLE", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Alta de cliente · MyOfia", robots: { index: false, follow: false } };
 export const instant = false;
 
 export default async function AltaCliente({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

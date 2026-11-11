@@ -87,9 +87,9 @@ export async function pausaPostHandler(req: Request, deps: DepsOficina): Promise
       if (error) throw new Error(error.message);
       return json({ pausada: true });
     }
-    // Una pausa impuesta por SAMGPLE (impago, abuso o petición) solo la quita SAMGPLE.
+    // Una pausa impuesta por MyOfia (impago, abuso o petición) solo la quita MyOfia.
     const { data: ajustes } = await deps.db.from("company_credit_settings").select("pausada_por_samgple").eq("company_id", companyId).single();
-    if (ajustes?.pausada_por_samgple) return fallo(409, "pausada_por_samgple", "SAMGPLE ha pausado tu oficina. Escríbenos para reanudarla.");
+    if (ajustes?.pausada_por_samgple) return fallo(409, "pausada_por_samgple", "MyOfia ha pausado tu oficina. Escríbenos para reanudarla.");
     let descartadas = 0;
     if (v.data.pendientes === "descartar") {
       const ids = await eventosEsperando(deps.db, companyId);

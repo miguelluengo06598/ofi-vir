@@ -34,7 +34,7 @@ export type OrigenNuevo =
   | { tipo: "evento_externo"; eventoId?: string | null; emailId?: string | null; canal: string }
   | { tipo: "traspaso"; tareaPadreId: string }
   | { tipo: "orden_usuario"; ordenadoPor: string; via?: string }
-  /** Exámenes de certificación: proceso interno de SAMGPLE, siempre simulado y en una empresa ficticia. */
+  /** Exámenes de certificación: proceso interno de MyOfia, siempre simulado y en una empresa ficticia. */
   | { tipo: "orden_usuario"; ordenadoPor: null; procesoInterno: string; solicitudId?: string | null }
   | { tipo: "rutina_usuario"; rutinaId: string }
   | { tipo: "seguimiento_aprobado"; seguimientoId: string };

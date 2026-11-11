@@ -21,7 +21,7 @@ async function Quien() {
 
 const enlace = "glass glass-interactive rounded-pill px-4 py-2 text-small text-white";
 
-/** Marco del panel de certificación del equipo de SAMGPLE. El acceso lo comprueban el proxy y cada página. */
+/** Marco del panel de certificación del equipo de MyOfia. El acceso lo comprueban el proxy y cada página. */
 export default function CertificacionLayout({ children }: { children: React.ReactNode }) {
   return (
     <>

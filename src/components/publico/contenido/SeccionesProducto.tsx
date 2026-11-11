@@ -24,7 +24,7 @@ const ASISTENTE = [
   { titulo: "Revisa la propuesta", texto: "El asistente propone tono, objetivo, lo que nunca debe hacer, horario, permisos y a quién pasa el trabajo. No guarda nada sin ti." },
   { titulo: "Añade lo que sabe", texto: "Tu web, PDF, documentos o preguntas frecuentes. El asistente te dice qué información falta." },
   { titulo: "Pruébalo en el simulador", texto: "Le escribes como si fueras un cliente y ves qué haría, sin enviar nada a nadie." },
-  { titulo: "Certificación de SAMGPLE", texto: "Examen técnico con datos ficticios y revisión de una persona de nuestro equipo." },
+  { titulo: "Certificación de MyOfia", texto: "Examen técnico con datos ficticios y revisión de una persona de nuestro equipo." },
   { titulo: "Actívalo", texto: "Desde ese momento trabaja cuando llega algo o cuando tú se lo pides." },
 ];
 

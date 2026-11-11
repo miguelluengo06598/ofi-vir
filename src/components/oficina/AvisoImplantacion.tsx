@@ -9,7 +9,7 @@ const dia = (d: string | null) => (d ? new Date(`${d}T12:00:00`).toLocaleDateStr
 
 /**
  * «Estamos preparando tu oficina»: mientras la empresa de la sesión tiene la implantación en curso, su progreso,
- * lo que le toca hacer al cliente y quién es su responsable en SAMGPLE. La empresa sale SIEMPRE de la sesión
+ * lo que le toca hacer al cliente y quién es su responsable en MyOfia. La empresa sale SIEMPRE de la sesión
  * (verificada contra sus pertenencias); nunca de un parámetro.
  */
 export async function AvisoImplantacion() {
@@ -37,7 +37,7 @@ export async function AvisoImplantacion() {
           <h2 id="impl-t" className="flex items-center gap-2 text-h2"><Wrench size={20} aria-hidden="true" /> Estamos preparando tu oficina</h2>
           <p className="mt-1 text-small text-ink-2">
             Configuramos tus departamentos y agentes, los probamos contigo y los certificamos antes de que trabajen con clientes reales.
-            {resp?.nombre ? ` Tu responsable en SAMGPLE es ${resp.nombre as string}.` : ""}
+            {resp?.nombre ? ` Tu responsable en MyOfia es ${resp.nombre as string}.` : ""}
             {impl.objetivo_fin ? ` Objetivo: ${dia(impl.objetivo_fin as string)}.` : ""}
           </p>
         </div>

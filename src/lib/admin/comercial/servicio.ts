@@ -24,8 +24,8 @@ const fila = (r: Record<string, unknown>): Omit<Solicitud, "proximaAccion" | "no
 
 export async function equipoSamgple(db: SupabaseClient): Promise<PersonaSamgple[]> {
   const { data, error } = await db.from("platform_roles").select("user_id, nombre").eq("activo", true).order("nombre");
-  if (error) throw new Error("No se pudo leer el equipo de SAMGPLE.");
-  return (data ?? []).map((r) => ({ userId: r.user_id as string, nombre: (r.nombre as string | null) ?? "Equipo SAMGPLE" }));
+  if (error) throw new Error("No se pudo leer el equipo de MyOfia.");
+  return (data ?? []).map((r) => ({ userId: r.user_id as string, nombre: (r.nombre as string | null) ?? "Equipo MyOfia" }));
 }
 
 export async function listarSolicitudes(db: SupabaseClient): Promise<Solicitud[]> {
@@ -51,7 +51,7 @@ export async function fichaSolicitud(db: SupabaseClient, id: string) {
     equipoSamgple(db),
   ]);
   if (!s) return null;
-  const nombre = (uid: string | null) => (uid ? equipo.find((p) => p.userId === uid)?.nombre ?? "Equipo SAMGPLE" : null);
+  const nombre = (uid: string | null) => (uid ? equipo.find((p) => p.userId === uid)?.nombre ?? "Equipo MyOfia" : null);
   return {
     solicitud: fila(s),
     notas: (notas ?? []).map((n): NotaSolicitud => ({ id: n.id as string, texto: n.texto as string, autor: nombre(n.autor_id as string | null), creadoEn: n.creado_en as string })),
