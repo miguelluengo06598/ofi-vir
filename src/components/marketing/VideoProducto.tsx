@@ -50,6 +50,10 @@ export function VideoProducto({ poster, webm, mp4, ancho, alto, descripcion, siz
   useEffect(() => {
     const v = video.current;
     if (!v) return;
+    // Safari iOS solo reproduce solo si el atributo `muted` está (React fija la propiedad, no el atributo).
+    v.defaultMuted = true;
+    v.muted = true;
+    if (v.readyState >= 2) setListo(true);
     if (reproducir) v.play().catch(() => setPausado(true));
     else v.pause();
   }, [reproducir, cargar]);
@@ -72,11 +76,16 @@ export function VideoProducto({ poster, webm, mp4, ancho, alto, descripcion, siz
           preload="metadata"
           aria-label={descripcion}
           onPlaying={() => setListo(true)}
-          onTimeUpdate={alTiempo ? (e) => alTiempo(e.currentTarget.currentTime, e.currentTarget.duration || 0) : undefined}
+          onLoadedData={() => setListo(true)}
+          onTimeUpdate={(e) => {
+            if (!listo) setListo(true);
+            alTiempo?.(e.currentTarget.currentTime, e.currentTarget.duration || 0);
+          }}
           className={`absolute inset-0 size-full object-cover transition-opacity duration-500 ${listo ? "opacity-100" : "opacity-0"}`}
         >
-          {webm && <source src={webm} type="video/webm" />}
+          {/* MP4 (H.264) primero: lo reproduce cualquier navegador; Safari a veces dice que puede con WebM y no puede. */}
           <source src={mp4} type="video/mp4" />
+          {webm && <source src={webm} type="video/webm" />}
         </video>
       )}
       {children}

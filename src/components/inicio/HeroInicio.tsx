@@ -39,6 +39,11 @@ export function HeroInicio({ horizontal, vertical }: { horizontal: FuentesDeVide
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
+    // Safari iOS solo reproduce solo si el atributo `muted` está (React fija la propiedad, no el atributo).
+    v.defaultMuted = true;
+    v.muted = true;
+    // Con autoPlay el vídeo puede empezar antes de que React escuche `playing`: si ya hay imagen, se enseña.
+    if (v.readyState >= 2 || !v.paused) setListo(true);
     if (pausado) v.pause();
     else v.play().catch(() => setPausado(true));
   }, [pausado, conVideo, esVertical]);
@@ -63,10 +68,13 @@ export function HeroInicio({ horizontal, vertical }: { horizontal: FuentesDeVide
             autoPlay
             preload="metadata"
             onPlaying={() => setListo(true)}
+            onLoadedData={() => setListo(true)}
+            onTimeUpdate={listo ? undefined : () => setListo(true)}
             className={`absolute inset-0 size-full object-cover transition-opacity duration-700 ${listo ? "opacity-100" : "opacity-0"}`}
           >
-            <source src={fuentes.webm} type="video/webm" />
+            {/* MP4 (H.264) primero: lo reproduce cualquier navegador; Safari a veces dice que puede con WebM y no puede. */}
             <source src={fuentes.mp4} type="video/mp4" />
+            <source src={fuentes.webm} type="video/webm" />
           </video>
         )}
         <div className="absolute inset-0 bg-linear-to-b from-black/60 via-black/40 to-black/75" />

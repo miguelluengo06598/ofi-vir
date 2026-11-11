@@ -19,8 +19,8 @@ export function MiniVideo({ fuentes, activo }: { fuentes: FuentesDeVideo; activo
       </picture>
       {reproducir && (
         <video autoPlay muted loop playsInline preload="auto" className="absolute inset-0 size-full object-cover">
-          <source src={fuentes.webm} type="video/webm" />
           <source src={fuentes.mp4} type="video/mp4" />
+          <source src={fuentes.webm} type="video/webm" />
         </video>
       )}
     </span>
