@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { GlassPanel } from "@/components/glass";
 import { usePreferencias } from "./preferencias";
 import { tipo } from "./tipografia";
@@ -23,6 +23,8 @@ type Props = {
   vhPorPaso?: number;
   /** Alto reservado para el visual, para que cambiar de paso no mueva nada. */
   altoVisual?: string;
+  /** Alto del visual en móvil (una sola columna: texto y visual tienen que caber en la pantalla). Por defecto, `altoVisual`. */
+  altoVisualMovil?: string;
   /**
    * Visual único que NO se desmonta al cambiar de paso (p. ej. una réplica de la interfaz que va resaltando
    * partes): recibe el paso activo. Sustituye a los `visual` de cada paso.
@@ -37,7 +39,7 @@ type Props = {
  * con indicador de progreso. Los pasos se ven completos en una lista de verdad para lectores de pantalla
  * y, con movimiento reducido, la sección entera se convierte en una lista normal (sin fijar nada).
  */
-export function SeccionFija({ pasos, etiqueta, vhPorPaso = 90, altoVisual = "clamp(12rem, 32vh, 20rem)", visualFijo, amplio }: Props) {
+export function SeccionFija({ pasos, etiqueta, vhPorPaso = 90, altoVisual = "clamp(12rem, 32vh, 20rem)", altoVisualMovil, visualFijo, amplio }: Props) {
   const { reducido } = usePreferencias();
   const zona = useRef<HTMLDivElement>(null);
   const [activo, setActivo] = useState(0);
@@ -71,6 +73,19 @@ export function SeccionFija({ pasos, etiqueta, vhPorPaso = 90, altoVisual = "cla
   }
 
   const paso = pasos[activo];
+  // El diseño en columnas empieza en `md`; el amplio (texto + visual grande) necesita más ancho y espera a `lg`.
+  // Clases completas en cada rama para que Tailwind las encuentre.
+  const c = amplio
+    ? {
+        panel: "lg:items-center lg:gap-10 lg:overflow-visible lg:grid-cols-[auto_minmax(0,0.85fr)_minmax(0,1.9fr)] lg:p-8 lg:pt-12",
+        indicador: "lg:h-full lg:flex-col lg:justify-center", barraH: "lg:hidden", barraV: "lg:block",
+        texto: "lg:min-h-[12rem]", extra: "hidden lg:block", visual: "lg:h-(--alto)", margen: "mt-7 lg:mt-0",
+      }
+    : {
+        panel: "md:items-center md:gap-10 md:overflow-visible md:grid-cols-[auto_1fr_1fr]",
+        indicador: "md:h-full md:flex-col md:justify-center", barraH: "md:hidden", barraV: "md:block",
+        texto: "md:min-h-[12rem]", extra: "hidden md:block", visual: "md:h-(--alto)", margen: "mt-7 md:mt-0",
+      };
   return (
     <div ref={zona} style={{ height: `${n * vhPorPaso}vh` }} className="relative">
       {/* Para lectores de pantalla: todos los pasos, en orden y sin depender del scroll. */}
@@ -83,20 +98,21 @@ export function SeccionFija({ pasos, etiqueta, vhPorPaso = 90, altoVisual = "cla
         ))}
       </ol>
 
-      <div aria-hidden="true" className="sticky top-0 flex h-svh items-center pt-20 pb-6">
-        <GlassPanel className={`grid w-full gap-6 p-6 sm:p-10 md:items-center md:gap-10 ${amplio ? "md:grid-cols-[auto_minmax(0,0.85fr)_minmax(0,1.9fr)] md:p-6 lg:p-8" : "md:grid-cols-[auto_1fr_1fr]"}`}>
+      <div aria-hidden="true" className="sticky top-0 flex h-svh items-center pt-20 pb-4 md:pb-6">
+        {/* minmax(0,1fr) y min-w-0: sin ellos, un visual ancho (una réplica, un vídeo) estira la columna y saca el texto de la tarjeta. */}
+        <GlassPanel className={`grid max-h-full w-full grid-cols-[minmax(0,1fr)] gap-4 overflow-hidden p-5 sm:p-8 ${c.panel}`}>
           {/* Indicador: puntos por paso y barra que se llena con el scroll. */}
-          <div className="flex items-center gap-3 md:h-full md:flex-col md:justify-center">
-            <div className="relative h-1 w-24 overflow-hidden rounded-full bg-white/15 md:hidden">
+          <div className={`flex items-center gap-3 ${c.indicador}`}>
+            <div className={`relative h-1 w-24 overflow-hidden rounded-full bg-white/15 ${c.barraH}`}>
               <motion.div className="absolute inset-0 origin-left rounded-full bg-white" style={{ scaleX: scrollYProgress }} />
             </div>
-            <div className="relative hidden h-40 w-1 overflow-hidden rounded-full bg-white/15 md:block">
+            <div className={`relative hidden h-40 w-1 overflow-hidden rounded-full bg-white/15 ${c.barraV}`}>
               <motion.div className="absolute inset-0 origin-top rounded-full bg-white" style={{ scaleY: scrollYProgress }} />
             </div>
             <p className="text-small tabular-nums text-ink-2">{activo + 1} / {n}</p>
           </div>
 
-          <div className="min-h-[12rem]">
+          <div className={`min-w-0 ${c.texto}`}>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={activo}
@@ -108,12 +124,16 @@ export function SeccionFija({ pasos, etiqueta, vhPorPaso = 90, altoVisual = "cla
                 <p className={tipo.antetitulo}>Paso {activo + 1}</p>
                 <h3 className={`mt-2 ${tipo.subtitular}`}>{paso.titulo}</h3>
                 <div className={`mt-3 ${tipo.cuerpo}`}>{paso.texto}</div>
-                {paso.extra && <div className="mt-4">{paso.extra}</div>}
+                {/* Con un visual fijo debajo, en móvil no caben los dos: el extra (un vídeo pequeño) se reserva para pantallas anchas. */}
+                {paso.extra && <div className={`mt-4 ${visualFijo ? c.extra : ""}`}>{paso.extra}</div>}
               </motion.div>
             </AnimatePresence>
           </div>
 
-          <div className="relative" style={{ height: altoVisual }}>
+          <div
+            className={`relative h-(--alto-movil) min-w-0 ${c.visual} ${visualFijo ? c.margen : ""}`}
+            style={{ "--alto": altoVisual, "--alto-movil": altoVisualMovil ?? altoVisual } as CSSProperties}
+          >
             {visualFijo ? visualFijo(activo) : (
             <AnimatePresence initial={false}>
               {paso.visual && (

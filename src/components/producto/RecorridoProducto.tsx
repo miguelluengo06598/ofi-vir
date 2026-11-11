@@ -36,6 +36,7 @@ export function RecorridoProducto() {
       vhPorPaso={70}
       amplio
       altoVisual={ALTO_REPLICA}
+      altoVisualMovil="min(21rem, calc(100svh - 24rem))"
       visualFijo={(paso) => (
         <DemoEnVivo
           componente={Replica}

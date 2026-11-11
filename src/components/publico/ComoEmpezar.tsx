@@ -130,7 +130,8 @@ function VistaPaso({ activo }: { activo: number }) {
   const certificacion = video("certificacion");
   if (activo === 4) {
     return (
-      <div className="h-full overflow-hidden rounded-card">
+      // El vídeo ocupa el ancho disponible y conserva su proporción (antes forzaba el alto y ensanchaba la tarjeta en móvil).
+      <div className="flex h-full items-center">
         <VideoProducto
           poster={certificacion.posterWebp}
           webm={certificacion.webm}
@@ -138,9 +139,9 @@ function VistaPaso({ activo }: { activo: number }) {
           ancho={certificacion.ancho}
           alto={certificacion.alto}
           descripcion={certificacion.descripcion}
-          className="h-full rounded-card!"
+          className="w-full"
         >
-          <span className="absolute top-3 left-3 rounded-pill bg-black/60 px-2.5 py-1 text-tiny ring-1 ring-white/20">Vídeo de certificación · provisional</span>
+          {certificacion.provisional && <span className="absolute top-3 left-3 rounded-pill bg-black/60 px-2.5 py-1 text-tiny ring-1 ring-white/20">Vídeo provisional</span>}
         </VideoProducto>
       </div>
     );
@@ -195,6 +196,7 @@ export function PasosComoEmpezar() {
           texto: <><NumeroPaso indice={indice} /><p className="mt-3">{paso.texto}</p></>,
         }))}
         altoVisual="clamp(18rem, 40vh, 27rem)"
+        altoVisualMovil="clamp(11rem, calc(100svh - 30rem), 18rem)"
         vhPorPaso={76}
         visualFijo={(activo) => <VistaPaso activo={activo < 0 ? 0 : activo} />}
       />

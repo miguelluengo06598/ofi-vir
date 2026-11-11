@@ -71,7 +71,8 @@ function Momento({ m, acento, reducido }: { m: MomentoDelDia; acento: string; re
 
       <div
         className={`glass col-start-2 rounded-card p-5 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:col-start-3 sm:row-start-1 sm:p-6 ${encendido ? "is-active" : ""}`}
-        style={{ transform: encendido ? "none" : "translateX(28px)" }}
+        // Entra desde abajo: desplazarla hacia un lado la sacaba de la pantalla en móvil.
+        style={{ transform: encendido ? "none" : "translateY(18px)" }}
       >
         <div className="flex flex-wrap items-center gap-2 text-tiny">
           <span className="font-semibold text-white">{m.agente}</span>
