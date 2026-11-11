@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
-import { ChevronDown, Menu, Sparkles } from "lucide-react";
+import { ChevronDown, Menu } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { MENU, esActual } from "@/content/navegacion";
 import { useMovimientoReducido } from "@/components/marketing/preferencias";
@@ -87,10 +87,9 @@ export function CabeceraPublica() {
           className={`glass mx-auto flex max-w-7xl items-center gap-2 rounded-pill py-2 pr-2 pl-4 ${compacta ? "is-active" : ""}`}
         >
           <Link href="/" className="flex shrink-0 items-center gap-2 rounded-pill text-small font-semibold whitespace-nowrap sm:text-body">
-            <span aria-hidden="true" className="flex size-7 items-center justify-center rounded-full bg-linear-to-br from-accent to-dept-operaciones">
-              <Sparkles size={15} />
-            </span>
-            Oficina Virtual IA
+            {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático de la marca */}
+            <img src="/marca-samgple.svg" alt="" aria-hidden="true" width={28} height={28} className="size-7" />
+            SAMGPLE
           </Link>
 
           <nav aria-label="Principal" className="mx-auto hidden xl:block">

@@ -10,7 +10,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Oficina Virtual IA",
+  title: "SAMGPLE",
   description: "Tu oficina virtual con agentes de IA organizados por departamentos.",
 };
 

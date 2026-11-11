@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Sparkles, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { defaultScene, scenes } from "@/data/scenes";
 import { DEPARTAMENTOS } from "@/content/departamentos";
@@ -58,10 +58,9 @@ export function MenuMovil({ ruta, alCerrar }: { ruta: string; alCerrar: () => vo
       <div className="relative mx-auto flex min-h-full max-w-xl flex-col px-5 pt-4 pb-10">
         <div className="flex items-center justify-between">
           <Link href="/" onClick={alCerrar} className="flex items-center gap-2 font-semibold">
-            <span aria-hidden="true" className="flex size-8 items-center justify-center rounded-full bg-linear-to-br from-accent to-dept-operaciones">
-              <Sparkles size={16} />
-            </span>
-            Oficina Virtual IA
+            {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático de la marca */}
+            <img src="/marca-samgple.svg" alt="" aria-hidden="true" width={32} height={32} className="size-8" />
+            SAMGPLE
           </Link>
           <button ref={cerrar} type="button" onClick={alCerrar} aria-label="Cerrar menú" className="flex size-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20">
             <X size={20} aria-hidden="true" />

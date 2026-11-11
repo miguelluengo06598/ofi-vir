@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Oficina Virtual IA: tu equipo de IA por departamentos";
+export const alt = "SAMGPLE: tu equipo de IA por departamentos";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -24,8 +24,8 @@ export default function OpenGraphImage() {
       >
         <div style={{ display: "flex", flexDirection: "column", maxWidth: "760px" }}>
           <div style={{ alignItems: "center", display: "flex", fontSize: 28, fontWeight: 600, gap: 16, letterSpacing: 1 }}>
-            <span style={{ alignItems: "center", background: "linear-gradient(135deg, #4F8CFF, #8B5CF6)", borderRadius: 999, display: "flex", fontSize: 17, height: 48, justifyContent: "center", width: 48 }}>IA</span>
-            Oficina Virtual IA
+            <span style={{ alignItems: "center", background: "linear-gradient(135deg, #4F8CFF, #8B5CF6)", borderRadius: 999, display: "flex", fontSize: 26, fontWeight: 700, height: 48, justifyContent: "center", width: 48 }}>S</span>
+            SAMGPLE
           </div>
           <div style={{ fontSize: 74, fontWeight: 600, letterSpacing: -3, lineHeight: 1.02, marginTop: 50 }}>Tu equipo de IA, organizado por departamentos.</div>
           <div style={{ color: "#d1d9e8", fontSize: 29, lineHeight: 1.35, marginTop: 28 }}>Tú apruebas lo importante. Los agentes se ocupan del resto.</div>

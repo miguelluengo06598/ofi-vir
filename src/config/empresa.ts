@@ -4,7 +4,7 @@
  * hasta que se sustituya. No inventar ningún dato: si no se sabe, se deja el marcador.
  */
 
-export const NOMBRE_PRODUCTO = "Oficina Virtual IA";
+export const NOMBRE_PRODUCTO = "SAMGPLE";
 export const NOMBRE_COMERCIAL = "SAMGPLE";
 
 export const EMPRESA = {

@@ -7,7 +7,7 @@ import { dbAdminDesdeEntorno } from "@/lib/admin/entorno";
 import { usuarioActual } from "@/lib/supabase/server";
 
 // Panel interno de IDESIE: nunca se indexa.
-export const metadata: Metadata = { title: "Panel interno · Oficina Virtual IA", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Panel interno · SAMGPLE", robots: { index: false, follow: false } };
 export const instant = false;
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

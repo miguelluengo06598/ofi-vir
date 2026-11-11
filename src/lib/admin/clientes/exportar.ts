@@ -68,7 +68,7 @@ export async function construirExportacion(db: SupabaseClient, companyId: string
   for (const [tabla, columnas] of Object.entries(TABLAS_EXPORTACION)) datos[tabla] = await todasLasFilas(db, tabla, columnas, companyId);
   return {
     formato: "oficina-virtual-exportacion", version: 1, generada_en: ahora.toISOString(),
-    nota: "Datos de tu empresa en la Oficina Virtual IA. Fechas en UTC (ISO 8601). Los créditos son enteros (1 crédito = 1 céntimo); el dinero va en céntimos.",
+    nota: "Datos de tu empresa en SAMGPLE. Fechas en UTC (ISO 8601). Los créditos son enteros (1 crédito = 1 céntimo); el dinero va en céntimos.",
     empresa, datos_fiscales: fiscales ?? null,
     miembros: (miembros ?? []).map((m) => ({ ...m, nombre: perfil.get(m.user_id)?.full_name ?? null, email: perfil.get(m.user_id)?.email ?? null })),
     datos,

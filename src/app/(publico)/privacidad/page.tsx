@@ -4,7 +4,7 @@ import { Dato, DocumentoLegal, type Apartado } from "@/components/publico/legal/
 import { EMPRESA, ENCARGADOS, NOMBRE_COMERCIAL, NOMBRE_PRODUCTO, POLITICAS, ULTIMA_ACTUALIZACION } from "@/config/empresa";
 import { CICLO_DE_VIDA } from "@/lib/creditos/tarifas";
 
-export const metadata: Metadata = { title: "Política de privacidad", description: `Cómo trata ${NOMBRE_COMERCIAL} los datos personales en ${NOMBRE_PRODUCTO}.` };
+export const metadata: Metadata = { title: "Política de privacidad", description: `Cómo trata ${NOMBRE_COMERCIAL} los datos personales en su plataforma.` };
 
 const FINALIDADES = [
   {

@@ -5,7 +5,7 @@ import { Dato, DocumentoLegal, type Apartado } from "@/components/publico/legal/
 import { CATEGORIAS, COOKIES, categoriasOpcionales } from "@/config/cookies";
 import { EMPRESA, ULTIMA_ACTUALIZACION } from "@/config/empresa";
 
-export const metadata: Metadata = { title: "Política de cookies", description: "Qué cookies y almacenamiento del navegador usa Oficina Virtual IA." };
+export const metadata: Metadata = { title: "Política de cookies", description: "Qué cookies y almacenamiento del navegador usa SAMGPLE." };
 
 const opcionales = categoriasOpcionales();
 

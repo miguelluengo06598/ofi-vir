@@ -23,7 +23,7 @@ const APARTADOS: Apartado[] = [
           <li><strong>Datos registrales:</strong> <Dato v={EMPRESA.datosRegistrales} /></li>
           <li><strong>Sitio web:</strong> <Dato v={EMPRESA.dominio} /></li>
         </ul>
-        <p>{NOMBRE_PRODUCTO} es un producto de {NOMBRE_COMERCIAL}.</p>
+        <p>{NOMBRE_COMERCIAL} es el nombre comercial del titular de este sitio web.</p>
       </>
     ),
   },

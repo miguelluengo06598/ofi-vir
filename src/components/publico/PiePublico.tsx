@@ -42,7 +42,7 @@ export function PiePublico() {
         </div>
 
         <div className="mt-8 flex flex-col gap-2 border-t border-white/10 pt-6 text-small text-ink-2 sm:flex-row sm:justify-between">
-          <p>Oficina Virtual IA es un producto de SAMGPLE.</p>
+          <p>SAMGPLE · Tu equipo de IA, organizado por departamentos.</p>
           <p>
             Contacto:{" "}
             <a href={`mailto:${CONTACTO_EMAIL}`} className="text-white underline underline-offset-4">{CONTACTO_EMAIL}</a>

@@ -26,12 +26,12 @@ export function componerBienvenida(d: DatosBienvenida) {
     saludo, "", intro, "", `Entra con este enlace (caduca en 7 días): ${d.enlace}`, "",
     ...(pasos.length ? ["Lo que te toca a ti:", ...pasos.map((p) => `- ${p}`), ""] : []),
     ...(d.propietario ? ["Qué va a pasar ahora: configuramos tus agentes, los probamos contigo y los certificamos antes de que trabajen con clientes reales.", "", `Tu responsable en SAMGPLE: ${contacto}.`, ""] : []),
-    "Oficina Virtual IA · un producto de SAMGPLE",
+    "SAMGPLE · Tu equipo de IA por departamentos",
   ].join("\n");
 
   const html = `<div style="font-family:Poppins,Arial,sans-serif;background:#0f1320;color:#fff;padding:32px">
   <div style="max-width:560px;margin:auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:24px;padding:32px">
-    <p style="color:#b9c4d6;margin:0 0 16px">SAMGPLE · Oficina Virtual IA</p>
+    <p style="color:#b9c4d6;margin:0 0 16px">SAMGPLE</p>
     <h1 style="font-size:24px;margin:0 0 12px">${esc(asunto)}</h1>
     <p>${esc(saludo)}</p><p>${esc(intro)}</p>
     <p style="margin:28px 0"><a href="${esc(d.enlace)}" style="background:#fff;color:#0f1320;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700">Entrar en mi oficina</a></p>

@@ -11,14 +11,14 @@ const indexable = process.env.VERCEL_ENV === "production" && Boolean(sitio);
 
 export const metadata: Metadata = {
   metadataBase: new URL(sitio || "http://localhost:3000"),
-  title: { default: "Oficina Virtual IA · Tu equipo de IA por departamentos", template: "%s · Oficina Virtual IA" },
+  title: { default: "SAMGPLE · Tu equipo de IA por departamentos", template: "%s · SAMGPLE" },
   description:
     "Agentes de ventas, atención al cliente, marketing y CRM que se pasan el trabajo entre ellos, conectados a tus herramientas. Tú solo apruebas lo importante.",
   robots: { index: indexable, follow: indexable },
   openGraph: {
     type: "website",
     locale: "es_ES",
-    siteName: "Oficina Virtual IA",
+    siteName: "SAMGPLE",
   },
   twitter: { card: "summary_large_image" },
 };
