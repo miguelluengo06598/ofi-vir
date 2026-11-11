@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CircleCheck, Circle, Wrench } from "lucide-react";
 import { headers } from "next/headers";
 import { GlassPanel } from "@/components/glass";
@@ -21,7 +22,7 @@ export async function AvisoImplantacion() {
   const { data: impl } = await db.from("implantaciones").select("id, responsable, objetivo_fin").eq("company_id", sesion.companyId).eq("estado", "en_curso").maybeSingle();
   if (!impl) return null;
   const [{ data: tareas }, { data: resp }] = await Promise.all([
-    db.from("implantacion_tareas").select("id, titulo, para, ayuda, vence_en, hecha_en, orden").eq("implantacion_id", impl.id).order("orden"),
+    db.from("implantacion_tareas").select("id, titulo, para, ayuda, vence_en, hecha_en, orden").eq("implantacion_id", impl.id).neq("estado", "descartada").order("orden"),
     impl.responsable ? db.from("platform_roles").select("nombre").eq("user_id", impl.responsable).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const todas = tareas ?? [];
@@ -61,6 +62,7 @@ export async function AvisoImplantacion() {
           </ul>
         </div>
       )}
+      <Link href="/puesta-en-marcha" className="glass glass-interactive w-fit rounded-pill px-4 py-2 text-small text-white">Ver la puesta en marcha</Link>
     </GlassPanel>
   );
 }

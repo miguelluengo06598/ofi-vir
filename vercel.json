@@ -3,12 +3,6 @@
   "crons": [
     { "path": "/api/cron/caducar-creditos", "schedule": "0 3 * * *" },
     { "path": "/api/cron/revisar-estados", "schedule": "15 3 * * *" },
-    { "path": "/api/cron/recertificacion", "schedule": "45 3 * * *" },
-    { "path": "/api/cron/rutinas", "schedule": "0 * * * *" },
-    { "path": "/api/cron/control-calidad", "schedule": "5 * * * *" },
-    { "path": "/api/cron/renovar-conexiones", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/abrir-aplazadas", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/procesar-pendientes", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/examenes-certificacion", "schedule": "*/5 * * * *" }
+    { "path": "/api/cron/recertificacion", "schedule": "45 3 * * *" }
   ]
 }

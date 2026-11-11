@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { exigirRolPlataforma, sesionPlataforma, type RolPlataforma } from "@/lib/admin/acceso";
 import { empresaPedida, sesionEnEmpresa } from "@/lib/empresas/sesion";
 
-const RUTAS_OFICINA = ["/oficina", "/agentes", "/aprobaciones", "/conexiones", "/creditos", "/cuenta", "/estado", "/favoritos", "/marketplace", "/memoria", "/mensajes", "/miembros", "/tareas"];
+const RUTAS_OFICINA = ["/oficina", "/agentes", "/aprobaciones", "/conexiones", "/creditos", "/cuenta", "/estado", "/favoritos", "/marketplace", "/memoria", "/mensajes", "/miembros", "/puesta-en-marcha", "/tareas"];
 const API_EXTERNA = ["/api/webhooks/", "/api/cron/", "/api/demo-oauth/"];
 const API_SOLO_PERSONA = ["/api/empresas", "/api/empresas/activa", "/api/invitaciones/aceptar"];
 
@@ -24,6 +24,7 @@ const ROLES_ADMIN: { base: string; exacta?: boolean; roles: RolPlataforma[] }[] 
   { base: "/admin/certificacion", roles: ["revisor_samgple"] },
   { base: "/admin/clientes", roles: ["comercial_samgple", "implantacion_samgple", "soporte_samgple", "finanzas_samgple"] },
   { base: "/admin/comercial", roles: ["comercial_samgple"] },
+  { base: "/admin/implantacion", roles: ["implantacion_samgple", "comercial_samgple", "soporte_samgple"] },
 ];
 function rolesDeRutaAdmin(ruta: string): RolPlataforma[] {
   const zona = ROLES_ADMIN.find((z) => (z.exacta ? ruta === z.base : ruta === z.base || ruta.startsWith(`${z.base}/`)));
