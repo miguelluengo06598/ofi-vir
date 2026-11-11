@@ -37,51 +37,54 @@ const VIDEOS = {
     segundos: 15,
     descripcion: "Versión vertical: un lead de Meta pasa de Lucía, en Ventas, a Iván, en el CRM, y la ficha se actualiza. Datos de ejemplo.",
   },
-  "departamento-ventas": { ...H, disponible: false, segundos: 11, descripcion: "Ventas: un lead nuevo, su cualificación y la cita propuesta. Datos de ejemplo." },
-  "departamento-atencion-al-cliente": { ...H, disponible: false, segundos: 11, descripcion: "Atención: una conversación de WhatsApp resuelta y una queja derivada a una persona. Datos de ejemplo." },
-  "departamento-marketing": { ...H, disponible: false, segundos: 11, descripcion: "Marketing: el panel de campañas y tres propuestas ordenadas por impacto. Datos de ejemplo." },
-  "departamento-operaciones-crm": { ...H, disponible: false, segundos: 11, descripcion: "Operaciones · CRM: contactos duplicados que se fusionan y fichas que se completan. Datos de ejemplo." },
-  "departamento-direccion": { ...H, disponible: false, segundos: 11, descripcion: "Dirección: Atlas resume el día y reparte objetivos. Datos de ejemplo." },
+  "departamento-ventas": { ...H, disponible: true, segundos: 11, descripcion: "Ventas, en símbolos: los leads llegan como puntos de luz al agente de ventas y los que encajan acaban en una cita confirmada. Datos de ejemplo." },
+  "departamento-atencion-al-cliente": { ...H, disponible: true, segundos: 11, descripcion: "Atención, en símbolos: una conversación se va resolviendo burbuja a burbuja y una queja pasa a una persona del equipo. Datos de ejemplo." },
+  "departamento-marketing": { ...H, disponible: true, segundos: 11, descripcion: "Marketing, en símbolos: las barras de resultados crecen y tres propuestas se reordenan por impacto. Datos de ejemplo." },
+  "departamento-operaciones-crm": { ...H, disponible: true, segundos: 11, descripcion: "Operaciones · CRM, en símbolos: dos fichas duplicadas se funden en una y la ficha se completa. Datos de ejemplo." },
+  "departamento-direccion": { ...H, disponible: true, segundos: 11, descripcion: "Dirección, en símbolos: los departamentos envían su resumen al centro y reciben de vuelta sus objetivos. Datos de ejemplo." },
   "cadena-anuncio-a-venta": {
     ...H,
-    disponible: false,
+    disponible: true,
     segundos: 20,
     // Anuncio → Lucía responde → aprobación pedida → aprobada → Iván registra → Marketing aprende.
     marcas: [0, 3, 6.5, 9.5, 12.5, 16],
     descripcion:
-      "Un anuncio de Meta genera un lead, Lucía responde en minutos, se pide y se da la aprobación del correo, Iván lo registra en el CRM y Marketing recibe qué leads compran. Datos de ejemplo.",
+      "La cadena en símbolos: un anuncio genera un lead, Lucía responde, se pide y se da la aprobación, Iván lo registra en el CRM y Marketing aprende de vuelta. Datos de ejemplo.",
   },
   aprobaciones: {
     ...H,
-    disponible: false,
+    disponible: true,
     segundos: 10,
-    descripcion: "Aprobaciones: un borrador de correo, el cursor edita una frase y pulsa Aprobar; el correo sale con su estado «Entregado». Datos de ejemplo.",
+    descripcion:
+      "Aprobaciones en símbolos: un borrador espera, se retoca una frase, una persona pulsa Aprobar y el correo llega con su doble check de entregado. Datos de ejemplo.",
   },
   memoria: {
     ...H,
-    disponible: false,
+    disponible: true,
     segundos: 10,
-    descripcion: "Memoria: la constelación de lo que sabe la oficina se ilumina al pulsar un contacto. Datos de ejemplo.",
+    descripcion:
+      "Memoria en símbolos: una constelación de recuerdos; al pulsar un contacto se encienden los recuerdos relacionados. Datos de ejemplo.",
   },
   creditos: {
     ...H,
-    disponible: false,
+    disponible: true,
     segundos: 8,
-    descripcion: "Créditos: el saldo, el consumo por agente y una tarea que descuenta sus créditos. Datos de ejemplo.",
+    descripcion:
+      "Créditos en símbolos: un anillo de saldo se va gastando en tres tareas de distinto tamaño, que se marcan como hechas. Datos de ejemplo.",
   },
   "configurar-agente": {
     ...H,
-    disponible: false,
+    disponible: true,
     segundos: 20,
     descripcion:
-      "El asistente «Cuéntanos tu negocio»: alguien describe su clínica, la ficha del agente se rellena sola, se conecta WhatsApp, se prueba en el simulador y se envía a certificación. Datos de ejemplo.",
+      "Configurar un agente en símbolos: cuentas cómo es tu negocio, la ficha del agente se rellena sola, se conecta un canal, se prueba en el simulador y se envía a certificación. Datos de ejemplo.",
   },
   certificacion: {
     ...H,
-    disponible: false,
+    disponible: true,
     segundos: 12,
     descripcion:
-      "Certificación: el agente responde a casos ficticios, pasa el examen técnico y una persona del equipo revisa el resultado antes de activarlo. Datos de ejemplo.",
+      "Certificación en símbolos: el agente cruza las cuatro pruebas del examen técnico, una persona lo revisa y recibe su sello de certificado. Datos de ejemplo.",
   },
 } satisfies Record<string, Entrada>;
 

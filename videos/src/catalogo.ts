@@ -19,4 +19,16 @@ export const DIMENSIONES = { horizontal: { ancho: 1920, alto: 1080 }, vertical: 
 export const CATALOGO: VideoDelCatalogo[] = [
   { id: "hero-oficina-cobra-vida", segundos: 15, formato: "horizontal", poster: 8.5 },
   { id: "hero-oficina-cobra-vida-vertical", segundos: 15, formato: "vertical", poster: 8.5 },
+  // Representativos (símbolos, no la interfaz tal cual): ver src/comun/simbolos.tsx.
+  { id: "departamento-ventas", segundos: 11, formato: "horizontal", poster: 4.0 },
+  { id: "departamento-atencion-al-cliente", segundos: 11, formato: "horizontal", poster: 7.5 },
+  { id: "departamento-marketing", segundos: 11, formato: "horizontal", poster: 7.5 },
+  { id: "departamento-operaciones-crm", segundos: 11, formato: "horizontal", poster: 7.6 },
+  { id: "departamento-direccion", segundos: 11, formato: "horizontal", poster: 6.0 },
+  { id: "cadena-anuncio-a-venta", segundos: 20, formato: "horizontal", poster: 10.5 },
+  { id: "aprobaciones", segundos: 10, formato: "horizontal", poster: 7.5 },
+  { id: "memoria", segundos: 10, formato: "horizontal", poster: 4.0 },
+  { id: "creditos", segundos: 8, formato: "horizontal", poster: 5.8 },
+  { id: "configurar-agente", segundos: 20, formato: "horizontal", poster: 13.5 },
+  { id: "certificacion", segundos: 12, formato: "horizontal", poster: 9.8 },
 ];
