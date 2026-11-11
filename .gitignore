@@ -79,8 +79,8 @@ coverage/
 /datos-reales/
 supabase/backups/
 
-# Vídeos del producto: se generan con `npm run videos` y se alojan fuera de git (ver src/config/videos.ts)
-/public/videos/
+# Vídeos del producto: se generan con `npm run videos`. Los de public/videos se versionan (son pocos y
+# pequeños) para que Vercel los sirva; si crecen, pasarlos a un CDN con NEXT_PUBLIC_VIDEOS_BASE_URL.
 /videos/node_modules/
 /videos/salida/
 

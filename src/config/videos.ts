@@ -1,7 +1,7 @@
 /**
- * Vídeos del producto (generados con `npm run videos`, proyecto videos/). Los archivos NO van en git:
- *  - En local se sirven desde public/videos (en .gitignore).
- *  - En producción, desde el alojamiento que se elija: basta con NEXT_PUBLIC_VIDEOS_BASE_URL
+ * Vídeos del producto (generados con `npm run videos`, proyecto videos/):
+ *  - Por defecto se sirven desde public/videos, que va en git (son pocos y pequeños) y Vercel los publica.
+ *  - Si crecen, alojarlos fuera y apuntar NEXT_PUBLIC_VIDEOS_BASE_URL a su carpeta
  *    (p. ej. https://<cuenta>.r2.dev/videos). Los nombres de archivo son los ids del catálogo.
  * Si el alojamiento es otro dominio, añadirlo a images.remotePatterns de next.config.ts para los pósteres.
  *
