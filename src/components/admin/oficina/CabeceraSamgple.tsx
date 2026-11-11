@@ -1,4 +1,6 @@
-import { ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { Building2, LogOut, ShieldCheck } from "lucide-react";
+import { cerrarSesion } from "@/app/(acceso)/acciones";
 import { GlassPanel } from "@/components/glass";
 import type { RolPlataforma } from "@/lib/admin/acceso";
 
@@ -17,19 +19,32 @@ const NOMBRE_ROL: Record<RolPlataforma, string> = {
   finanzas_samgple: "Finanzas",
 };
 
-/** Distintivo «MyOfia · Administración» y saludo con los roles de la persona. */
-export function CabeceraSamgple({ nombre, roles }: { nombre: string; roles: RolPlataforma[] }) {
+const boton = "inline-flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-small ring-1 ring-white/20 hover:bg-white/10";
+
+/** Distintivo «MyOfia · Administración», quién eres, el acceso a tu propia oficina y cerrar sesión. Va en todas las pantallas. */
+export function CabeceraSamgple({ nombre, roles, miOficina }: { nombre: string; roles: RolPlataforma[]; miOficina: boolean }) {
   return (
-    <GlassPanel className="flex flex-wrap items-center justify-between gap-3 rounded-pill! px-4 py-2.5" style={{ boxShadow: `inset 0 0 0 1px ${ACENTO_ADMIN}55, var(--glass-shadow)` }}>
+    <GlassPanel className="flex flex-wrap items-center justify-between gap-3 rounded-panel! px-4 py-2.5" style={{ boxShadow: `inset 0 0 0 1px ${ACENTO_ADMIN}55, var(--glass-shadow)` }}>
       <p className="flex items-center gap-2.5">
         <span className="inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-small font-semibold text-black" style={{ background: ACENTO_ADMIN }}>
           <ShieldCheck size={15} aria-hidden="true" /> MyOfia · Administración
         </span>
-        <span className="hidden text-small text-ink-2 sm:inline">La oficina de MyOfia</span>
+        <span className="text-small text-ink-2">
+          <span className="text-white">{nombre}</span> · {roles.map((r) => NOMBRE_ROL[r]).join(", ")}
+        </span>
       </p>
-      <p className="text-small text-ink-2">
-        <span className="text-white">{nombre}</span> · {roles.map((r) => NOMBRE_ROL[r]).join(", ")}
-      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        {miOficina && (
+          <Link href="/admin/mi-oficina" className={boton}>
+            <Building2 size={15} aria-hidden="true" /> Mi oficina
+          </Link>
+        )}
+        <form action={cerrarSesion}>
+          <button type="submit" className={boton}>
+            <LogOut size={15} aria-hidden="true" /> Cerrar sesión
+          </button>
+        </form>
+      </div>
     </GlassPanel>
   );
 }

@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
-import { exigirRolPlataforma, sesionPlataforma, type RolPlataforma } from "@/lib/admin/acceso";
+import { sesionPlataformaDeToken, tieneRol, type RolPlataforma } from "@/lib/admin/acceso";
 import { empresaPedida, sesionEnEmpresa } from "@/lib/empresas/sesion";
 
 const RUTAS_OFICINA = ["/oficina", "/agentes", "/aprobaciones", "/conexiones", "/creditos", "/cuenta", "/estado", "/favoritos", "/marketplace", "/memoria", "/mensajes", "/miembros", "/puesta-en-marcha", "/tareas"];
@@ -25,6 +25,7 @@ const ROLES_ADMIN: { base: string; exacta?: boolean; roles: RolPlataforma[] }[] 
   { base: "/admin/clientes", roles: ["comercial_samgple", "implantacion_samgple", "soporte_samgple", "finanzas_samgple"] },
   { base: "/admin/comercial", roles: ["comercial_samgple"] },
   { base: "/admin/implantacion", roles: ["implantacion_samgple", "comercial_samgple", "soporte_samgple"] },
+  { base: "/admin/mi-oficina", roles: [] },
 ];
 function rolesDeRutaAdmin(ruta: string): RolPlataforma[] {
   const zona = ROLES_ADMIN.find((z) => (z.exacta ? ruta === z.base : ruta === z.base || ruta.startsWith(`${z.base}/`)));
@@ -85,8 +86,11 @@ export async function proxy(req: NextRequest) {
   const db = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
   if (ruta.startsWith("/admin")) {
-    const plataforma = await sesionPlataforma(req.headers, db);
-    if (!plataforma) return conCookies(new NextResponse("No encontrado", { status: 404, headers: { "cache-control": "no-store" } }), respuesta);
+    // El token recién renovado por este mismo cliente; `sesionPlataformaDeToken` valida ESE token (firma y nivel MFA).
+    const { data: { session } } = await supabase.auth.getSession();
+    const plataforma = await sesionPlataformaDeToken(session?.access_token ?? null, db);
+    const noExiste = () => conCookies(new NextResponse("No encontrado", { status: 404, headers: { "cache-control": "no-store" } }), respuesta);
+    if (!plataforma) return noExiste();
     if (!plataforma.mfaVerificada && ruta !== "/admin/mfa") {
       const destino = req.nextUrl.clone();
       destino.pathname = "/admin/mfa";
@@ -94,8 +98,7 @@ export async function proxy(req: NextRequest) {
       return conCookies(NextResponse.redirect(destino), respuesta);
     }
     if (ruta === "/admin/mfa") return respuesta;
-    if (await exigirRolPlataforma(rolesDeRutaAdmin(ruta), req.headers, db)) return respuesta;
-    return conCookies(new NextResponse("No encontrado", { status: 404, headers: { "cache-control": "no-store" } }), respuesta);
+    return tieneRol(plataforma, rolesDeRutaAdmin(ruta)) ? respuesta : noExiste();
   }
   // Estas rutas se usan antes de disponer de una primera oficina; sus handlers validan la persona.
   if (esSoloPersona(ruta)) return respuesta;

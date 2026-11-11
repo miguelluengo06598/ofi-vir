@@ -3,7 +3,6 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { AsistenteAlta, type InicialAlta } from "@/components/admin/comercial/AsistenteAlta";
-import { CabeceraSamgple } from "@/components/admin/oficina/CabeceraSamgple";
 import { exigirRolPlataforma } from "@/lib/admin/acceso";
 import { plantillasDisponibles } from "@/lib/admin/comercial/alta";
 import { ROLES_COMERCIAL } from "@/lib/admin/comercial/config";
@@ -30,7 +29,6 @@ export default async function AltaCliente({ searchParams }: { searchParams: Prom
   };
   return (
     <div className="flex flex-col gap-5">
-      <CabeceraSamgple nombre={sesion.nombre} roles={sesion.roles} />
       <div>
         <Link href="/admin/comercial" className="text-small text-ink-2 underline-offset-4 hover:underline">← Comercial</Link>
         <h1 className="mt-1 text-h1">{s ? `Alta de ${s.empresa ?? s.nombre}` : "Alta manual de cliente"}</h1>

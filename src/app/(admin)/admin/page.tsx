@@ -3,9 +3,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { AlertasAtencion } from "@/components/admin/oficina/AlertasAtencion";
 import { BarraPanorama } from "@/components/admin/oficina/BarraPanorama";
-import { CabeceraSamgple } from "@/components/admin/oficina/CabeceraSamgple";
 import { EnDirectoPlataforma } from "@/components/admin/oficina/EnDirectoPlataforma";
-import { NavSamgple } from "@/components/admin/oficina/NavSamgple";
 import { exigirRolPlataforma, ROLES_PLATAFORMA } from "@/lib/admin/acceso";
 import { dbAdminDesdeEntorno } from "@/lib/admin/entorno";
 import { alertasAtencion, indicadoresPanorama, seriesPanorama, sucesosEnDirecto } from "@/lib/admin/oficina/panorama";
@@ -34,8 +32,6 @@ export default async function OficinaSamgple() {
 
   return (
     <div className="flex flex-col gap-6">
-      <CabeceraSamgple nombre={sesion.nombre} roles={sesion.roles} />
-      <NavSamgple roles={sesion.roles} actual="/admin" />
       <BarraPanorama indicadores={indicadores} series={series} />
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr] lg:items-start">
         <AlertasAtencion alertas={alertas} />

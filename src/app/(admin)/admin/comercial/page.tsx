@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { BotonAltaManual, Tablero } from "@/components/admin/comercial/Tablero";
-import { CabeceraSamgple } from "@/components/admin/oficina/CabeceraSamgple";
-import { NavSamgple } from "@/components/admin/oficina/NavSamgple";
 import { exigirRolPlataforma } from "@/lib/admin/acceso";
 import { ROLES_COMERCIAL } from "@/lib/admin/comercial/config";
 import { listarSolicitudes } from "@/lib/admin/comercial/servicio";
@@ -20,8 +18,6 @@ export default async function Comercial() {
   const solicitudes = await listarSolicitudes(db);
   return (
     <div className="flex flex-col gap-5">
-      <CabeceraSamgple nombre={sesion.nombre} roles={sesion.roles} />
-      <NavSamgple roles={sesion.roles} actual="/admin/comercial" />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-h1">Comercial</h1>

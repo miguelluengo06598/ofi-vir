@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["fra1"],
   "crons": [
     { "path": "/api/cron/caducar-creditos", "schedule": "0 3 * * *" },
     { "path": "/api/cron/revisar-estados", "schedule": "15 3 * * *" },

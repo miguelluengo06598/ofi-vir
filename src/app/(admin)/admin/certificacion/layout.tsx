@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { Suspense } from "react";
-import { SelectorRevisorDev } from "@/components/admin/certificacion/SelectorRevisorDev";
-import { listarRevisores, sesionRevisor } from "@/lib/admin/certificacion/acceso";
+import { sesionRevisor } from "@/lib/admin/certificacion/acceso";
 import { NOMBRE_CATEGORIA } from "@/lib/admin/certificacion/config";
 import { dbAdminDesdeEntorno } from "@/lib/admin/entorno";
 
@@ -14,7 +13,6 @@ async function Quien() {
     <div className="flex flex-col items-end gap-1 text-right">
       <p className="text-small">{sesion.nombre} · <span className="text-ink-2">{sesion.rol === "admin_samgple" ? "Administración" : "Revisión"}</span></p>
       <p className="text-tiny text-ink-3">Categorías: {sesion.categorias.map((c) => NOMBRE_CATEGORIA[c] ?? c).join(", ") || "ninguna"}</p>
-      {sesion.esDeDesarrollo && <SelectorRevisorDev actual={sesion.userId} revisores={await listarRevisores(db)} />}
     </div>
   );
 }

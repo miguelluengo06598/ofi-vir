@@ -5,9 +5,9 @@
  * (`sesionRevisor`): una empresa cliente nunca llega aquí, y si llegara, no obtiene nada.
  */
 import { revalidatePath } from "next/cache";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { z } from "zod";
-import { COOKIE_DEV_REVISOR, sesionRevisor, type SesionRevisor } from "@/lib/admin/certificacion/acceso";
+import { sesionRevisor, type SesionRevisor } from "@/lib/admin/certificacion/acceso";
 import { CHECKLIST, DECISIONES } from "@/lib/admin/certificacion/config";
 import { decidir, RevisionError, simularParaRevisor, soltarSolicitud, tomarSolicitud } from "@/lib/admin/certificacion/servicio";
 import { dbAdminDesdeEntorno } from "@/lib/admin/entorno";
@@ -89,18 +89,6 @@ export async function simular(input: z.input<typeof Simulacion>): Promise<Hecho<
   try {
     return { ok: true, resultado: await simularParaRevisor(deps, { requestId: v.data.id, mensaje: v.data.mensaje, canal: v.data.canal }) };
   } catch (e) { return fallo(e, "simular"); }
-}
-
-/** SOLO DESARROLLO (mientras no hay login): cambia la persona revisora con la que se ve el panel, para probar la segunda opinión. */
-export async function cambiarRevisorDeDesarrollo(userId: string): Promise<Hecho> {
-  if (process.env.NODE_ENV === "production" || !z.uuid().safeParse(userId).success) return { ok: false, mensaje: SIN_ACCESO };
-  const c = await entrar();
-  if (!c?.sesion.esDeDesarrollo) return { ok: false, mensaje: SIN_ACCESO };
-  const { data } = await c.db.from("reviewers").select("user_id").eq("user_id", userId).eq("activo", true).maybeSingle();
-  if (!data) return { ok: false, mensaje: "Esa persona no es revisora." };
-  (await cookies()).set(COOKIE_DEV_REVISOR, userId, { httpOnly: true, sameSite: "lax", path: "/" });
-  revalidatePath("/admin/certificacion", "layout");
-  return { ok: true };
 }
 
 const SancionCalidad = z.object({

@@ -27,7 +27,10 @@ async function ejecutar(fn: () => Promise<void>): Promise<Resultado> {
     revalidatePath("/admin/comercial");
     return { ok: true };
   } catch (e) {
-    return { ok: false, mensaje: e instanceof Error ? e.message : "No se pudo completar." };
+    // Los mensajes del servicio son textos propios (sin detalles de la base); cualquier otro error no se enseña.
+    const propio = e instanceof Error && /^[A-ZÁÉÍÓÚÑ«¿¡][^\n]{0,160}\.$/.test(e.message) && !/supabase|postgres|sql|duplicate|violates|relation|column/i.test(e.message);
+    if (!propio) console.error("[admin/comercial]", e instanceof Error ? e.message : "error desconocido");
+    return { ok: false, mensaje: propio ? (e as Error).message : "No se pudo completar." };
   }
 }
 
