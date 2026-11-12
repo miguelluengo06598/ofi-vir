@@ -8,8 +8,10 @@ const permiso = (p: PlantillaAgente, id: string) => p.herramientas.find((h) => h
 const copia = (p: PlantillaAgente, cambios: Partial<PlantillaAgente>): PlantillaAgente => ({ ...structuredClone(p), ...cambios });
 
 describe("plantillas de IDESIE", () => {
-  it("están las tres de la primera fase, sin repetir", () => {
-    assert.deepEqual(PLANTILLAS.map((p) => p.id), ["lucia-sdr", "sara-whatsapp", "ivan-crm"]);
+  it("están las diez plantillas, sin repetir", () => {
+    assert.deepEqual(PLANTILLAS.map((p) => p.id), [
+      "lucia-sdr", "sara-whatsapp", "ivan-crm", "marco-cierre", "paula-reactivacion", "leo-email", "nora-contenido", "teo-anuncios", "ada-analista", "atlas-coordinador",
+    ]);
   });
 
   for (const p of PLANTILLAS) {

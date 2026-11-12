@@ -13,12 +13,15 @@ import { GlassPanel } from "@/components/glass";
 import { supabaseAdmin, usuarioActual } from "@/lib/supabase/server";
 import { empresaPedida, sesionEnEmpresa } from "@/lib/empresas/sesion";
 import { headers } from "next/headers";
+import { connection } from "next/server";
+import { cargarOficinaReal } from "@/lib/oficina/estadoReal";
 
 // La sesión y la empresa activa son datos por petición; esta rama no puede prerenderizarse.
 export const instant = false;
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Esta capa es deliberadamente independiente del Proxy: nunca confiamos solo en una redirección.
+  await connection(); // sesión, empresa y la hora de «hoy» son de cada petición
   const persona = await usuarioActual();
   if (!persona) redirect("/login?next=/oficina");
   const db = supabaseAdmin();
@@ -49,11 +52,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     );
   }
   const { data: perfil } = await db.from("users").select("full_name, email").eq("id", persona.id).maybeSingle();
+  const nombre = perfil?.full_name || persona.user_metadata.full_name || persona.email || "Mi cuenta";
+  // La oficina de verdad: agentes, aprobaciones y métricas de la empresa de la sesión (nada de datos de ejemplo).
+  const oficina = await cargarOficinaReal(db, sesion.companyId, nombre);
   return (
     <CreditosProvider>
-    <ApprovalsProvider>
+    <ApprovalsProvider oficina={oficina}>
       <InboxProvider>
-      <SimulationProvider>
+      <SimulationProvider real>
         <a
           href="#contenido"
           className="fixed top-2 left-2 z-[100] -translate-y-20 rounded-pill bg-white px-4 py-2 text-small text-black focus:translate-y-0"
@@ -62,7 +68,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </a>
         <Background />
 
-        <TopBar usuario={{ nombre: perfil?.full_name || persona.user_metadata.full_name || persona.email || "Mi cuenta", email: perfil?.email || persona.email || "" }} rol={sesion.rol} />
+        <TopBar usuario={{ nombre, email: perfil?.email || persona.email || "" }} rol={sesion.rol} />
         <Dock />
 
         {/* Márgenes para no quedar bajo la TopBar (2 filas en móvil) ni el Dock. */}

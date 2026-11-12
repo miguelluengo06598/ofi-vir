@@ -2,6 +2,8 @@
 
 import { List, Network, RotateCcw, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useApprovals } from "@/components/ApprovalsProvider";
+import { borrarContactoDeMemoria, corregirRecuerdo } from "@/app/actions/memoria";
 import { GlassInput, GlassPanel, PillButton, departmentMeta, type DepartmentId } from "@/components/glass";
 import { currentUser } from "@/data/navigation";
 import { departmentOrder } from "@/data/departments";
@@ -22,8 +24,21 @@ import { MemoryGraph, type GraphCluster } from "./MemoryGraph";
 import { MemoryList } from "./MemoryList";
 import { NodeGlyph } from "./NodeGlyph";
 
-export function MemoryView({ initialData }: { initialData?: MemoryData | null }) {
-  const [data, setData] = useState<MemoryData>(() => initialData ?? initialMemory());
+type Props = {
+  initialData?: MemoryData | null;
+  /** Oficina real: la memoria de la empresa (nunca se rellena con ejemplos) y los cambios se guardan en la base. */
+  real?: boolean;
+  /** Corregir y borrar: solo propietarios y administradores. */
+  puedeEditar?: boolean;
+};
+
+export function MemoryView({ initialData, real = false, puedeEditar = true }: Props) {
+  const { agente, usuario } = useApprovals();
+  const vacia: MemoryData = { clients: [], nodes: [], edges: [] };
+  const [data, setData] = useState<MemoryData>(() => initialData ?? (real ? vacia : initialMemory()));
+  const sinConexion = real && initialData === null;
+  // Departamento de un nodo: el del agente que lo creó (en la oficina real, sus agentes de verdad).
+  const departamentoDe = (n: MemoryNode): DepartmentId => (real ? (agente(n.creatorId)?.departmentId ?? "direccion") : nodeDepartment(n));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [types, setTypes] = useState<Set<NodeType>>(new Set());
@@ -58,9 +73,10 @@ export function MemoryView({ initialData }: { initialData?: MemoryData | null })
   const hiddenIds = useMemo(() => {
     const hidden = new Set<string>();
     for (const n of data.nodes) {
-      if ((types.size > 0 && !types.has(n.type)) || (dept !== "all" && nodeDepartment(n) !== dept)) hidden.add(n.id);
+      if ((types.size > 0 && !types.has(n.type)) || (dept !== "all" && departamentoDe(n) !== dept)) hidden.add(n.id);
     }
     return hidden;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- departamentoDe solo depende de la oficina cargada
   }, [data.nodes, types, dept]);
 
   const selected = useMemo(() => {
@@ -92,20 +108,28 @@ export function MemoryView({ initialData }: { initialData?: MemoryData | null })
       return next;
     });
 
-  const editNode = (id: string, fields: { label: string; detail: string }) => {
+  const editNode = async (id: string, fields: { label: string; detail: string }) => {
+    if (real) {
+      const r = await corregirRecuerdo({ nodeId: id, titulo: fields.label, contenido: fields.detail });
+      if (!r.ok) return setAnnouncement(r.mensaje);
+    }
     setData((d) => ({
       ...d,
       nodes: d.nodes.map((n) =>
         n.id !== id || (n.label === fields.label && n.detail === fields.detail)
           ? n
-          : { ...n, ...fields, events: [...n.events, { at: localIso(), text: `Corregido por ${currentUser.name}.` }] },
+          : { ...n, ...fields, events: [...n.events, { at: localIso(), text: `Corregido por ${real ? (usuario ?? "ti") : currentUser.name}.` }] },
       ),
     }));
     setAnnouncement("Cambios guardados.");
   };
 
-  const deleteClient = (clientId: string) => {
+  const deleteClient = async (clientId: string) => {
     const client = data.clients.find((c) => c.id === clientId);
+    if (real) {
+      const r = await borrarContactoDeMemoria({ contactId: clientId });
+      if (!r.ok) return setAnnouncement(r.mensaje);
+    }
     const removed = new Set(data.nodes.filter((n) => n.clientId === clientId).map((n) => n.id));
     setData((d) => ({
       clients: d.clients.filter((c) => c.id !== clientId),
@@ -143,6 +167,8 @@ export function MemoryView({ initialData }: { initialData?: MemoryData | null })
       onSelect={select}
       onEdit={editNode}
       onDeleteClient={deleteClient}
+      real={real}
+      puedeEditar={puedeEditar}
     />
   );
 
@@ -230,11 +256,19 @@ export function MemoryView({ initialData }: { initialData?: MemoryData | null })
 
       {empty ? (
         <GlassPanel className="enter flex flex-col items-start gap-3 p-6">
-          <h2 className="text-h2">La memoria está vacía</h2>
-          <p className="text-small text-ink-2">Has borrado todos los clientes. Los agentes irán guardando datos nuevos a medida que trabajen.</p>
-          <PillButton icon={RotateCcw} onClick={restore}>
-            Restaurar datos de ejemplo
-          </PillButton>
+          <h2 className="text-h2">{sinConexion ? "No se ha podido cargar la memoria" : "La memoria está vacía"}</h2>
+          <p className="text-small text-ink-2">
+            {sinConexion
+              ? "Vuelve a intentarlo en unos segundos."
+              : real
+                ? "Tus agentes guardarán aquí lo que aprendan de cada contacto (datos, acuerdos, objeciones, pendientes) a medida que trabajen."
+                : "Has borrado todos los clientes. Los agentes irán guardando datos nuevos a medida que trabajen."}
+          </p>
+          {!real && (
+            <PillButton icon={RotateCcw} onClick={restore}>
+              Restaurar datos de ejemplo
+            </PillButton>
+          )}
         </GlassPanel>
       ) : nothingShown ? (
         <GlassPanel className="enter flex flex-col items-start gap-3 p-6">

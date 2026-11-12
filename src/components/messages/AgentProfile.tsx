@@ -34,11 +34,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function AgentProfile({ agent }: { agent: OfficeAgent }) {
-  const profile = getAgentProfile(agent.id);
   const consumoMes = useConsumoDeAgente(agent.name);
-  const { openConsult, openContact } = useApprovals();
-  const contacts = contactsOfAgent(agent.id);
-  const expert = expertFor(agent.creator);
+  const { openConsult, openContact, modoReal } = useApprovals();
+  // Ficha, contactos, expertos y archivos de ejemplo solo en las demos: en la oficina real no se inventa nada.
+  const profile = modoReal ? null : getAgentProfile(agent.id);
+  const contacts = modoReal ? [] : contactsOfAgent(agent.id);
+  const expert = modoReal ? undefined : expertFor(agent.creator);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
       <div className="flex flex-col items-center gap-2 text-center">
@@ -85,6 +86,7 @@ export function AgentProfile({ agent }: { agent: OfficeAgent }) {
         </ul>
       </Section>
 
+      {!modoReal && (
       <Section title="Correos">
         <EmailQuota agentId={agent.id} />
         {contacts.length > 0 && (
@@ -105,6 +107,7 @@ export function AgentProfile({ agent }: { agent: OfficeAgent }) {
           </ul>
         )}
       </Section>
+      )}
 
       <Section title="Certificación">
         <CicloDelAgente agentSlug={agent.id} />
@@ -145,6 +148,7 @@ export function AgentProfile({ agent }: { agent: OfficeAgent }) {
         </p>
       </Section>
 
+      {profile && profile.files.length > 0 && (
       <Section title="Archivos generados">
         <ul className="flex flex-col gap-2">
           {profile.files.map((f) => {
@@ -159,6 +163,7 @@ export function AgentProfile({ agent }: { agent: OfficeAgent }) {
           })}
         </ul>
       </Section>
+      )}
     </div>
   );
 }

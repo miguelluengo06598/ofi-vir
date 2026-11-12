@@ -4,19 +4,16 @@ import { SupabaseMemoryStore } from "./supabaseStore.ts";
 import { toMemoryData } from "./toMemoryData.ts";
 
 /**
- * Memoria de la empresa actual para la vista (solo servidor).
- * Devuelve null si el backend no está configurado o no responde: la vista usa entonces los datos de ejemplo.
- * Mientras no haya inicio de sesión, la empresa sale de DEV_COMPANY_ID.
+ * Memoria de la empresa de la sesión para la vista (solo servidor). Nunca se rellena con ejemplos: sin recuerdos,
+ * devuelve una memoria vacía; si la base no responde, null (la vista lo dice).
  */
-export async function loadMemoryData(): Promise<MemoryData | null> {
-  const companyId = process.env.DEV_COMPANY_ID?.trim();
+export async function loadMemoryData(companyId: string): Promise<MemoryData | null> {
   const store = SupabaseMemoryStore.fromEnv();
-  if (!companyId || !store) return null;
+  if (!store) return null;
   try {
-    const graph = await createMemoryService({ store, embedder: null }).loadGraph(companyId);
-    const data = toMemoryData(graph);
-    return data.nodes.length > 0 ? data : null;
-  } catch {
+    return toMemoryData(await createMemoryService({ store, embedder: null }).loadGraph(companyId));
+  } catch (e) {
+    console.error("loadMemoryData:", e instanceof Error ? e.message : "error desconocido");
     return null;
   }
 }

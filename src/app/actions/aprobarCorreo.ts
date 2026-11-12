@@ -1,6 +1,7 @@
 "use server";
 
-import { devContext } from "@/lib/devContext";
+import { sesionDeAccion } from "@/lib/empresas/sesionAccion";
+import { puede } from "@/lib/empresas/permisos";
 import { emailConfigFromEnv } from "@/lib/email/config";
 import { ResendSender } from "@/lib/email/sender";
 import { aprobarYEnviar, type AprobarYEnviarResult } from "@/lib/email/service";
@@ -14,9 +15,10 @@ export type AprobarCorreoResult = AprobarYEnviarResult | { estado: "sin_backend"
  * Mientras no haya inicio de sesión, empresa y persona salen de DEV_COMPANY_ID y DEV_USER_ID.
  */
 export async function aprobarCorreo(input: { agentSlug: string; toEmail: string; subject: string; body: string }): Promise<AprobarCorreoResult> {
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   const store = SupabaseEmailStore.fromEnv();
   if (!ctx || !store) return { estado: "sin_backend" };
+  if (!puede(ctx.rol, "aprobar", ctx)) return { estado: "no_enviado", codigo: "sin_aprobacion", mensaje: "No tienes permiso para aprobar envíos en esta empresa." };
   const { companyId, userId } = ctx;
 
   const config = emailConfigFromEnv();

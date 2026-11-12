@@ -52,12 +52,25 @@ function TaskRow({ task, name }: { task: OfficeTask; name: string }) {
 }
 
 export function TasksView() {
-  const { office, resolved, consultations } = useApprovals();
+  const { office, resolved, consultations, modoReal } = useApprovals();
   const [dept, setDept] = useState<DepartmentId | "all">("all");
 
   const agents = office.summaries.flatMap((s) => s.agents);
-  const tasks = useMemo(() => buildTasks(agents, resolved, consultations), [agents, resolved, consultations]);
+  const tasks = useMemo(() => (modoReal ? [] : buildTasks(agents, resolved, consultations)), [modoReal, agents, resolved, consultations]);
   const visible = tasks.filter((t) => dept === "all" || t.departmentId === dept);
+
+  // Oficina real: solo las tareas de la base (las de ejemplo solo existen en las demos de la web).
+  if (modoReal) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-h1">Tareas</h1>
+          <p className="text-body text-ink-2">Lo que están haciendo tus agentes</p>
+        </div>
+        <TareasReales vacio />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

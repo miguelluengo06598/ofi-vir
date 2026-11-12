@@ -12,9 +12,11 @@ import { SeguimientosPropuestos } from "./SeguimientosPropuestos";
 
 export function ApprovalsView() {
   const router = useRouter();
-  const { resolved, office, pendingCount } = useApprovals();
+  const { resolved, office, pendingCount, modoReal } = useApprovals();
   const agents = office.summaries.flatMap((s) => s.agents);
-  const pending = approvals.filter((a) => !resolved.has(a.id));
+  // Oficina real: las peticiones de verdad son los borradores y seguimientos de arriba; las de ejemplo solo en demos.
+  const pending = modoReal ? [] : approvals.filter((a) => !resolved.has(a.id));
+  const alDia = modoReal ? pendingCount === 0 : pending.length === 0;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -42,7 +44,7 @@ export function ApprovalsView() {
           ))}
         </AnimatePresence>
 
-        {pending.length === 0 && (
+        {alDia && (
           <div className="enter my-auto" style={{ "--enter-delay": "0.3s" } as React.CSSProperties}>
             <GlassPanel className="flex flex-col items-center gap-3 px-8 py-12 text-center">
               <PartyPopper size={40} aria-hidden="true" />

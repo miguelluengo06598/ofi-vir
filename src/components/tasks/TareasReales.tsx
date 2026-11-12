@@ -17,9 +17,23 @@ const HORA = (iso: string) => new Date(iso).toLocaleString("es-ES", { day: "nume
  * Tareas reales (de la base) con por qué empezó cada una y su cadena desde el origen («Lead nuevo de Meta → Sara → Lucía»).
  * Sin backend, no muestra nada (la vista sigue con los datos de ejemplo).
  */
-export function TareasReales() {
+export function TareasReales({ vacio = false }: { vacio?: boolean }) {
   const [tareas, setTareas] = useState<Tarea[] | null>(null);
-  useEffect(() => { void llamar<{ tareas: Tarea[] }>("/api/tareas").then((r) => r.ok && setTareas(r.datos.tareas)); }, []);
+  const [error, setError] = useState(false);
+  useEffect(() => { void llamar<{ tareas: Tarea[] }>("/api/tareas").then((r) => (r.ok ? setTareas(r.datos.tareas) : setError(true))); }, []);
+  if (vacio && (error || (tareas && tareas.length === 0))) {
+    return (
+      <GlassPanel className="enter flex flex-col gap-2 p-6">
+        <h2 className="text-h2">{error ? "No se han podido cargar las tareas" : "Todavía no hay tareas"}</h2>
+        <p className="text-small text-ink-2">
+          {error
+            ? "Vuelve a intentarlo en unos segundos."
+            : "Tus agentes solo trabajan cuando hay un motivo: un lead o un correo que llega, una orden vuestra, una rutina que activéis o un seguimiento aprobado. Cuando pase, la tarea aparecerá aquí con por qué empezó."}
+        </p>
+      </GlassPanel>
+    );
+  }
+  if (vacio && !tareas) return <p className="text-small text-ink-2" aria-live="polite">Cargando tareas…</p>;
   if (!tareas || tareas.length === 0) return null;
   return (
     <GlassPanel as="section" aria-labelledby="tareas-reales" className="enter flex flex-col gap-2 p-6">

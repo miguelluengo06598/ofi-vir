@@ -7,19 +7,20 @@ import { useApprovals } from "@/components/ApprovalsProvider";
 import { GlassPanel, PillButton } from "@/components/glass";
 import { useInbox } from "@/components/InboxProvider";
 import { useSimulation } from "@/components/SimulationProvider";
-import { agentById, firstName } from "@/data/agents";
+import { firstName } from "@/data/agents";
 import { contactDirectory } from "@/data/emails";
-import { chainById, kindLabel } from "@/data/handoffs";
-import { HandoffPair, HandoffStatusText } from "./parts";
+import { kindLabel } from "@/data/handoffs";
+import { HandoffPair, HandoffStatusText, useAgenteDe } from "./parts";
 
 const SHOWN = 5;
 const ANNOUNCE_EVERY_MS = 10_000;
 
 /** Panel «En directo»: los últimos traspasos. En móvil se despliega desde un botón sobre el dock. */
 export function LivePanel() {
-  const { events, latest, paused, toggle, openChain } = useSimulation();
+  const { events, latest, paused, toggle, openChain, cadena } = useSimulation();
+  const agenteDe = useAgenteDe();
   const { messages, fresh } = useInbox();
-  const { openContact } = useApprovals();
+  const { openContact, modoReal } = useApprovals();
   const [open, setOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const lastAnnounced = useRef(0);
@@ -31,8 +32,8 @@ export function LivePanel() {
     if (now - lastAnnounced.current < ANNOUNCE_EVERY_MS) return;
     lastAnnounced.current = now;
     const { handoff: h } = latest;
-    setAnnouncement(`Traspaso de ${firstName(agentById(h.fromAgentId).name)} a ${firstName(agentById(h.toAgentId).name)}: ${h.summary}`);
-  }, [latest]);
+    setAnnouncement(`Traspaso de ${firstName(agenteDe(h.fromAgentId).name)} a ${firstName(agenteDe(h.toAgentId).name)}: ${h.summary}`);
+  }, [latest, agenteDe]);
 
   // Correo real recibido: se anuncia como mucho cada 10 s, igual que los traspasos.
   const newest = messages[0];
@@ -46,7 +47,9 @@ export function LivePanel() {
 
   const recent = events.slice(-SHOWN).reverse();
   const mails = messages.slice(0, 3);
-  const directoryId = (email: string) => Object.entries(contactDirectory).find(([, c]) => c.email.toLowerCase() === email.toLowerCase())?.[0];
+  // En la oficina real no hay agenda de ejemplo: el correo se muestra sin abrir una ficha inventada.
+  const directoryId = (email: string) =>
+    modoReal ? undefined : Object.entries(contactDirectory).find(([, c]) => c.email.toLowerCase() === email.toLowerCase())?.[0];
 
   return (
     <>
@@ -132,7 +135,7 @@ export function LivePanel() {
                       <span className="text-ink-3">{kindLabel[e.handoff.kind]} · </span>
                       {e.handoff.summary}
                     </span>
-                    <span className="block text-tiny text-ink-3">Empezó por: {chainById(e.handoff.chainId).origen}</span>
+                    <span className="block text-tiny text-ink-3">Empezó por: {cadena(e.handoff.chainId)?.origen ?? "—"}</span>
                     <span className="mt-0.5 flex items-center gap-2">
                       <span className="text-tiny text-ink-3">{e.time}</span>
                       <HandoffStatusText status={e.status} />

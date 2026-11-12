@@ -7,19 +7,21 @@ import { useApprovals } from "@/components/ApprovalsProvider";
 import { MotionGlassPanel, PillButton, departmentColor, departmentMeta } from "@/components/glass";
 import { useSimulation } from "@/components/SimulationProvider";
 import { approvals } from "@/data/approvals";
-import { agentById, firstName } from "@/data/agents";
-import { chainById, chainCost, kindLabel, type Handoff } from "@/data/handoffs";
+import { firstName } from "@/data/agents";
+import { chainCost, kindLabel, type Handoff } from "@/data/handoffs";
 import { fmtNumber } from "@/lib/format";
 import { useFocusTrap } from "@/lib/useFocusTrap";
-import { HandoffPair, HandoffStatusText, useResolvedStatus } from "./parts";
+import { HandoffPair, HandoffStatusText, useAgenteDe, useResolvedStatus } from "./parts";
 
 const credits = (n: number) => `${fmtNumber(n, 1)} créditos`;
 
 function Step({ handoff }: { handoff: Handoff }) {
-  const { decisions, decide } = useApprovals();
-  const from = agentById(handoff.fromAgentId);
-  const to = agentById(handoff.toAgentId);
-  const approval = approvals.find((a) => a.id === handoff.approvalId);
+  const { decisions, decide, modoReal } = useApprovals();
+  const agenteDe = useAgenteDe();
+  const from = agenteDe(handoff.fromAgentId);
+  const to = agenteDe(handoff.toAgentId);
+  // Las aprobaciones de ejemplo solo existen en las demos: en la oficina real se deciden en Aprobaciones.
+  const approval = modoReal ? undefined : approvals.find((a) => a.id === handoff.approvalId);
   const decision = decisions.find((d) => d.approvalId === handoff.approvalId)?.decision;
   const status = useResolvedStatus(handoff);
 
@@ -98,8 +100,8 @@ function Step({ handoff }: { handoff: Handoff }) {
 }
 
 function Content({ chainId }: { chainId: string }) {
-  const { closeChain } = useSimulation();
-  const chain = chainById(chainId);
+  const { closeChain, cadena } = useSimulation();
+  const chain = cadena(chainId)!; // ChainDialog solo monta Content si la cadena existe
   const dialog = useRef<HTMLElement>(null);
   const id = useId();
   useFocusTrap(dialog);
@@ -179,6 +181,7 @@ function Content({ chainId }: { chainId: string }) {
 
 /** Diálogo global con la cadena completa como línea de tiempo vertical. */
 export function ChainDialog() {
-  const { chainId } = useSimulation();
-  return <AnimatePresence>{chainId && <Content key={chainId} chainId={chainId} />}</AnimatePresence>;
+  const { chainId, cadena } = useSimulation();
+  // Solo se abre una cadena que existe (en la oficina real, una que ya se ha cargado).
+  return <AnimatePresence>{chainId && cadena(chainId) && <Content key={chainId} chainId={chainId} />}</AnimatePresence>;
 }

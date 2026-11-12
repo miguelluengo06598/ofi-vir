@@ -13,6 +13,7 @@ import {
   type MemoryNode,
 } from "@/data/memory";
 import { EmailThreads } from "@/components/emails/EmailThreads";
+import { useApprovals } from "@/components/ApprovalsProvider";
 import { Tabs, tabId } from "@/components/emails/parts";
 import { fmtDateTime } from "@/lib/format";
 import { NodeGlyph } from "./NodeGlyph";
@@ -27,10 +28,14 @@ type Props = {
   onSelect: (id: string) => void;
   onEdit: (id: string, fields: { label: string; detail: string }) => void;
   onDeleteClient: (clientId: string) => void;
+  /** Oficina real: el agente que lo creó sale de la oficina de la empresa. */
+  real?: boolean;
+  puedeEditar?: boolean;
 };
 
 /** Ficha del nodo elegido. Un solo panel de cristal a la derecha del grafo. */
-export function MemoryDetail({ node, client, nodes, edges, onClose, onSelect, onEdit, onDeleteClient }: Props) {
+export function MemoryDetail({ node, client, nodes, edges, onClose, onSelect, onEdit, onDeleteClient, real = false, puedeEditar = true }: Props) {
+  const { agente } = useApprovals();
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [tab, setTab] = useState<"ficha" | "correos">("ficha");
@@ -39,8 +44,11 @@ export function MemoryDetail({ node, client, nodes, edges, onClose, onSelect, on
   const editBtn = useRef<HTMLButtonElement>(null);
   const deleteBtn = useRef<HTMLButtonElement>(null);
 
-  const creator = agentById(node.creatorId);
-  const dept = departmentMeta[nodeDepartment(node)];
+  const creator = real
+    ? (agente(node.creatorId) ?? { id: node.creatorId, name: "Un agente", departmentId: "direccion" as const })
+    : agentById(node.creatorId);
+  const departamento = real ? creator.departmentId : nodeDepartment(node);
+  const dept = departmentMeta[departamento];
   const byId = new Map(nodes.map((n) => [n.id, n]));
 
   // Conexiones leídas desde el nodo: «trabaja en → Clínica Sol», «← Laura Gómez · recibió».
@@ -156,7 +164,7 @@ export function MemoryDetail({ node, client, nodes, edges, onClose, onSelect, on
         <dd>{fmtDateTime(node.createdAt)}</dd>
         <dt className="text-ink-2">Creado por</dt>
         <dd className="flex items-center gap-2">
-          <Avatar name={creator.name} tone={nodeDepartment(node)} size={24} />
+          <Avatar name={creator.name} tone={departamento} size={24} />
           <span>
             {creator.name}
             <span className="block text-tiny text-ink-2">{dept.label}</span>
@@ -206,6 +214,7 @@ export function MemoryDetail({ node, client, nodes, edges, onClose, onSelect, on
         </ol>
       </section>
 
+      {puedeEditar && (
       <div className="flex flex-col gap-3 border-t border-glass-border pt-4">
         {!editing && (
           <PillButton ref={editBtn} icon={Pencil} onClick={() => setEditing(true)} className="self-start">
@@ -235,6 +244,7 @@ export function MemoryDetail({ node, client, nodes, edges, onClose, onSelect, on
           </PillButton>
         )}
       </div>
+      )}
         </>
       )}
     </GlassPanel>

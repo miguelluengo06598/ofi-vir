@@ -1,6 +1,6 @@
 "use server";
 
-import { devContext } from "@/lib/devContext";
+import { sesionDeAccion } from "@/lib/empresas/sesionAccion";
 import type { LiveMessage } from "@/lib/email/inboundStore";
 import { SupabaseEmailStore } from "@/lib/email/supabaseStore";
 
@@ -9,7 +9,7 @@ import { SupabaseEmailStore } from "@/lib/email/supabaseStore";
  * Devuelve texto plano de contenido externo: la interfaz lo muestra como texto, nunca como HTML.
  */
 export async function correosRecibidos(): Promise<LiveMessage[]> {
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   const store = SupabaseEmailStore.fromEnv();
   if (!ctx || !store) return [];
   try {

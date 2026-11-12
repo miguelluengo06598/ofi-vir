@@ -4,7 +4,6 @@ import { AnimatePresence, animate, motion, useReducedMotion } from "framer-motio
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { GlassPanel, departmentColor, type DepartmentId } from "@/components/glass";
 import { useSimulation } from "@/components/SimulationProvider";
-import { connectedPairs } from "@/data/handoffs";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { curve, type Rect } from "./curva";
 
@@ -21,7 +20,7 @@ const BUBBLE_MS = 4500;
 export function HandoffLayer({ containerRef, layoutKey }: { containerRef: RefObject<HTMLElement | null>; layoutKey: string }) {
   const wide = useMediaQuery("(min-width: 1024px)");
   const reduced = useReducedMotion();
-  const { latest } = useSimulation();
+  const { latest, pares } = useSimulation();
   const [rects, setRects] = useState<Rects>({});
   const [bubbles, setBubbles] = useState<{ seq: number; dept: DepartmentId; text: string }[]>([]);
   const uid = useId().replace(/:/g, "");
@@ -101,7 +100,7 @@ export function HandoffLayer({ containerRef, layoutKey }: { containerRef: RefObj
     <>
       <svg aria-hidden="true" className="pointer-events-none absolute inset-0 size-full overflow-visible">
         <defs>
-          {connectedPairs().map(([a, b], i) => {
+          {pares().map(([a, b], i) => {
             const ra = rects[a];
             const rb = rects[b];
             if (!ra || !rb) return null;
@@ -126,7 +125,7 @@ export function HandoffLayer({ containerRef, layoutKey }: { containerRef: RefObj
         </defs>
 
         {/* En reposo: una línea muy tenue por cada pareja de departamentos que se comunican. */}
-        {connectedPairs().map(([a, b], i) => {
+        {pares().map(([a, b], i) => {
           const ra = rects[a];
           const rb = rects[b];
           if (!ra || !rb) return null;

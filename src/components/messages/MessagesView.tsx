@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useApprovals } from "@/components/ApprovalsProvider";
 import { GlassPanel, PillButton } from "@/components/glass";
+import { llamar } from "@/components/oficina/llamar";
 import { initialConversations, simulatedReply, touchConversation as touch, type Message } from "@/data/messages";
 import { AgentProfile } from "./AgentProfile";
 import { ChatPanel } from "./ChatPanel";
@@ -23,9 +24,10 @@ const newMessage = (from: Message["from"], text: string): Message => ({
 });
 
 export function MessagesView() {
-  const { office, conversations, setConversations } = useApprovals();
+  const { office, conversations, setConversations, modoReal } = useApprovals();
   const officeAgents = office.summaries.flatMap((s) => s.agents);
-  const firstId = initialConversations[0].agentId;
+  // Oficina real: la primera conversación que se cargue o el primer agente; demo: la conversación de ejemplo.
+  const firstId = modoReal ? (conversations[0]?.agentId ?? officeAgents[0]?.id ?? "") : initialConversations[0].agentId;
   const [selectedId, setSelectedId] = useState(firstId);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<Tab>("all");
@@ -43,8 +45,19 @@ export function MessagesView() {
     const pending = timers.current;
     return () => pending.forEach(clearTimeout);
   }, []);
+  const [aviso, setAviso] = useState<string | null>(null);
+  // Oficina real: las conversaciones de verdad de esta persona con sus agentes.
+  useEffect(() => {
+    if (!modoReal) return;
+    void llamar<{ conversaciones: typeof conversations; motor: boolean }>("/api/mensajes").then((r) => {
+      if (!r.ok) return setAviso("No se han podido cargar tus mensajes.");
+      if (!r.datos.motor) setAviso("Los agentes no pueden responder ahora mismo: falta configurar la conexión con la IA.");
+      setConversations(r.datos.conversaciones);
+      if (r.datos.conversaciones[0]) setSelectedId(r.datos.conversaciones[0].agentId);
+    });
+  }, [modoReal, setConversations]);
 
-  const agent = officeAgents.find((a) => a.id === selectedId)!;
+  const agent = officeAgents.find((a) => a.id === selectedId) ?? officeAgents[0];
   const conversation = conversations.find((c) => c.agentId === selectedId) ?? {
     agentId: selectedId,
     messages: [],
@@ -64,9 +77,27 @@ export function MessagesView() {
     select(agentId);
   }
 
+  async function sendReal(body: string) {
+    const target = agent;
+    setConversations((cs) => touch(cs, target.id, (c) => ({ ...c, messages: [...c.messages, newMessage("me", body)] })));
+    setDraft("");
+    setTyping((t) => [...t, target.id]);
+    const r = await llamar<{ mensajes: Message[] }>("/api/mensajes", "POST", { agenteId: target.id, texto: body });
+    const llegados = r.ok ? r.datos.mensajes : [newMessage("system", r.mensaje)];
+    setConversations((cs) =>
+      touch(cs, target.id, (c) => ({
+        ...c,
+        messages: [...c.messages, ...llegados],
+        unread: selectedRef.current === target.id ? 0 : c.unread + 1,
+      })),
+    );
+    setTyping((t) => t.filter((id) => id !== target.id));
+  }
+
   function send(text: string) {
     const body = text.trim();
     if (!body) return;
+    if (modoReal) return void sendReal(body);
     const target = officeAgents.find((a) => a.id === selectedId)!;
     setConversations((cs) => touch(cs, target.id, (c) => ({ ...c, messages: [...c.messages, newMessage("me", body)] })));
     setDraft("");
@@ -86,12 +117,25 @@ export function MessagesView() {
     );
   }
 
+  if (!agent) {
+    return (
+      <div className="flex flex-1 flex-col gap-6">
+        <h1 className="text-h1">Mensajes</h1>
+        <GlassPanel className="flex flex-col gap-2 p-6">
+          <h2 className="text-h2">Todavía no hay agentes en tu oficina</h2>
+          <p className="text-small text-ink-2">Cuando tengáis un agente configurado, podréis escribirle desde aquí.</p>
+        </GlassPanel>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-h1">Mensajes</h1>
           <p className="text-body text-ink-2">Habla con tus agentes</p>
+          {aviso && <p className="text-small text-status-waiting" role="status">{aviso}</p>}
         </div>
         <PillButton
           icon={Plus}

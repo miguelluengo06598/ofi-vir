@@ -5,8 +5,7 @@ import type { Permiso } from "../herramientas/tipos.ts";
  * `npm run plantillas:sync` la copia a la tabla `agent_templates`. La `version` NO se escribe aquí: la sube el
  * script cuando cambia el contenido, y cada versión nueva queda «pendiente de certificar» hasta que IDESIE la certifique.
  *
- * Para añadir una plantilla nueva (marco-cierre, paula-reactivacion, leo-email, nora-contenido, teo-anuncios,
- * ada-analista, atlas-coordinador): crea `<id>.ts` con `export default definirPlantilla({...})` y añádela a `index.ts`.
+ * Para añadir una plantilla nueva: crea `<id>.ts` con `export default definirPlantilla({...})` y añádela a `index.ts`.
  */
 export type TipoDepartamento = "ventas" | "atencion" | "marketing" | "operaciones" | "direccion" | "personalizado";
 export type TipoTarea = "simple" | "estandar" | "experta";

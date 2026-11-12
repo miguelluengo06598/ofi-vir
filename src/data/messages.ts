@@ -7,7 +7,7 @@ export type Message = {
   from: "agent" | "me" | "system";
   text: string;
   time: string;
-  day: "Ayer" | "Hoy";
+  day: string;
 };
 
 export type Conversation = { agentId: string; messages: Message[]; unread: number };

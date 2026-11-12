@@ -38,8 +38,8 @@ export async function traspasosHandler(req: Request, deps: DepsTraspasosApi): Pr
     const [{ data: tr, error: e2 }, { data: ags }, { data: deps_ }] = await Promise.all([
       deps.db.from("handoffs").select("id, chain_id, position, from_agent_id, to_agent_id, from_department_id, to_department_id, kind, summary, bubble, card, status, credits, occurred_at, tipo_traspaso, ficha")
         .eq("company_id", companyId).in("chain_id", ids).order("position", { ascending: true }),
-      deps.db.from("agents").select("id, slug").eq("company_id", companyId),
-      deps.db.from("departments").select("id, slug").eq("company_id", companyId),
+      deps.db.from("agents").select("id, name, slug").eq("company_id", companyId),
+      deps.db.from("departments").select("id, tipo").eq("company_id", companyId),
     ]);
     if (e2) throw new Error(e2.message);
     // Por qué empezó cada cadena: el origen de su tarea raíz (la que no es un traspaso).
@@ -58,8 +58,11 @@ export async function traspasosHandler(req: Request, deps: DepsTraspasosApi): Pr
         null, { persona: (id) => pe.get(id), rutina: (id) => ru.get(id) },
       ));
     }
-    const agente = new Map((ags ?? []).map((a) => [a.id as string, a.slug as string]));
-    const dpto = new Map((deps_ ?? []).map((d) => [d.id as string, d.slug as string]));
+    // Los agentes van por su id (el de la oficina) con su nombre; los departamentos, por su tipo (ventas, atencion…).
+    const nombre = new Map((ags ?? []).map((a) => [a.id as string, a.name as string]));
+    // La interfaz identifica a los agentes por su slug (fichas, simulador, certificación).
+    const slug = new Map((ags ?? []).map((a) => [a.id as string, (a.slug as string) || (a.id as string)]));
+    const dpto = new Map((deps_ ?? []).map((d) => [d.id as string, d.tipo as string]));
     const porCadena = new Map<string, FilaTraspaso[]>();
     for (const t of (tr ?? []) as FilaTraspaso[]) porCadena.set(t.chain_id, [...(porCadena.get(t.chain_id) ?? []), t]);
     return json({
@@ -70,7 +73,8 @@ export async function traspasosHandler(req: Request, deps: DepsTraspasosApi): Pr
           id: c.id, title: c.title, goal: c.goal, origen: origenDe.get(c.id as string) ?? "Origen desconocido", estado: c.estado, motivoCorte: c.motivo_corte,
           costeTotal: hs.reduce((n, h) => n + Number(h.credits), 0),
           handoffs: hs.map((h) => ({
-            id: h.id, chainId: h.chain_id, fromAgentId: agente.get(h.from_agent_id) ?? h.from_agent_id, toAgentId: agente.get(h.to_agent_id) ?? h.to_agent_id,
+            id: h.id, chainId: h.chain_id, fromAgentId: slug.get(h.from_agent_id) ?? h.from_agent_id, toAgentId: slug.get(h.to_agent_id) ?? h.to_agent_id,
+            fromAgentName: nombre.get(h.from_agent_id) ?? "Agente", toAgentName: nombre.get(h.to_agent_id) ?? "Agente",
             fromDepartmentId: dpto.get(h.from_department_id) ?? h.from_department_id, toDepartmentId: dpto.get(h.to_department_id) ?? h.to_department_id,
             kind: h.kind, tipoTraspaso: h.tipo_traspaso, summary: h.summary, bubble: h.bubble ?? h.summary,
             card: h.tipo_traspaso && esTipoDeTraspaso(h.tipo_traspaso) && h.ficha ? fichaParaMostrar(h.tipo_traspaso, h.ficha) : h.card,

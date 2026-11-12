@@ -17,6 +17,7 @@ import { buildOffice, hiredAgentId, type HiredAgent } from "@/data/departments";
 import type { EmailEdit } from "@/data/emails";
 import { expertFor, initialConsultations, type Consultation } from "@/data/experts";
 import { initialConversations, touchConversation, type Conversation } from "@/data/messages";
+import { construirOficinaReal, type MetricaDepartamento, type OficinaReal } from "@/lib/oficina/oficinaReal";
 
 export type Decision = { approvalId: string; decision: "approved" | "rejected" };
 
@@ -61,12 +62,27 @@ type ApprovalsContextValue = {
   openConsult: (agentId: string) => void;
   closeConsult: () => void;
   consult: (agentId: string, problem: string) => void;
+  /** true en la oficina de una empresa (datos reales); false en las demos de la web pública (datos de ejemplo). */
+  modoReal: boolean;
+  /** Nombre de la persona que ha entrado (en las demos, el de ejemplo). */
+  usuario: string | null;
+  /** Métricas reales de cada departamento (solo en modo real). */
+  metricas: Record<string, MetricaDepartamento[]> | null;
+  /** Estadísticas reales por agente (solo en la oficina real). */
+  estadisticas: OficinaReal["estadisticas"] | null;
+  /** Nombre y departamento de un agente de esta oficina por su id. */
+  agente: (id: string) => { id: string; name: string; departmentId: DepartmentId } | null;
 };
 
 const ApprovalsContext = createContext<ApprovalsContextValue | null>(null);
 
-/** Estado compartido (simulado) de la oficina: aprobaciones, contrataciones, créditos, mensajes y consultas al experto. */
-export function ApprovalsProvider({ children }: { children: ReactNode }) {
+/**
+ * Estado compartido de la oficina. Con `oficina` (la oficina de una empresa) todo sale de la base de datos: agentes, en
+ * qué están, aprobaciones pendientes y métricas; no hay conversaciones, consultas ni contrataciones inventadas. Sin ella
+ * (las demos de la web pública, etiquetadas como «datos de ejemplo») usa los datos de ejemplo.
+ */
+export function ApprovalsProvider({ children, oficina }: { children: ReactNode; oficina?: OficinaReal }) {
+  const real = oficina !== undefined;
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [emailEdits, setEmailEdits] = useState<Record<string, EmailEdit>>({});
@@ -75,12 +91,17 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
   const [contactTarget, setContactTarget] = useState<string | null>(null);
   const [hired, setHired] = useState<HiredAgent[]>([]);
   const [arrival, setArrival] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-  const [consultations, setConsultations] = useState<Consultation[]>(initialConsultations);
+  const [conversations, setConversations] = useState<Conversation[]>(real ? [] : initialConversations);
+  const [consultations, setConsultations] = useState<Consultation[]>(real ? [] : initialConsultations);
   const [consultTarget, setConsultTarget] = useState<string | null>(null);
 
   const resolved = useMemo(() => new Set(decisions.map((d) => d.approvalId)), [decisions]);
-  const office = useMemo(() => buildOffice(resolved, hired, consultations), [resolved, hired, consultations]);
+  const office = useMemo(() => (oficina ? construirOficinaReal(oficina) : buildOffice(resolved, hired, consultations)), [oficina, resolved, hired, consultations]);
+  const porId = useMemo(() => new Map(office.summaries.flatMap((s) => s.agents).map((a) => [a.id, a])), [office]);
+  const agente = useCallback((id: string) => {
+    const a = porId.get(id);
+    return a ? { id: a.id, name: a.name, departmentId: a.departmentId } : null;
+  }, [porId]);
 
   const decide = useCallback(
     (approvalId: string, decision: Decision["decision"]) =>
@@ -177,7 +198,12 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
       contactTarget,
       openContact,
       closeContact,
-      pendingCount: approvals.filter((a) => !resolved.has(a.id)).length,
+      pendingCount: oficina ? oficina.pendientes : approvals.filter((a) => !resolved.has(a.id)).length,
+      modoReal: real,
+      usuario: oficina?.usuario ?? null,
+      metricas: oficina?.metricas ?? null,
+      estadisticas: oficina?.estadisticas ?? null,
+      agente,
       office,
       hired,
       arrival,
@@ -199,6 +225,7 @@ export function ApprovalsProvider({ children }: { children: ReactNode }) {
     [
       decisions, resolved, edits, emailEdits, editEmail, contactTarget, openContact, closeContact, office, hired, arrival, hire,
       finishArrival, decide, sending, sendErrors, approveEmail, edit, conversations, consultations, consultTarget, openConsult, closeConsult, consult,
+      oficina, real, agente,
     ],
   );
 

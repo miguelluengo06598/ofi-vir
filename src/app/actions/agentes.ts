@@ -2,7 +2,10 @@
 
 import { after } from "next/server";
 import { z } from "zod";
-import { devContext } from "@/lib/devContext";
+import { sesionDeAccion } from "@/lib/empresas/sesionAccion";
+import { esGestor, puede } from "@/lib/empresas/permisos";
+
+const SIN_PERMISO_APROBAR = "No tienes permiso para aprobar o rechazar en esta empresa.";
 import { crearTarea, ejecutarTarea, LIMITES } from "@/lib/agents/loop";
 import { motorDesdeEntorno } from "@/lib/agents/fromEnv";
 import { instruccionLeadDePrueba } from "@/lib/agents/pruebas";
@@ -25,8 +28,9 @@ export type LanzarResultado =
  */
 export async function lanzarTareaDePrueba(input: { agentSlug: string }): Promise<LanzarResultado> {
   const slug = z.string().min(1).max(100).safeParse(input.agentSlug);
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   if (!slug.success || !ctx || !SupabaseAgentStore.fromEnv()) return { estado: "sin_backend", mensaje: "No hay backend configurado: la ficha sigue en modo simulado." };
+  if (!esGestor(ctx.rol)) return { estado: "error", mensaje: "Solo los propietarios y administradores pueden lanzar tareas de prueba." };
   const motor = motorDesdeEntorno();
   if (!motor) return { estado: "sin_clave", mensaje: "Falta ANTHROPIC_API_KEY en .env.local." };
   try {
@@ -56,7 +60,7 @@ export type VistaTarea = { task: TaskInfo; steps: TaskStep[] } | null;
 /** Estado y pasos de una tarea de la empresa (para verla en directo). */
 export async function verTarea(taskId: string): Promise<VistaTarea> {
   const id = z.string().uuid().safeParse(taskId);
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   const store = SupabaseAgentStore.fromEnv();
   if (!id.success || !ctx || !store) return null;
   try {
@@ -70,7 +74,7 @@ export async function verTarea(taskId: string): Promise<VistaTarea> {
 
 /** Borradores de correo redactados por agentes que esperan tu aprobación. */
 export async function borradoresDeAgentes(): Promise<PendingDraft[]> {
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   const store = SupabaseAgentStore.fromEnv();
   if (!ctx || !store) return [];
   try {
@@ -86,10 +90,11 @@ export type DecisionBorrador = { estado: "enviado" | "rechazado" } | { estado: "
 /** Aprueba el borrador tal cual se ve (texto exacto de la base) y lo envía. */
 export async function aprobarBorradorDeAgente(input: { approvalId: string }): Promise<DecisionBorrador> {
   const id = z.string().uuid().safeParse(input.approvalId);
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   const agents = SupabaseAgentStore.fromEnv();
   const emails = SupabaseEmailStore.fromEnv();
   if (!id.success || !ctx || !agents || !emails) return { estado: "error", mensaje: "No hay backend configurado." };
+  if (!puede(ctx.rol, "aprobar", ctx)) return { estado: "error", mensaje: SIN_PERMISO_APROBAR };
   try {
     const draft = (await agents.listPendingDrafts(ctx.companyId)).find((d) => d.approvalId === id.data);
     if (!draft) return { estado: "error", mensaje: "Este borrador ya no está pendiente." };
@@ -112,9 +117,10 @@ export async function aprobarBorradorDeAgente(input: { approvalId: string }): Pr
 
 export async function rechazarBorradorDeAgente(input: { approvalId: string }): Promise<DecisionBorrador> {
   const id = z.string().uuid().safeParse(input.approvalId);
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   const store = SupabaseAgentStore.fromEnv();
   if (!id.success || !ctx || !store) return { estado: "error", mensaje: "No hay backend configurado." };
+  if (!puede(ctx.rol, "aprobar", ctx)) return { estado: "error", mensaje: SIN_PERMISO_APROBAR };
   try {
     return (await store.rejectDraft(ctx.companyId, id.data, ctx.userId)) ? { estado: "rechazado" } : { estado: "error", mensaje: "Este borrador ya no está pendiente." };
   } catch (e) {
@@ -126,7 +132,7 @@ export async function rechazarBorradorDeAgente(input: { approvalId: string }): P
 /** Pulgar arriba/abajo de una acción: la empresa solo puede valorar una aprobación de uno de sus agentes. */
 export async function valorarAprobacionDeAgente(input: { approvalId: string; valor: 1 | -1; motivo?: string }): Promise<{ ok: true } | { ok: false; mensaje: string }> {
   const v = z.object({ approvalId: z.uuid(), valor: z.union([z.literal(1), z.literal(-1)]), motivo: z.string().trim().max(1000).optional() }).strict().safeParse(input);
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim(), key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!v.success || !ctx || !url || !key) return { ok: false, mensaje: "No hay backend configurado." };
   const db = createClient(url, key, { auth: { persistSession: false } });
@@ -148,7 +154,7 @@ export async function valorarAprobacionDeAgente(input: { approvalId: string; val
 /** Resumen público para la empresa: no devuelve muestras, motivos ni notas internas del equipo revisor. */
 export async function historialDeCalidadDeAgente(agentSlug: string) {
   const slug = z.string().min(1).max(100).safeParse(agentSlug);
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   const store = SupabaseAgentStore.fromEnv();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim(), key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!slug.success || !ctx || !store || !url || !key) return null;
@@ -164,7 +170,7 @@ export async function historialDeCalidadDeAgente(agentSlug: string) {
 /** Lo que la oficina recordó al terminar una tarea (solo lo nuevo; lo que ya constaba no se cuenta). */
 export async function aprendizajeDeTarea(taskId: string): Promise<LearnedNode[]> {
   const id = z.string().uuid().safeParse(taskId);
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   const store = SupabaseAgentStore.fromEnv();
   if (!id.success || !ctx || !store) return [];
   try {
@@ -178,7 +184,7 @@ export async function aprendizajeDeTarea(taskId: string): Promise<LearnedNode[]>
 /** Lo aprendido en las últimas tareas de un agente. */
 export async function recuerdosRecientes(agentSlug: string): Promise<TaskLearning[]> {
   const slug = z.string().min(1).max(100).safeParse(agentSlug);
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   const store = SupabaseAgentStore.fromEnv();
   if (!slug.success || !ctx || !store) return [];
   try {
@@ -201,8 +207,9 @@ export type CasosVista = { ok: true; resultado: ResultadoCasos } | { ok: false; 
 type Preparado = { error: string } | { error?: undefined; api: NonNullable<ReturnType<typeof depsSimuladorDesdeEntorno>>; ctx: { companyId: string; userId: string }; agent: { id: string } };
 async function prepararSimulador(agentSlug: string): Promise<Preparado> {
   const slug = z.string().min(1).max(100).safeParse(agentSlug);
-  const ctx = devContext();
+  const ctx = await sesionDeAccion();
   if (!slug.success || !ctx) return { error: "No hay backend configurado: el simulador solo funciona con el backend real." };
+  if (!esGestor(ctx.rol)) return { error: "Solo los propietarios y administradores pueden usar el simulador." };
   const api = depsSimuladorDesdeEntorno();
   if (!api) return { error: "El simulador necesita la base de datos y ANTHROPIC_API_KEY en .env.local." };
   const agent = await api.deps.engine.store.getAgentBySlug(ctx.companyId, slug.data);

@@ -15,14 +15,16 @@ const fmtWhen = (iso: string) =>
 
 /** Pestaña «Correos» de la ficha de un contacto: hilos y, al abrir uno, la conversación. */
 export function EmailThreads({ contactId }: { contactId: string }) {
-  const { decisions, emailEdits } = useApprovals();
+  const { decisions, emailEdits, modoReal } = useApprovals();
   const { messages, fresh } = useInbox();
   const email = contactDirectory[contactId]?.email;
   const threads = useMemo(() => {
+    // Hilos de ejemplo solo en las demos de la web.
+    if (modoReal) return [];
     const base = threadsFor(contactId, decisions, emailEdits);
     const live = email ? liveThreadsFor(contactId, email, messages) : [];
     return [...live, ...base].sort((a, b) => b.lastAt.localeCompare(a.lastAt));
-  }, [contactId, decisions, emailEdits, email, messages]);
+  }, [modoReal, contactId, decisions, emailEdits, email, messages]);
   const [openId, setOpenId] = useState<string | null>(null);
   const open = threads.find((t) => t.id === openId);
 

@@ -68,7 +68,7 @@ function ArrivalFlight({ agent, onDone }: { agent: OfficeAgent; onDone: () => vo
 export function OfficeView() {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [selected, setSelected] = useState<DepartmentId | null>(null);
-  const { decisions, office, arrival, finishArrival, decide } = useApprovals();
+  const { decisions, office, arrival, finishArrival, decide, usuario } = useApprovals();
   const opener = useRef<HTMLElement | null>(null);
   const row = useRef<HTMLDivElement>(null);
   const hour = useSyncExternalStore(subscribeToClock, getHour, getServerHour);
@@ -105,7 +105,7 @@ export function OfficeView() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-h1" suppressHydrationWarning>
-            {greeting(hour)}, {currentUser.name.split(" ")[0]}
+            {greeting(hour)}, {(usuario ?? currentUser.name).split(/[ @]/)[0]}
           </h1>
           <p className="text-body text-ink-2">
             {working} de {agents} agentes trabajando · {pendingApprovals}{" "}

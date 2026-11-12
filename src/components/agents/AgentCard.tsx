@@ -4,11 +4,15 @@ import type { OfficeAgent } from "@/data/departments";
 import { useConsumoDeAgente } from "@/components/creditos/useConsumoDeAgente";
 import { getAgentStats } from "@/data/agentStats";
 import { fmtNumber } from "@/lib/format";
+import { useApprovals } from "@/components/ApprovalsProvider";
 
 type Props = { agent: OfficeAgent; delay: number; onOpen: () => void };
 
 export function AgentCard({ agent, delay, onOpen }: Props) {
-  const stats = getAgentStats(agent.id);
+  const { modoReal, estadisticas } = useApprovals();
+  const real = estadisticas?.[agent.id];
+  // Oficina real: tareas terminadas en 7 días y % de valoraciones positivas; demo: las cifras de ejemplo.
+  const stats = modoReal ? { tasksWeek: real?.tareasSemana ?? 0, rating: null } : getAgentStats(agent.id);
   const creditsMonth = useConsumoDeAgente(agent.name);
   return (
     <GlassCard
@@ -39,7 +43,9 @@ export function AgentCard({ agent, delay, onOpen }: Props) {
         </div>
         <div>
           <dd className="text-body font-semibold">
-            {stats.rating === null ? "—" : <Rating value={stats.rating} />}
+            {modoReal
+              ? real?.positivas == null ? "—" : `${real.positivas} % positivas`
+              : stats.rating === null ? "—" : <Rating value={stats.rating} />}
           </dd>
           <dt className="text-tiny text-ink-2">Valoración</dt>
         </div>

@@ -2,7 +2,7 @@
 
 /**
  * Acciones de servidor del ciclo de vida de un agente (estado, certificación, versiones, plantilla y correcciones). Misma lógica y los
- * mismos permisos que las rutas /api/agentes/[id]/…: la empresa y la persona salen de la sesión (hoy, la persona de desarrollo) y nunca
+ * mismos permisos que las rutas /api/agentes/[id]/…: la empresa y la persona salen de la sesión (cookie de Supabase Auth + empresa activa verificada) y nunca
  * de lo que mande la interfaz.
  */
 import { after } from "next/server";
@@ -18,6 +18,7 @@ import { ejecutarExamen } from "@/lib/certificacion/examen";
 import { CertificacionError, enviarACertificacion } from "@/lib/certificacion/solicitudes";
 import type { Sesion } from "@/lib/creditos/api";
 import { esGestor } from "@/lib/empresas/permisos";
+import { sesionDeAccion } from "@/lib/empresas/sesionAccion";
 
 export type Resultado<T> = ({ ok: true } & T) | { ok: false; mensaje: string; faltan?: string[] };
 
@@ -28,7 +29,7 @@ async function contexto(agentSlug: string, o: { soloAdmin: boolean }): Promise<C
   const slug = z.string().min(1).max(100).safeParse(agentSlug);
   const api = depsCicloDesdeEntorno((p) => after(() => p));
   if (!slug.success || !api) return { error: SIN_BACKEND };
-  const sesion = await api.autenticar(new Request("http://accion.local"));
+  const sesion = await sesionDeAccion();
   if (!sesion) return { error: SIN_BACKEND };
   if (o.soloAdmin && !esGestor(sesion.rol)) return { error: "Solo los propietarios y administradores pueden cambiar un agente." };
   const { data } = await api.deps.db.from("agents").select("id").eq("company_id", sesion.companyId).eq("slug", slug.data).maybeSingle();

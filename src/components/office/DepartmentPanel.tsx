@@ -14,10 +14,10 @@ import {
 } from "@/components/glass";
 import { activity, approvals as allApprovals } from "@/data/approvals";
 import { useSimulation } from "@/components/SimulationProvider";
-import { ResolvedStatusText } from "@/components/handoffs/parts";
-import { agentById, firstName } from "@/data/agents";
+import { ResolvedStatusText, useAgenteDe } from "@/components/handoffs/parts";
+import { firstName } from "@/data/agents";
 import { allHandoffs, kindLabel } from "@/data/handoffs";
-import { type Decision } from "@/components/ApprovalsProvider";
+import { type Decision, useApprovals } from "@/components/ApprovalsProvider";
 import { departmentInfo, type DepartmentSummary } from "@/data/departments";
 
 type Props = {
@@ -36,8 +36,11 @@ export function DepartmentPanel({ summary, decisions, onDecide, onClose }: Props
   const Icon = meta.icon;
   const dialog = useRef<HTMLElement>(null);
   useFocusTrap(dialog);
-  const { seen, openChain } = useSimulation();
-  const emitted = allHandoffs.filter((h) => seen.has(h.id));
+  const { seen, openChain, events } = useSimulation();
+  const { modoReal, metricas } = useApprovals();
+  const agenteDe = useAgenteDe();
+  // Oficina real: los traspasos de verdad que ya se han cargado. Demo: los de ejemplo ya reproducidos.
+  const emitted = modoReal ? events.map((e) => e.handoff) : allHandoffs.filter((h) => seen.has(h.id));
   const received = emitted.filter((h) => h.toDepartmentId === id && h.fromDepartmentId !== id);
   const sent = emitted.filter((h) => h.fromDepartmentId === id && h.toDepartmentId !== id);
 
@@ -51,7 +54,8 @@ export function DepartmentPanel({ summary, decisions, onDecide, onClose }: Props
       time: "Ahora",
       text: `${d.decision === "approved" ? "Aprobaste" : "Rechazaste"}: ${d.approval.title}.`,
     }));
-  const recent = [...decided, ...activity.filter((a) => a.departmentId === id)];
+  const recent = modoReal ? decided : [...decided, ...activity.filter((a) => a.departmentId === id)];
+  const cifras = modoReal ? metricas?.[id] ?? [] : info.metrics;
 
   return (
     <>
@@ -96,7 +100,7 @@ export function DepartmentPanel({ summary, decisions, onDecide, onClose }: Props
                 />
               </div>
               <dl className="flex flex-wrap gap-x-10 gap-y-3">
-                {info.metrics.map((m) => (
+                {cifras.map((m) => (
                   <div key={m.label}>
                     <dd className="text-h1">{m.value}</dd>
                     <dt className="text-small text-ink-2">{m.label}</dt>
@@ -208,7 +212,7 @@ export function DepartmentPanel({ summary, decisions, onDecide, onClose }: Props
                               <span className="text-small">{h.summary}</span>
                               <span className="flex flex-wrap items-center gap-x-3 text-tiny text-ink-3">
                                 <span>
-                                  {kindLabel[h.kind]} {verb} {firstName(agentById(h[other]).name)} · {departmentMeta[h[otherDept]].label}
+                                  {kindLabel[h.kind]} {verb} {firstName(agenteDe(h[other]).name)} · {departmentMeta[h[otherDept]].label}
                                 </span>
                                 <span>{h.time}</span>
                                 <ResolvedStatusText handoff={h} />
@@ -226,6 +230,7 @@ export function DepartmentPanel({ summary, decisions, onDecide, onClose }: Props
                 <h3 id="dept-activity" className="text-h2">
                   Actividad reciente
                 </h3>
+                {recent.length === 0 && <p className="text-small text-ink-3">Todavía no hay actividad en este departamento.</p>}
                 <ul className="flex flex-col">
                   {recent.map((item) => (
                     <li
