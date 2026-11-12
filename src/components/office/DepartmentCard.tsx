@@ -21,7 +21,7 @@ export function DepartmentCard({
   const { arrival } = useApprovals();
   const { latest } = useSimulation();
   const pulse = latest && latest.handoff.toDepartmentId === id ? latest.seq : 0;
-  const lead = agents[0];
+  const lead = agents[0] as (typeof agents)[number] | undefined;
   const counts = statusOrder
     .map((status) => {
       const members = agents.filter((a) => a.status === status);
@@ -39,7 +39,7 @@ export function DepartmentCard({
       cardId={id}
       pulse={pulse}
       onOpen={onOpen}
-      description={`${lead.name.split(" ")[0]} está ${lead.currentTask}`}
+      description={lead ? `${lead.name.split(" ")[0]} está ${lead.currentTask}` : "Todavía no hay agentes en este departamento"}
       footer={
         <div className="flex items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1.5">

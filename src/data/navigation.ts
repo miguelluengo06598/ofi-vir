@@ -6,6 +6,7 @@ import {
   ListChecks,
   MessageSquare,
   Network,
+  Plug,
   Rocket,
   Star,
   Store,
@@ -33,6 +34,7 @@ export const dockNav: NavItem[] = [
   { href: "/puesta-en-marcha", label: "Puesta en marcha", icon: Rocket },
   { href: "/memoria", label: "Memoria", icon: Network },
   { href: "/marketplace", label: "Marketplace", icon: Store },
+  { href: "/conexiones", label: "Conexiones", icon: Plug },
   { href: "/creditos", label: "Créditos", icon: Wallet },
   { href: "/favoritos", label: "Favoritos", icon: Star },
 ];
