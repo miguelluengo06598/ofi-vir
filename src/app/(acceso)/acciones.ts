@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { createHash } from "node:crypto";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { permitir } from "@/lib/auth/rate-limit";
+import { olvidar, permitir } from "@/lib/auth/rate-limit";
 import { supabaseAdmin, supabaseServidor } from "@/lib/supabase/server";
 
 export type EstadoAcceso = { error?: string; aviso?: string };
@@ -24,15 +24,42 @@ async function claveCliente(accion: string) {
   return `${accion}:${h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "desconocido"}`;
 }
 
+/**
+ * Adónde va cada persona al entrar: quien es del equipo de MyOfia y no pidió otra página va a su panel (/admin);
+ * el resto, a su oficina. Si esta consulta falla se usa la oficina, cuyo layout vuelve a decidir.
+ */
+async function destinoTrasEntrar(userId: string, pedido: FormDataEntryValue | null) {
+  const destino = destinoSeguro(pedido);
+  if (destino !== "/oficina") return destino;
+  try {
+    const { data } = await supabaseAdmin().from("platform_roles").select("activo").eq("user_id", userId).maybeSingle();
+    return data?.activo === true ? "/admin" : destino;
+  } catch {
+    return destino;
+  }
+}
+
 export async function entrar(_anterior: EstadoAcceso, datos: FormData): Promise<EstadoAcceso> {
-  if (!permitir(await claveCliente("login"), 5, 15 * 60_000)) return { error: "Demasiados intentos. Espera unos minutos antes de volver a intentarlo." };
+  const clave = await claveCliente("login");
+  if (!permitir(clave, 8, 15 * 60_000)) return { error: "Demasiados intentos. Espera unos minutos antes de volver a intentarlo." };
   const v = Credenciales.safeParse({ email: datos.get("email"), password: datos.get("password") });
   if (!v.success) return { error: v.error.issues[0]?.message ?? "Revisa los datos." };
-  const supabase = await supabaseServidor();
-  const { error } = await supabase.auth.signInWithPassword(v.data);
-  // La respuesta es deliberadamente genérica: no confirma si el correo está registrado.
-  if (error) return { error: "No hemos podido iniciar sesión con esos datos. Revisa el correo, la contraseña y la confirmación de tu cuenta." };
-  redirect(destinoSeguro(datos.get("next")));
+  let userId: string;
+  try {
+    const supabase = await supabaseServidor();
+    const { data, error } = await supabase.auth.signInWithPassword(v.data);
+    // La respuesta es deliberadamente genérica: no confirma si el correo está registrado.
+    if (error || !data.user) return { error: "No hemos podido iniciar sesión con esos datos. Revisa el correo, la contraseña y la confirmación de tu cuenta." };
+    userId = data.user.id;
+  } catch (e) {
+    // Fallo de red o de configuración: no es culpa de la persona ni cuenta como intento fallido.
+    console.error("[acceso] entrar:", e instanceof Error ? e.message : "error desconocido");
+    olvidar(clave);
+    return { error: "No hemos podido conectar con el servicio de acceso. Inténtalo de nuevo en un momento." };
+  }
+  // Un inicio de sesión correcto no acerca al bloqueo: solo cuentan los fallos.
+  olvidar(clave);
+  redirect(await destinoTrasEntrar(userId, datos.get("next")));
 }
 
 export async function enviarEnlaceMagico(_anterior: EstadoAcceso, datos: FormData): Promise<EstadoAcceso> {

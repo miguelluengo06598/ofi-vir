@@ -8,6 +8,7 @@ import { InboxProvider } from "@/components/InboxProvider";
 import { ChainDialog } from "@/components/handoffs/ChainDialog";
 import { SimulationProvider } from "@/components/SimulationProvider";
 import { redirect } from "next/navigation";
+import { cerrarSesion } from "@/app/(acceso)/acciones";
 import { GlassPanel } from "@/components/glass";
 import { supabaseAdmin, usuarioActual } from "@/lib/supabase/server";
 import { empresaPedida, sesionEnEmpresa } from "@/lib/empresas/sesion";
@@ -24,7 +25,28 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const cabeceras = await headers();
   const sesion = await sesionEnEmpresa(db, persona.id, empresaPedida(cabeceras));
   if (!sesion) {
-    return <><Background /><main className="flex flex-1 items-center justify-center p-6"><GlassPanel strong className="max-w-md p-8 text-center"><h1 className="text-xl font-semibold">Tu cuenta no tiene ninguna oficina</h1><p className="mt-3 text-small text-ink-2">Pide una invitación a la persona responsable de tu empresa para empezar a trabajar.</p><a href="/solicitar-acceso" className="mt-6 inline-flex rounded-pill bg-white px-5 py-3 text-small font-semibold text-black">Solicitar acceso</a></GlassPanel></main></>;
+    // Alguien del equipo de MyOfia sin oficina propia no se queda en un callejón: su sitio es el panel.
+    const { data: plataforma } = await db.from("platform_roles").select("activo").eq("user_id", persona.id).maybeSingle();
+    if (plataforma?.activo === true) redirect("/admin");
+    return (
+      <>
+        <Background />
+        <main className="flex flex-1 items-center justify-center p-6">
+          <GlassPanel strong className="max-w-md p-8 text-center">
+            <h1 className="text-xl font-semibold">Tu cuenta no tiene ninguna oficina</h1>
+            <p className="mt-3 text-small text-ink-2">
+              Has entrado como {persona.email}. Pide una invitación a la persona responsable de tu empresa para empezar a trabajar.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <a href="/solicitar-acceso" className="inline-flex rounded-pill bg-white px-5 py-3 text-small font-semibold text-black">Solicitar acceso</a>
+              <form action={cerrarSesion}>
+                <button type="submit" className="inline-flex rounded-pill px-5 py-3 text-small ring-1 ring-white/30 hover:bg-white/10">Cerrar sesión</button>
+              </form>
+            </div>
+          </GlassPanel>
+        </main>
+      </>
+    );
   }
   const { data: perfil } = await db.from("users").select("full_name, email").eq("id", persona.id).maybeSingle();
   return (

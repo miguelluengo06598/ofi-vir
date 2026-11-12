@@ -69,7 +69,9 @@ export async function proxy(req: NextRequest) {
 
   if (ruta === "/login" && user) {
     const destino = req.nextUrl.clone();
-    destino.pathname = "/oficina";
+    // Ya hay sesión: a donde iba (p. ej. /login?next=/admin) o a la oficina, cuyo layout manda al panel a quien es de MyOfia.
+    const pedido = req.nextUrl.searchParams.get("next") ?? "";
+    destino.pathname = pedido.startsWith("/") && !pedido.startsWith("//") && !pedido.startsWith("/login") ? pedido.split("?")[0] : "/oficina";
     destino.search = "";
     return conCookies(NextResponse.redirect(destino), respuesta);
   }
@@ -106,6 +108,16 @@ export async function proxy(req: NextRequest) {
   if (esOficina(ruta) || (ruta.startsWith("/api/") && !esExterna(ruta))) {
     const sesion = await sesionEnEmpresa(db, user.id, empresaPedida(req.headers));
     if (sesion) return respuesta;
+    // Sin oficina, pero del equipo de MyOfia: su sitio es el panel (el layout de la oficina hace lo mismo por si acaso).
+    if (esOficina(ruta)) {
+      const { data: plataforma } = await db.from("platform_roles").select("activo").eq("user_id", user.id).maybeSingle();
+      if (plataforma?.activo === true) {
+        const destino = req.nextUrl.clone();
+        destino.pathname = "/admin";
+        destino.search = "";
+        return conCookies(NextResponse.redirect(destino), respuesta);
+      }
+    }
     if (ruta.startsWith("/api/")) return conCookies(NextResponse.json({ error: "sin_oficina", mensaje: "Tu cuenta no pertenece a ninguna oficina activa." }, { status: 403 }), respuesta);
   }
   return respuesta;
