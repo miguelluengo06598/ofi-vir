@@ -124,7 +124,45 @@ export function FacebookLeadsView() {
           </ul>
         </>
       )}
+      {estado?.conexion && estado.conexion.estado === "conectado" && <Desconectar conexionId={estado.conexion.id} alTerminar={async (mensaje) => { setAviso(mensaje); await cargar(); }} />}
     </div>
+  );
+}
+
+/** «Desconectar Facebook»: deja de recibir leads de todas las páginas. Los contactos ya recibidos se quedan. */
+function Desconectar({ conexionId, alTerminar }: { conexionId: string; alTerminar: (mensaje: string) => Promise<void> }) {
+  const [confirmando, setConfirmando] = useState(false);
+  const [trabajando, setTrabajando] = useState(false);
+  const desconectar = async () => {
+    setTrabajando(true);
+    try {
+      const r = await fetch(`/api/conexiones/${conexionId}/desconectar`, { method: "POST" });
+      await alTerminar(r.ok ? "Facebook desconectado. Ya no recibirás leads de tus páginas; los contactos que ya tenías siguen en tu oficina." : "No se ha podido desconectar. Inténtalo de nuevo.");
+    } catch {
+      await alTerminar("No se ha podido desconectar. Comprueba tu conexión a internet.");
+    } finally {
+      setTrabajando(false);
+      setConfirmando(false);
+    }
+  };
+  return (
+    <GlassPanel className="flex flex-col gap-3 p-5">
+      <h2 className="text-h2">Desconectar Facebook</h2>
+      {!confirmando ? (
+        <>
+          <p className="text-small text-ink-2">Dejarás de recibir leads de todas tus páginas. Los contactos que ya han llegado se quedan en tu oficina.</p>
+          <div><PillButton onClick={() => setConfirmando(true)}>Desconectar Facebook</PillButton></div>
+        </>
+      ) : (
+        <div role="alert" className="flex flex-col gap-3 rounded-card bg-red-500/12 p-4 ring-1 ring-red-300/35">
+          <p className="text-body">¿Seguro? Quitaremos el aviso de leads de tus páginas y borraremos los permisos que nos diste. Para volver a recibir leads tendrás que conectar Facebook otra vez.</p>
+          <div className="flex flex-wrap gap-2">
+            <PillButton solid onClick={() => void desconectar()} disabled={trabajando}>{trabajando ? "Desconectando…" : "Sí, desconectar"}</PillButton>
+            <PillButton onClick={() => setConfirmando(false)} disabled={trabajando}>Cancelar</PillButton>
+          </div>
+        </div>
+      )}
+    </GlassPanel>
   );
 }
 

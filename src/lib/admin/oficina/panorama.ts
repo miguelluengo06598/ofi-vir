@@ -30,7 +30,7 @@ const INDICADORES: { id: IndicadorId; etiqueta: string; formato: Indicador["form
   { id: "alertas_abiertas", etiqueta: "Alertas abiertas", formato: "numero", mejorSiSube: false, flujo: false, roles: TODOS },
 ];
 
-export type TipoAlerta = "sin_saldo" | "recarga_fallida" | "agente_suspendido" | "certificacion_atrasada" | "errores_repetidos" | "coste_ia_alto" | "error_sistema";
+export type TipoAlerta = "sin_saldo" | "recarga_fallida" | "agente_suspendido" | "certificacion_atrasada" | "errores_repetidos" | "coste_ia_alto" | "error_sistema" | "meta_conexion";
 const ROLES_ALERTA: Record<TipoAlerta, RolPlataforma[]> = {
   sin_saldo: ["admin_samgple", "finanzas_samgple", "soporte_samgple"],
   recarga_fallida: ["admin_samgple", "finanzas_samgple", "soporte_samgple"],
@@ -39,6 +39,7 @@ const ROLES_ALERTA: Record<TipoAlerta, RolPlataforma[]> = {
   errores_repetidos: ["admin_samgple", "soporte_samgple"],
   coste_ia_alto: ["admin_samgple", "finanzas_samgple"],
   error_sistema: ["admin_samgple"],
+  meta_conexion: ["admin_samgple", "soporte_samgple", "implantacion_samgple"],
 };
 
 export type TipoSuceso = "tarea_empieza" | "tarea_termina" | "traspaso" | "compra" | "alta" | "certificacion";

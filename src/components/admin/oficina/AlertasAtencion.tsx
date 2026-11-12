@@ -1,4 +1,4 @@
-import { BadgeAlert, CircleAlert, Clock, Coins, CreditCard, OctagonAlert, ServerCrash, TrendingUp, type LucideIcon } from "lucide-react";
+import { BadgeAlert, CircleAlert, Clock, Coins, CreditCard, OctagonAlert, ServerCrash, TrendingUp, Unplug, type LucideIcon } from "lucide-react";
 import { GlassPanel } from "@/components/glass";
 import type { Alerta, TipoAlerta } from "@/lib/admin/oficina/panorama";
 
@@ -10,14 +10,25 @@ const META: Record<TipoAlerta, { icono: LucideIcon; titulo: string }> = {
   errores_repetidos: { icono: OctagonAlert, titulo: "Errores repetidos" },
   coste_ia_alto: { icono: TrendingUp, titulo: "Coste de IA por encima de lo normal" },
   error_sistema: { icono: ServerCrash, titulo: "Error del sistema" },
+  meta_conexion: { icono: Unplug, titulo: "Conexión con Facebook" },
 };
 
 const eur = (c: unknown) => `${(Number(c) / 100).toLocaleString("es-ES", { maximumFractionDigits: 2 })} €`;
 const desde = (iso: string) => new Date(iso).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
+const PROBLEMA_META: Record<string, string> = {
+  suscripcion_perdida: "Facebook dejó de avisar de sus leads y no se pudo recuperar",
+  permiso_caducado: "el permiso de la página ha caducado",
+  acceso_leads: "la página limita el acceso a los clientes potenciales",
+  faltan_permisos: "faltan permisos de Facebook",
+  sin_leads_con_anuncios: "varios días sin leads con anuncios activos",
+};
+
 function detalle(a: Alerta): string | null {
   switch (a.tipo) {
     case "certificacion_atrasada": return `En cola ${String(a.detalle.espera ?? "")} (plazo ${String(a.detalle.plazoHoras ?? "")} h laborables)`;
+    case "meta_conexion": return `${String(a.detalle.pagina ?? "Una página")}: ${PROBLEMA_META[String(a.detalle.problema)] ?? "revisar la conexión"}`;
+    case "error_sistema": return a.detalle.origen === "meta_lead_ads" ? `Un lead de Facebook no se pudo recoger (${String(a.detalle.codigo ?? "error")}, ${String(a.detalle.intentos ?? "")} intentos)` : null;
     case "errores_repetidos": return `${String(a.detalle.fallos ?? "")} tareas fallidas en 24 h`;
     case "coste_ia_alto": return `Hoy ${eur(a.detalle.hoy_centimos)} · media diaria ${eur(a.detalle.media_centimos)}`;
     default: return null;

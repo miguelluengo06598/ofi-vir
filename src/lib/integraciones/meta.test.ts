@@ -193,3 +193,19 @@ describe("conectar Facebook (Facebook y base simulados)", () => {
     assert.ok(aviso, "la página sin ADVERTISE queda avisada");
   });
 });
+
+describe("avisos firmados de Facebook (signed_request)", async () => {
+  const { leerSignedRequest } = await import("./meta/mantenimiento.ts");
+  const firmar = (carga: object, secreto = SECRETO) => {
+    const datos = Buffer.from(JSON.stringify(carga)).toString("base64url");
+    return `${createHmac("sha256", secreto).update(datos).digest("base64url")}.${datos}`;
+  };
+  it("acepta solo la firma de nuestra app con HMAC-SHA256 y un id numérico", () => {
+    assert.deepEqual(leerSignedRequest(firmar({ algorithm: "HMAC-SHA256", user_id: "1234567", issued_at: 9 }), SECRETO), { user_id: "1234567", issued_at: 9 });
+    assert.equal(leerSignedRequest(firmar({ algorithm: "HMAC-SHA256", user_id: "1234567" }, "otro-secreto"), SECRETO), null);
+    assert.equal(leerSignedRequest(firmar({ algorithm: "plain", user_id: "1234567" }), SECRETO), null);
+    assert.equal(leerSignedRequest(firmar({ algorithm: "HMAC-SHA256", user_id: "1; drop" }), SECRETO), null);
+    assert.equal(leerSignedRequest("sin-punto", SECRETO), null);
+    assert.equal(leerSignedRequest(`${firmar({ algorithm: "HMAC-SHA256", user_id: "1" })}.extra`, SECRETO), null);
+  });
+});

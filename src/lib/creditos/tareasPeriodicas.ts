@@ -23,7 +23,7 @@ import type { ResultadoAplazadas } from "../agentes/reglas/aplazadas.ts";
 import type { ResultadoTraspasos } from "../agentes/traspasos/procesar.ts";
 import { muestrearYAlertar } from "../calidad/servicio.ts";
 
-export const TAREAS_PERIODICAS = ["caducar-creditos", "revisar-estados", "renovar-bonos", "recertificacion", "control-calidad", "rutinas", "renovar-conexiones", "abrir-aplazadas", "procesar-pendientes", "examenes-certificacion", "leads-meta"] as const;
+export const TAREAS_PERIODICAS = ["caducar-creditos", "revisar-estados", "renovar-bonos", "recertificacion", "control-calidad", "rutinas", "renovar-conexiones", "abrir-aplazadas", "procesar-pendientes", "examenes-certificacion", "leads-meta", "leads-meta-recuperar", "meta-salud"] as const;
 export type TareaPeriodica = (typeof TAREAS_PERIODICAS)[number];
 
 export type DepsTareas = {
@@ -53,6 +53,10 @@ export type DepsTareas = {
   procesarMuestrasCalidad?: (empresaId?: string) => Promise<{ evaluadas: number; revision: number; errores: number; alertas: number }>;
   /** Procesa los avisos de leads de Meta pendientes (y sus reintentos). Sin él, `leads-meta` solo cuenta cuántos esperan. */
   procesarLeadsMeta?: () => Promise<{ resultados: { estado: string }[] }>;
+  /** Pide a Meta los leads que no llegaron por el aviso (cada hora). Sin él, `leads-meta-recuperar` no hace nada. */
+  recuperarLeadsMeta?: () => Promise<unknown>;
+  /** Revisa la conexión de cada página con Facebook (cada día). Sin él, `meta-salud` no hace nada. */
+  saludMeta?: () => Promise<unknown>;
 };
 
 async function rpc<T>(db: SupabaseClient, fn: string, args: Record<string, unknown>): Promise<T> {
@@ -238,8 +242,13 @@ export async function leadsMeta(d: DepsTareas) {
   return { procesados: true, total: resultados.length, ok: cuenta("procesado"), ignorados: cuenta("ignorado"), reintentos: cuenta("reintento"), errores: cuenta("error") };
 }
 
+/** 11 y 12) Mantenimiento de Meta Lead Ads, sin IA: recuperar leads perdidos y revisar la salud de la conexión. */
+const sinConfigurar = { procesado: false, motivo: "Meta Lead Ads no está configurado (falta la base o META_APP_SECRET)." };
+export const recuperarLeadsMeta = async (d: DepsTareas) => (d.recuperarLeadsMeta ? { procesado: true, ...(await d.recuperarLeadsMeta() as object) } : sinConfigurar);
+export const saludMeta = async (d: DepsTareas) => (d.saludMeta ? { procesado: true, ...(await d.saludMeta() as object) } : sinConfigurar);
+
 const TAREAS: Record<TareaPeriodica, (d: DepsTareas) => Promise<unknown>> = {
-  "leads-meta": leadsMeta,
+  "leads-meta": leadsMeta, "leads-meta-recuperar": recuperarLeadsMeta, "meta-salud": saludMeta,
   recertificacion,
   "control-calidad": controlCalidad,
   "caducar-creditos": caducarCreditos, "revisar-estados": revisarEstados, "renovar-bonos": renovarBonos, rutinas: ejecutarRutinas,

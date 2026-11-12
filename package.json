@@ -35,6 +35,7 @@
     "prueba:conocimiento": "node --env-file=.env.local scripts/prueba-conocimiento.ts",
     "test:iniciativa": "node --env-file=.env.local --test --test-concurrency=1 \"tests/iniciativa/*.test.ts\"",
     "test:miembros": "node --env-file=.env.local --test --test-concurrency=1 \"tests/miembros/*.test.ts\"",
+    "comprobar:ia": "node --env-file=.env.local scripts/comprobar-ia.ts",
     "test:meta": "node --env-file=.env.local --test --test-concurrency=1 \"tests/meta/*.test.ts\"",
     "videos": "npm --prefix videos run renderizar --",
     "videos:studio": "npm --prefix videos run studio"

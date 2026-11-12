@@ -155,7 +155,9 @@ export async function aprenderDeTarea(
 
     const respuesta = await deps.llm.create({
       model: MODELO_APRENDIZAJE,
-      maxTokens: 2500,
+      maxTokens: 6000,
+      // Extraer hechos de una conversación no necesita pensar mucho: esfuerzo bajo y margen para el razonamiento.
+      esfuerzo: "low",
       system: SISTEMA_APRENDIZAJE,
       tools: [],
       messages: [{

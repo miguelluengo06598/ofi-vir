@@ -11,7 +11,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { obtenerProveedor, PERMISOS_META_LEADS } from "../proveedores.ts";
-import { canjearCodigo, ConexionError, guardarConexion, obtenerCredenciales, type DepsConexiones } from "../servicio.ts";
+import { canjearCodigo, ConexionError, guardarConexion, type DepsConexiones } from "../servicio.ts";
 import { ErrorDeMeta, graph, graphLista, tokenDeLargaDuracion } from "./graph.ts";
 
 if (typeof window !== "undefined") throw new Error("src/lib/integraciones/meta/servicio.ts es solo para el servidor.");
@@ -42,11 +42,15 @@ export async function completarConexionMeta(
   let largo: string;
   let concedidos: string[];
   let cuenta: string | null = null;
+  let idExterno: string | null = null;
   try {
     largo = await tokenDeLargaDuracion(d, token.access_token);
     const permisos = await graphLista<{ permission: string; status: string }>(d, "me/permissions", { token: largo });
     concedidos = permisos.filter((p) => p.status === "granted").map((p) => p.permission);
-    cuenta = (await graph<{ name?: string }>(d, "me", { token: largo, params: { fields: "name" } })).name?.slice(0, 200) ?? null;
+    const yo = await graph<{ id?: string; name?: string }>(d, "me", { token: largo, params: { fields: "id,name" } });
+    cuenta = yo.name?.slice(0, 200) ?? null;
+    // Id de la persona en esta app: lo usan los avisos de Facebook de desautorización y de eliminación de datos.
+    idExterno = /^[0-9]{1,32}$/.test(yo.id ?? "") ? yo.id! : null;
   } catch (err) {
     d.log.warn(`[meta] no se pudo completar la conexión de la empresa ${e.companyId} (${err instanceof ErrorDeMeta ? err.message : "error"}).`);
     throw new ConexionError(502, "intercambio_fallido", "Facebook no aceptó la conexión. Inténtalo de nuevo.");
@@ -61,6 +65,7 @@ export async function completarConexionMeta(
     caducaEn: null, cuenta,
   });
   await anotarEnConexion(d.db, e.companyId, conexionId, faltan.length ? `faltan_permisos:${faltan.join(",")}` : null);
+  if (idExterno) await d.db.from("company_connections").update({ id_externo: idExterno }).eq("company_id", e.companyId).eq("id", conexionId);
   if (faltaImprescindible) return { resultado: "faltan_permisos", paginas: 0, enOtraOficina: 0, faltan };
 
   let paginas: { id: string; name: string; access_token?: string; tasks?: string[] }[];
@@ -314,8 +319,6 @@ export async function limpiarEnMetaAntesDeDesconectar(d: DepsConexiones, company
       await graph(d, `${p.page_id}/subscribed_apps`, { token: await tokenDePagina(d, companyId, p.id as string), metodo: "DELETE" });
     } catch { /* se desconecta igualmente */ }
   }
-  try {
-    const cred = await obtenerCredenciales(d, companyId, PROVEEDOR_META);
-    if (cred?.token) await graph(d, "me/permissions", { token: cred.token, metodo: "DELETE" });
-  } catch { /* mejor esfuerzo: el secreto se borra igualmente al desconectar */ }
+  // No se retiran los permisos de la persona en Facebook (DELETE /me/permissions): son de toda la app, y si esa persona
+  // también conectó otra oficina, la dejaría sin leads. Basta con borrar aquí sus tokens (lo hace la desconexión).
 }

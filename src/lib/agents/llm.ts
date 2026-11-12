@@ -18,8 +18,15 @@ export type LlmRequest = {
    */
   systemBlocks?: LlmSystemBlock[];
   tools: LlmTool[];
-  /** Obliga al modelo a llamar a una herramienta concreta (salida estructurada). */
+  /**
+   * Salida estructurada: el modelo debe responder llamando a esta herramienta. En los modelos que no admiten forzarla
+   * (Sonnet 5.5, Opus 5.5) el cliente real lo pide en las instrucciones y lo reintenta una vez; el razonamiento se apaga.
+   */
   toolChoice?: { type: "tool"; name: string };
+  /** Esfuerzo (`output_config.effort`). Sin él: medio (Haiku) o alto (Sonnet) en los agentes, bajo en lo estructurado. */
+  esfuerzo?: "low" | "medium" | "high";
+  /** En una llamada estructurada, mantener el razonamiento (p. ej. un evaluador que debe pensar). Necesita más `maxTokens`. */
+  razonar?: boolean;
   messages: LlmMessage[];
 };
 

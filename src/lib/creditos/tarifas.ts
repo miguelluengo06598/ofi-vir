@@ -40,17 +40,17 @@ export const TIPOS_DE_TAREA: Readonly<Record<TipoDeTareaId, TipoDeTarea>> = Obje
       simple: {
         creditos: 2, concepto: "tarea_simple",
         modeloPorDefecto: MODELOS.haiku, modelosPermitidos: [MODELOS.haiku],
-        maxPasos: 3, maxTokensSalida: 1500,
+        maxPasos: 3, maxTokensSalida: 4000,
       },
       estandar: {
         creditos: 10, concepto: "tarea_estandar",
         modeloPorDefecto: MODELOS.haiku, modelosPermitidos: [MODELOS.haiku, MODELOS.sonnet],
-        maxPasos: 6, maxTokensSalida: 3000,
+        maxPasos: 6, maxTokensSalida: 8000,
       },
       experta: {
         creditos: 50, concepto: "tarea_experta",
         modeloPorDefecto: MODELOS.sonnet, modelosPermitidos: [MODELOS.sonnet],
-        maxPasos: 12, maxTokensSalida: 6000,
+        maxPasos: 12, maxTokensSalida: 16000,
       },
     }) as Record<TipoDeTareaId, TipoDeTarea>,
 );

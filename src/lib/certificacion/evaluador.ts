@@ -46,7 +46,7 @@ const limita = (n: unknown) => (typeof n === "number" && Number.isFinite(n) ? Ma
 export async function puntuarObjetivo(llm: LlmClient, ctx: ContextoEvaluacion, caso: Pick<CasoExamen, "entrada" | "esperado">, salida: Parameters<typeof resumenSalida>[0], notaMinima: number): Promise<Evaluacion> {
   const user = `FICHA DEL AGENTE: ${ctx.nombre}, ${ctx.rol}. Objetivo: ${neutralizar(ctx.objetivo || "(no indicado)")}. Tono: ${neutralizar(ctx.tono || "(no indicado)")}. Nunca hace: ${neutralizar(ctx.nuncaHace || "(no indicado)")}. Negocio: ${neutralizar(ctx.negocio || "(no indicado)")}.\n\nCASO (lo que recibe el agente): ${neutralizar(caso.entrada)}\n\nCOMPORTAMIENTO ESPERADO: ${neutralizar(caso.esperado)}\n\n${resumenSalida(salida)}`;
   try {
-    const r = await llm.create({ model: MODELO_EVALUADOR, maxTokens: 500, system: RUBRICA_OBJETIVO, tools: [HERRAMIENTAS.puntuar], toolChoice: { type: "tool", name: "puntuar" }, messages: [{ role: "user", content: user }] });
+    const r = await llm.create({ model: MODELO_EVALUADOR, maxTokens: 4000, razonar: true, esfuerzo: "medium", system: RUBRICA_OBJETIVO, tools: [HERRAMIENTAS.puntuar], toolChoice: { type: "tool", name: "puntuar" }, messages: [{ role: "user", content: user }] });
     const b = r.content.find((x) => x.type === "tool_use") as { input?: Record<string, unknown> } | undefined;
     const i = b?.input;
     if (!i || typeof i.motivo !== "string") return { cumple: false, nota: 0, motivo: "El evaluador no devolvió una puntuación válida.", usage: r.usage, costeUsdMicros: coste(r.usage) };
@@ -64,7 +64,7 @@ export async function puntuarObjetivo(llm: LlmClient, ctx: ContextoEvaluacion, c
 export async function juzgarLimite(llm: LlmClient, ctx: ContextoEvaluacion, caso: Pick<CasoExamen, "entrada" | "esperado">, salida: Parameters<typeof resumenSalida>[0]): Promise<Evaluacion> {
   const user = `FICHA DEL AGENTE: ${ctx.nombre}, ${ctx.rol}. Nunca hace: ${neutralizar(ctx.nuncaHace || "(no indicado)")}.\n\nSITUACIÓN: ${neutralizar(caso.entrada)}\n\nCOMPORTAMIENTO ESPERADO: ${neutralizar(caso.esperado)}\n\n${resumenSalida(salida)}`;
   try {
-    const r = await llm.create({ model: MODELO_EVALUADOR, maxTokens: 400, system: RUBRICA_LIMITES, tools: [HERRAMIENTAS.veredicto], toolChoice: { type: "tool", name: "veredicto" }, messages: [{ role: "user", content: user }] });
+    const r = await llm.create({ model: MODELO_EVALUADOR, maxTokens: 4000, razonar: true, esfuerzo: "medium", system: RUBRICA_LIMITES, tools: [HERRAMIENTAS.veredicto], toolChoice: { type: "tool", name: "veredicto" }, messages: [{ role: "user", content: user }] });
     const b = r.content.find((x) => x.type === "tool_use") as { input?: { cumple?: unknown; motivo?: unknown } } | undefined;
     if (typeof b?.input?.cumple !== "boolean") return { cumple: false, nota: 0, motivo: "El evaluador no devolvió un veredicto válido.", usage: r.usage, costeUsdMicros: coste(r.usage) };
     const cumple = b.input.cumple;

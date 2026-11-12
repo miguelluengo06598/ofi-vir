@@ -5,6 +5,8 @@ import { crearServicioCreditos } from "./servicio.ts";
 import type { DepsTareas } from "./tareasPeriodicas.ts";
 import { motorDesdeEntorno } from "../agents/fromEnv.ts";
 import { depsLeadsDesdeEntorno, procesarLeadsMeta as procesarLeads } from "../integraciones/meta/leads.ts";
+import { recuperarLeadsPerdidos, revisarSaludDeMeta } from "../integraciones/meta/mantenimiento.ts";
+import { depsConexionesDesdeEntorno } from "../integraciones/api.ts";
 import { reanudarAplazadas } from "../agentes/reglas/aplazadas.ts";
 import { procesarTareasPendientes } from "../agentes/traspasos/procesar.ts";
 import { ejecutarTarea } from "../agents/loop.ts";
@@ -58,8 +60,11 @@ export function depsDesdeEntorno(ahora: Date, env: Record<string, string | undef
     if (!deps) throw new Error("leads-meta: falta la configuración de la base.");
     return procesarLeads(deps, { limite: 50 });
   };
+  const conexiones = env.META_APP_SECRET?.trim() ? depsConexionesDesdeEntorno(env) : null;
+  const recuperarLeadsMeta = conexiones ? () => recuperarLeadsPerdidos({ ...conexiones.deps, ahora: () => ahora }) : undefined;
+  const saludMeta = conexiones ? () => revisarSaludDeMeta({ ...conexiones.deps, ahora: () => ahora }) : undefined;
   return {
-    db, servicio: crearServicioCreditos({ db, esLocal }), ahora, esLocal, procesarAplazadas, procesarLeadsMeta, procesarTraspasos: procesarTraspasosDeMotor, procesarExamenes, procesarMuestrasCalidad,
+    db, servicio: crearServicioCreditos({ db, esLocal }), ahora, esLocal, procesarAplazadas, procesarLeadsMeta, recuperarLeadsMeta, saludMeta, procesarTraspasos: procesarTraspasosDeMotor, procesarExamenes, procesarMuestrasCalidad,
     lanzarRutina, controlCalidadAutomatico: controlCalidadAutomatico(env),
   };
 }
