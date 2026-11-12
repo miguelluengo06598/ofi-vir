@@ -100,3 +100,30 @@ describe("proveedor demo (OAuth falso)", () => {
     assert.equal(canjear(new URLSearchParams({ client_id: "demo-client", client_secret: "no", grant_type: "refresh_token", refresh_token: "x" }), ENV).status, 401);
   });
 });
+
+describe("proveedor meta_leads", () => {
+  const meta = obtenerProveedor("meta_leads")!;
+  const env = { META_APP_ID: "123456789012345", META_APP_SECRET: "secreto-de-prueba", META_LOGIN_CONFIG_ID: "987654321098765", META_GRAPH_VERSION: "v26.0" };
+
+  it("solo está disponible con la app, el secreto, la configuración de login y una versión válida", () => {
+    assert.equal(estaDisponible(meta, env), true);
+    for (const falta of Object.keys(env)) assert.equal(estaDisponible(meta, { ...env, [falta]: "" }), false, `sin ${falta}`);
+    assert.equal(estaDisponible(meta, { ...env, META_GRAPH_VERSION: "26" }), false, "versión sin formato vNN.N");
+    assert.equal(estaDisponible(meta, { ...env, META_GRAPH_VERSION: "v26.0/../x" }), false, "la versión no puede colar una ruta");
+  });
+
+  it("deriva las URLs de la versión de la Graph API y no usa las variables CONEXION_*", () => {
+    const cfg = configuracionOAuth(meta, { ...env, CONEXION_META_LEADS_AUTH_URL: "https://malo.example/auth" })!;
+    assert.equal(cfg.urlAutorizacion, "https://www.facebook.com/v26.0/dialog/oauth");
+    assert.equal(cfg.urlToken, "https://graph.facebook.com/v26.0/oauth/access_token");
+    assert.equal(cfg.clientId, env.META_APP_ID);
+    assert.equal(cfg.urlRevocar, null);
+  });
+
+  it("pide los permisos con config_id y no con scope; la ficha pública no lleva secretos", () => {
+    assert.equal(meta.scopesEnUrl, false);
+    assert.deepEqual(meta.parametrosAutorizacion!(env), { config_id: env.META_LOGIN_CONFIG_ID });
+    assert.deepEqual(meta.scopes, ["leads_retrieval", "pages_manage_metadata", "pages_show_list", "pages_read_engagement", "ads_management", "pages_manage_ads"]);
+    assert.ok(!JSON.stringify(fichaDeProveedor(meta, env)).includes(env.META_APP_SECRET));
+  });
+});

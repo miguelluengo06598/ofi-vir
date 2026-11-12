@@ -116,7 +116,9 @@ export async function iniciarConexion(d: DepsConexiones, e: { companyId: string;
   u.searchParams.set("response_type", "code");
   u.searchParams.set("client_id", cfg.clientId);
   u.searchParams.set("redirect_uri", redirectUri(p.id, app));
-  if (p.scopes.length) u.searchParams.set("scope", p.scopes.join(" "));
+  if (p.scopes.length && p.scopesEnUrl !== false) u.searchParams.set("scope", p.scopes.join(" "));
+  // Parámetros propios del proveedor; nunca pueden pisar los del flujo (client_id, redirect_uri, state…).
+  for (const [k, v] of Object.entries(p.parametrosAutorizacion?.(d.env) ?? {})) if (v && !u.searchParams.has(k)) u.searchParams.set(k, v);
   u.searchParams.set("state", state);
   if (verificador) {
     u.searchParams.set("code_challenge", desafioS256(verificador));
@@ -149,36 +151,49 @@ export async function rechazarConexion(d: DepsConexiones, e: { companyId: string
   await validarYConsumirEstado(d, e);
 }
 
-export async function completarConexion(d: DepsConexiones, e: { companyId: string; userId: string; proveedorId: string; state: string; code: string }): Promise<{ conexionId: string }> {
+/** Paso 1 del callback: valida y consume el state y canjea el código por el token del proveedor (que no sale del servidor). */
+export async function canjearCodigo(d: DepsConexiones, e: { companyId: string; userId: string; proveedorId: string; state: string; code: string }): Promise<{ proveedor: Proveedor; token: TokenDelProveedor }> {
   const p = buscarProveedor(e.proveedorId);
   const cfg = configuracionOAuth(p, d.env);
   const app = urlDeLaApp(d.env);
   if (!cfg || !app) throw new ConexionError(409, "proveedor_no_disponible", `${p.nombre} todavía no está disponible.`);
   if (!e.code || e.code.length > 2000) throw new ConexionError(400, "codigo_invalido", "Falta el código de autorización.");
   const { verificador } = await validarYConsumirEstado(d, e);
-
-  let t: TokenDelProveedor;
   try {
-    t = await pedirToken(d, cfg, {
+    const token = await pedirToken(d, cfg, {
       grant_type: "authorization_code", code: e.code, redirect_uri: redirectUri(p.id, app), ...(verificador ? { code_verifier: verificador } : {}),
     });
+    return { proveedor: p, token };
   } catch (err) {
     d.log.warn(`[conexiones] ${p.id}: el intercambio del código falló (${err instanceof ErrorDeToken ? err.tipo : "error"}) para la empresa ${e.companyId}.`);
     throw new ConexionError(502, "intercambio_fallido", `${p.nombre} no aceptó la conexión. Inténtalo de nuevo.`);
   }
-  const ahora = d.ahora();
-  const scopes = t.scope ? t.scope.split(/[\s,]+/).filter(Boolean) : p.scopes;
+}
+
+/** Paso 2: guarda la conexión con su secreto cifrado en una sola transacción. `caducaEn: null` = sin renovación automática. */
+export async function guardarConexion(
+  d: DepsConexiones,
+  e: { companyId: string; userId: string; proveedor: Proveedor; accessToken: string; refreshToken?: string; tokenType?: string; scopes: string[]; caducaEn: string | null; cuenta?: string | null },
+): Promise<{ conexionId: string }> {
   const { data, error } = await d.db.rpc("conexion_guardar", {
-    p_company_id: e.companyId, p_user_id: e.userId, p_proveedor: p.id, p_tipo_auth: p.tipoAuth, p_cuenta: t.account_label ?? null,
-    p_scopes: scopes, p_caduca: caducaEn(t, ahora),
-    p_secreto: aSecreto({ v: 1, access_token: t.access_token, ...(t.refresh_token ? { refresh_token: t.refresh_token } : {}), token_type: t.token_type ?? "Bearer" }),
+    p_company_id: e.companyId, p_user_id: e.userId, p_proveedor: e.proveedor.id, p_tipo_auth: e.proveedor.tipoAuth, p_cuenta: e.cuenta ?? null,
+    p_scopes: e.scopes, p_caduca: e.caducaEn,
+    p_secreto: aSecreto({ v: 1, access_token: e.accessToken, ...(e.refreshToken ? { refresh_token: e.refreshToken } : {}), token_type: e.tokenType ?? "Bearer" }),
   });
   if (error || !data) {
-    d.log.error(`[conexiones] ${p.id}: no se pudo guardar la conexión de la empresa ${e.companyId}.`);
+    d.log.error(`[conexiones] ${e.proveedor.id}: no se pudo guardar la conexión de la empresa ${e.companyId}.`);
     throw new ConexionError(500, "error_interno", "No se pudo guardar la conexión.");
   }
-  d.log.info(`[conexiones] ${p.id}: conectado para la empresa ${e.companyId} (conexión ${data}).`);
+  d.log.info(`[conexiones] ${e.proveedor.id}: conectado para la empresa ${e.companyId} (conexión ${data}).`);
   return { conexionId: data as string };
+}
+
+export async function completarConexion(d: DepsConexiones, e: { companyId: string; userId: string; proveedorId: string; state: string; code: string }): Promise<{ conexionId: string }> {
+  const { proveedor: p, token: t } = await canjearCodigo(d, e);
+  return guardarConexion(d, {
+    companyId: e.companyId, userId: e.userId, proveedor: p, accessToken: t.access_token, refreshToken: t.refresh_token, tokenType: t.token_type,
+    scopes: t.scope ? t.scope.split(/[\s,]+/).filter(Boolean) : p.scopes, caducaEn: caducaEn(t, d.ahora()), cuenta: t.account_label ?? null,
+  });
 }
 
 /** Proveedores con clave de API (p. ej. WhatsApp): la clave se guarda cifrada igual que un token. */

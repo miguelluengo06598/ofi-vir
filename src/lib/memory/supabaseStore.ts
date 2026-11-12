@@ -10,7 +10,7 @@ const CONTACT_COLS = "id, name, email, organization, job_title";
 const toContact = (c: Record<string, unknown>): StoredContact => ({
   id: c.id as string,
   name: c.name as string,
-  email: c.email as string,
+  email: (c.email as string | null) ?? "",
   organization: (c.organization as string | null) ?? "",
   jobTitle: (c.job_title as string | null) ?? "",
 });

@@ -509,7 +509,7 @@ insert into public.solicitudes_acceso (id, nombre, email, empresa, sector, taman
   ('5011c170-0000-4000-8000-000000000001', 'Raquel Pons', 'raquel@academiapons.test', 'Academia Pons', 'Academias', '5-20', 'Nos llegan muchas consultas por WhatsApp en septiembre.', true, 'nueva', 'web', now() - interval '3 hours'),
   ('5011c170-0000-4000-8000-000000000002', 'Óscar Lledó', 'oscar@inmolledo.test', 'Inmobiliaria Lledó', 'Inmobiliarias', '5-20', 'Leads de portales que se quedan sin respuesta el fin de semana.', false, 'nueva', 'web', now() - interval '1 day'),
   ('5011c170-0000-4000-8000-000000000003', 'Marina Sáez', 'marina@gimnasioforma.test', 'Gimnasio Forma', 'Gimnasios', '21-50', null, true, 'nueva', 'web', now() - interval '2 days'),
-  ('5011c170-0000-4000-8000-000000000004', 'Iker Bengoa', 'iker@reformasbengoa.test', 'Reformas Bengoa', 'Reformas', '5-20', 'Queremos ver cómo responde a presupuestos.', true, 'demo', 'web', now() - interval '6 days'),
+  ('5011c170-0000-4000-8000-000000000004', 'Iker Bengoa', 'iker@reformasbengoa.test', 'Reformas Bengoa', 'Reformas', '5-20', 'Queremos ver cómo responde a presupuestos.', true, 'demo_hecha', 'web', now() - interval '6 days'),
   ('5011c170-0000-4000-8000-000000000005', 'Lidia Ferrer', 'lidia@tiendaferrer.test', 'Tienda Ferrer', 'E-commerce', '1-4', null, false, 'contactada', 'manual', now() - interval '12 days')
 on conflict (id) do nothing;
 insert into public.demos (id, solicitud_id, fecha, estado, responsable) values
@@ -521,12 +521,14 @@ insert into public.implantaciones (id, company_id, estado, responsable, inicio, 
   ('1a700000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000003', 'en_curso', '1de51e00-0000-4000-8000-0000000000a1', current_date - 5, current_date + 25)
 on conflict (id) do nothing;
 insert into public.implantacion_tareas (id, implantacion_id, titulo, orden, vence_en, hecha_en) values
-  ('1a7a0000-0000-4000-8000-000000000001', '1a700000-0000-4000-8000-000000000001', 'Conectar el CRM', 1, current_date - 12, now() - interval '13 days'),
+  ('1a7a0000-0000-4000-8000-000000000001', '1a700000-0000-4000-8000-000000000001', 'Conectar el CRM', 1, current_date - 12, null),
   ('1a7a0000-0000-4000-8000-000000000002', '1a700000-0000-4000-8000-000000000001', 'Configurar a Lucía con el asistente', 2, current_date - 4, null),
   ('1a7a0000-0000-4000-8000-000000000003', '1a700000-0000-4000-8000-000000000001', 'Enviar a certificación', 3, current_date + 3, null),
   ('1a7a0000-0000-4000-8000-000000000004', '1a700000-0000-4000-8000-000000000002', 'Reunión de arranque', 1, current_date - 2, null),
   ('1a7a0000-0000-4000-8000-000000000005', '1a700000-0000-4000-8000-000000000002', 'Cargar el conocimiento (web y PDF)', 2, current_date + 6, null)
 on conflict (id) do nothing;
+-- La primera ya está hecha (el estado y la fecha van juntos: implantacion_tareas_hecha_coherente).
+update public.implantacion_tareas set estado = 'hecha', hecha_en = now() - interval '13 days' where id = '1a7a0000-0000-4000-8000-000000000001';
 insert into public.soporte_consultas (id, company_id, asunto, estado, prioridad, creado_en) values
   ('50a00000-0000-4000-8000-000000000001', 'a64499d1-7f43-4a43-abc8-41a313dc4018', 'No llegan los correos de un cliente', 'abierta', 'alta', now() - interval '5 hours'),
   ('50a00000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001', 'Duda sobre el tope de gasto por agente', 'en_curso', 'normal', now() - interval '2 days'),

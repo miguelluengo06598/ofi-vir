@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { crearServicioCreditos } from "./servicio.ts";
 import type { DepsTareas } from "./tareasPeriodicas.ts";
 import { motorDesdeEntorno } from "../agents/fromEnv.ts";
+import { depsLeadsDesdeEntorno, procesarLeadsMeta as procesarLeads } from "../integraciones/meta/leads.ts";
 import { reanudarAplazadas } from "../agentes/reglas/aplazadas.ts";
 import { procesarTareasPendientes } from "../agentes/traspasos/procesar.ts";
 import { ejecutarTarea } from "../agents/loop.ts";
@@ -51,8 +52,14 @@ export function depsDesdeEntorno(ahora: Date, env: Record<string, string | undef
   const procesarExamenes = examen ? (empresaId?: string, o: { excluirTipos?: string[] } = {}) => procesarExamenesPendientes(examen, { companyId: empresaId, ...o }) : undefined;
   const haiku = AnthropicLlm.fromEnv();
   const procesarMuestrasCalidad = haiku ? (empresaId?: string) => evaluarMuestrasPendientes(db, haiku, { companyId: empresaId, ahora }) : undefined;
+  // Leads de Meta: no necesitan IA para guardarse (el agente los atiende después por la cola).
+  const procesarLeadsMeta = async () => {
+    const deps = await depsLeadsDesdeEntorno(env);
+    if (!deps) throw new Error("leads-meta: falta la configuración de la base.");
+    return procesarLeads(deps, { limite: 50 });
+  };
   return {
-    db, servicio: crearServicioCreditos({ db, esLocal }), ahora, esLocal, procesarAplazadas, procesarTraspasos: procesarTraspasosDeMotor, procesarExamenes, procesarMuestrasCalidad,
+    db, servicio: crearServicioCreditos({ db, esLocal }), ahora, esLocal, procesarAplazadas, procesarLeadsMeta, procesarTraspasos: procesarTraspasosDeMotor, procesarExamenes, procesarMuestrasCalidad,
     lanzarRutina, controlCalidadAutomatico: controlCalidadAutomatico(env),
   };
 }

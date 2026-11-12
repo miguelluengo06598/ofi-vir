@@ -23,7 +23,7 @@ import type { ResultadoAplazadas } from "../agentes/reglas/aplazadas.ts";
 import type { ResultadoTraspasos } from "../agentes/traspasos/procesar.ts";
 import { muestrearYAlertar } from "../calidad/servicio.ts";
 
-export const TAREAS_PERIODICAS = ["caducar-creditos", "revisar-estados", "renovar-bonos", "recertificacion", "control-calidad", "rutinas", "renovar-conexiones", "abrir-aplazadas", "procesar-pendientes", "examenes-certificacion"] as const;
+export const TAREAS_PERIODICAS = ["caducar-creditos", "revisar-estados", "renovar-bonos", "recertificacion", "control-calidad", "rutinas", "renovar-conexiones", "abrir-aplazadas", "procesar-pendientes", "examenes-certificacion", "leads-meta"] as const;
 export type TareaPeriodica = (typeof TAREAS_PERIODICAS)[number];
 
 export type DepsTareas = {
@@ -51,6 +51,8 @@ export type DepsTareas = {
   controlCalidadAutomatico?: boolean;
   /** Puntúa con Haiku las muestras reales ya anonimizada. Sin evaluador, se muestrea y se alertan las señales acumuladas. */
   procesarMuestrasCalidad?: (empresaId?: string) => Promise<{ evaluadas: number; revision: number; errores: number; alertas: number }>;
+  /** Procesa los avisos de leads de Meta pendientes (y sus reintentos). Sin él, `leads-meta` solo cuenta cuántos esperan. */
+  procesarLeadsMeta?: () => Promise<{ resultados: { estado: string }[] }>;
 };
 
 async function rpc<T>(db: SupabaseClient, fn: string, args: Record<string, unknown>): Promise<T> {
@@ -224,7 +226,20 @@ export async function controlCalidad(d: DepsTareas) {
   return { ...base, evaluadas: r.evaluadas, enRevision: r.revision, errores: r.errores, procesadas: true };
 }
 
+/** 10) Leads de Meta Lead Ads pendientes: los que no se procesaron al llegar y los reintentos con su espera cumplida. */
+export async function leadsMeta(d: DepsTareas) {
+  if (!d.procesarLeadsMeta) {
+    const { count, error } = await d.db.from("meta_lead_events").select("id", { count: "exact", head: true }).eq("estado", "recibido");
+    if (error) throw new Error("leads-meta: no se pudieron contar los avisos pendientes.");
+    return { pendientes: count ?? 0, procesados: false };
+  }
+  const { resultados } = await d.procesarLeadsMeta();
+  const cuenta = (e: string) => resultados.filter((r) => r.estado === e).length;
+  return { procesados: true, total: resultados.length, ok: cuenta("procesado"), ignorados: cuenta("ignorado"), reintentos: cuenta("reintento"), errores: cuenta("error") };
+}
+
 const TAREAS: Record<TareaPeriodica, (d: DepsTareas) => Promise<unknown>> = {
+  "leads-meta": leadsMeta,
   recertificacion,
   "control-calidad": controlCalidad,
   "caducar-creditos": caducarCreditos, "revisar-estados": revisarEstados, "renovar-bonos": renovarBonos, rutinas: ejecutarRutinas,

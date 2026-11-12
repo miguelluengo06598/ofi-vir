@@ -11,6 +11,7 @@ import { integracionesFaltantes } from "./faltantes.ts";
 import { urlDeLaApp } from "./proveedores.ts";
 import { completarConexion, conectarConClave, ConexionError, desconectar, iniciarConexion, listarConexiones, rechazarConexion, type DepsConexiones } from "./servicio.ts";
 import { esGestor } from "../empresas/permisos.ts";
+import { completarConexionMeta, limpiarEnMetaAntesDeDesconectar, PROVEEDOR_META } from "./meta/servicio.ts";
 
 export type DepsApiConexiones = { deps: DepsConexiones; autenticar: (req: Request) => Promise<Sesion | null> };
 
@@ -77,6 +78,12 @@ export async function callbackHandler(req: Request, proveedorId: string, api: De
       await rechazarConexion(api.deps, base);
       return redirigir(destinoFinal(api, q.get("error") === "access_denied" ? "cancelado" : "error", proveedorId));
     }
+    if (proveedorId === PROVEEDOR_META) {
+      // Facebook: además del token, se guardan las páginas y se comprueba qué permisos se dieron de verdad.
+      const r = await completarConexionMeta(api.deps, { companyId: e.sesion.companyId, userId: e.sesion.userId, state, code: q.get("code") ?? "" });
+      const app = urlDeLaApp(api.deps.env) ?? "";
+      return redirigir(`${app}/conexiones/facebook?resultado=${r.resultado}${r.enOtraOficina ? "&en_revision=1" : ""}`);
+    }
     await completarConexion(api.deps, { ...base, code: q.get("code") ?? "" });
     return redirigir(destinoFinal(api, "ok", proveedorId));
   } catch (err) {
@@ -109,6 +116,9 @@ export async function desconectarHandler(req: Request, id: string, api: DepsApiC
   if ("res" in e) return e.res;
   if (!idValido(id)) return fallo(404, "conexion_no_encontrada", "No existe esa conexión en vuestra oficina.");
   try {
+    // Facebook: antes de borrar los accesos, se deja de recibir avisos y se retiran los permisos en Meta (mejor esfuerzo).
+    const { data: con } = await api.deps.db.from("company_connections").select("proveedor, estado").eq("company_id", e.sesion.companyId).eq("id", id).maybeSingle();
+    if (con?.proveedor === PROVEEDOR_META && con.estado === "conectado") await limpiarEnMetaAntesDeDesconectar(api.deps, e.sesion.companyId);
     return json(await desconectar(api.deps, { companyId: e.sesion.companyId, conexionId: id }));
   } catch (err) {
     return responderError(err, api);

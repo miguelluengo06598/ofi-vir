@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { GlassPanel, PillButton } from "@/components/glass";
+import { ResumenFacebook } from "./meta/TarjetaFacebook";
 
 type Ficha = {
   id: string; nombre: string; logo: string; descripcion: string; tipoAuth: "oauth2" | "api_key" | "dominio"; disponible: boolean; demo: boolean;
@@ -69,11 +70,12 @@ export function ConexionesView() {
               </div>
               <p className="text-small text-ink-2">{f.descripcion}</p>
               {f.herramientas.length > 0 && <p className="text-small text-ink-3">Habilita: {f.herramientas.map((h) => h.nombre).join(", ")}</p>}
+              {f.id === "meta_leads" && <ResumenFacebook />}
               <div className="mt-auto flex gap-2">
                 {f.conexion?.estado === "conectado" ? (
                   <PillButton onClick={() => void desconectar(f.conexion!.id)}>Desconectar</PillButton>
                 ) : f.tipoAuth === "oauth2" && f.disponible ? (
-                  <PillButton solid onClick={() => irA(`/api/conexiones/${f.id}/iniciar`)}>{f.conexion ? "Volver a conectar" : "Conectar"}</PillButton>
+                  <PillButton solid onClick={() => irA(`/api/conexiones/${f.id}/iniciar`)}>{f.conexion ? "Volver a conectar" : f.id === "meta_leads" ? "Conectar Facebook" : "Conectar"}</PillButton>
                 ) : (
                   <span className="text-small text-ink-3">{f.tipoAuth === "oauth2" ? "No disponible todavía" : "Se conecta con una clave"}</span>
                 )}

@@ -3,7 +3,7 @@
  * Contra la base LOCAL. Ejecutar: npm run test:admin
  */
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 import { createClient } from "@supabase/supabase-js";
 import { sesionAdminIdesie } from "../../src/lib/admin/acceso.ts";
@@ -24,7 +24,20 @@ const MES = `${ANIO}-05`;
 const EN_MES = `${ANIO}-05-15T10:00:00Z`;
 const SIG_MES = `${ANIO}-06`;
 
-type Usuario = { id: string; token: string };
+type Usuario = { id: string; token: string; tokenMfa?: string };
+
+/** Código TOTP (RFC 6238, 30 s, 6 cifras) de un secreto base32, como lo calcula una app de autenticación. */
+function codigoTotp(secretoBase32: string, ahora = Date.now()): string {
+  const alfabeto = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const ch of secretoBase32.replace(/=+$/, "").toUpperCase()) bits += alfabeto.indexOf(ch).toString(2).padStart(5, "0");
+  const clave = Buffer.from(bits.match(/.{8}/g)!.map((b) => parseInt(b, 2)));
+  const contador = Buffer.alloc(8);
+  contador.writeBigUInt64BE(BigInt(Math.floor(ahora / 30_000)));
+  const h = createHmac("sha1", clave).update(contador).digest();
+  const o = h[h.length - 1] & 0xf;
+  return String((h.readUInt32BE(o) & 0x7fffffff) % 1_000_000).padStart(6, "0");
+}
 const authUsers: string[] = [];
 async function usuario(companyId: string, role: "owner" | "admin" | "member" | "admin_idesie", etiqueta: string): Promise<Usuario> {
   const email = `adm-${etiqueta}-${RUN}@test.example`;
@@ -36,7 +49,14 @@ async function usuario(companyId: string, role: "owner" | "admin" | "member" | "
   const c = createClient(url, anon, { auth: { persistSession: false } });
   const s = await c.auth.signInWithPassword({ email, password });
   assert.ifError(s.error);
-  return { id: data.user!.id, token: s.data.session!.access_token };
+  const token = s.data.session!.access_token;
+  if (role !== "admin_idesie") return { id: data.user!.id, token };
+  // El panel exige la verificación en dos pasos (aal2): se da de alta una app TOTP y se verifica un código.
+  const alta = await c.auth.mfa.enroll({ factorType: "totp", friendlyName: `prueba-${RUN}` });
+  assert.ifError(alta.error);
+  const v = await c.auth.mfa.challengeAndVerify({ factorId: alta.data!.id, code: codigoTotp((alta.data as { totp: { secret: string } }).totp.secret) });
+  assert.ifError(v.error);
+  return { id: data.user!.id, token, tokenMfa: v.data!.access_token };
 }
 const cab = (token?: string) => ({ get: (n: string) => (n.toLowerCase() === "authorization" && token ? `Bearer ${token}` : null) });
 
@@ -83,8 +103,9 @@ before(async () => {
 after(async () => { for (const id of authUsers) await db.auth.admin.deleteUser(id); });
 
 describe("acceso: solo admin_idesie", () => {
-  it("el rol admin_idesie entra; propietario, token falso y sin sesión no", async () => {
-    assert.deepEqual(await sesionAdminIdesie(cab(idesie.token), db, {}), { userId: idesie.id });
+  it("administración entra solo con el segundo paso verificado; propietario, token falso y sin sesión no", async () => {
+    assert.deepEqual(await sesionAdminIdesie(cab(idesie.tokenMfa), db, {}), { userId: idesie.id });
+    assert.equal(await sesionAdminIdesie(cab(idesie.token), db, {}), null, "con contraseña pero sin el segundo paso (aal1) no entra");
     assert.equal(await sesionAdminIdesie(cab(owner.token), db, {}), null, "un propietario de empresa cliente no entra");
     assert.equal(await sesionAdminIdesie(cab("no-es-un-jwt"), db, {}), null);
     assert.equal(await sesionAdminIdesie(cab(), db, {}), null, "sin sesión ni persona de desarrollo");
